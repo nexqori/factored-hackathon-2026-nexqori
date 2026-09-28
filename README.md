@@ -2,7 +2,7 @@
 
 Base bancaria local con **React + TypeScript, FastAPI y PostgreSQL**. Identidad Terracota suave, español/inglés/portugués, acceso de cliente y administrador, productos, movimientos, servicios, solicitudes y agente de navegación.
 
-Es una demo funcional con autenticación y persistencia reales en el servidor local. Los datos son ficticios; no ejecuta operaciones bancarias. El asistente usa reglas guiadas, sin LLM ni operador humano conectado.
+La base tiene autenticación y persistencia reales en el servidor local. Los datos son ficticios; no ejecuta operaciones bancarias. El asistente usa reglas guiadas, sin LLM ni operador humano conectado.
 
 ## Arranque local
 
@@ -18,7 +18,7 @@ Abre **http://localhost:5180**. Sólo ese puerto está publicado y escucha en 12
 
 El setup genera contraseñas aleatorias en `.env` y conserva el archivo si ya existe. Abre ese archivo local para obtener la clave correspondiente:
 
-| Cuenta de demo | Rol | Variable con su contraseña |
+| Cuenta inicial | Rol | Variable con su contraseña |
 | --- | --- | --- |
 | andrea@nexqori.local | Cliente | CUSTOMER_PASSWORD |
 | admin@nexqori.local | Administrador | ADMIN_PASSWORD |
@@ -39,7 +39,7 @@ Detener contenedores conserva el volumen PostgreSQL. No uses opciones que borren
 - Login y cierre de sesión, roles de servidor y preferencia ES/EN/PT persistida.
 - Inicio, cuentas, tarjetas, movimientos con búsqueda/filtros y detalle por producto.
 - Transferencias, pagos, préstamos, inversiones, seguros y efectivo como consultas.
-- Solicitudes con confirmación, referencia, idempotencia, estado y derivación simulada.
+- Solicitudes con confirmación, referencia, idempotencia, estado y solicitud de atención.
 - Panel admin para usuarios, cola, inicio de revisión y auditoría.
 - Agente: “Llévame a transferencias”, “Show my cards”, “Abrir empréstimos”. Navega por rutas permitidas, consulta el saldo propio y prepara un formulario; no ejecuta operaciones.
 - Lectura de la última respuesta mediante las voces disponibles del navegador.

@@ -32,7 +32,7 @@ Usa el nombre **Nexqori** en interfaz y `nexqori` en identificadores técnicos. 
 
 Escribe con cercanía, sin infantilizar. Ofrece el siguiente paso y explica el estado: solicitado, recibido, en revisión o resuelto. No prometas reembolso, bloqueo ni resolución si el servicio no lo ha confirmado.
 
-La app inicial funciona con datos ficticios y reglas locales de demo. Identifica ese modo de forma visible. El asistente guiado no debe presentarse como un modelo de IA conectado. Español (`es`), inglés (`en`) y portugués (`pt`) tienen igual prioridad en toda la base: login, menús, formularios, errores, estados, agente, accesibilidad y administración. No conviertas moneda al cambiar idioma.
+La interfaz debe sentirse natural, como un producto bancario: por instrucción de Bryan, no añadir etiquetas de demo, modo demo, simulación o datos ficticios a las pantallas. Usar mensajes de producto que expliquen la consulta o solicitud realmente registrada. Mantener las limitaciones técnicas en la documentación; no inventar operaciones completadas, devoluciones, un operador conectado o un modelo de IA disponible. Español (`es`), inglés (`en`) y portugués (`pt`) tienen igual prioridad en toda la base: login, menús, formularios, errores, estados, agente, accesibilidad y administración. No conviertas moneda al cambiar idioma.
 
 ## Stack, idiomas y agente
 

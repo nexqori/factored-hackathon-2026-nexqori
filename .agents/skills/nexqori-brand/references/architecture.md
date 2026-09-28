@@ -10,4 +10,4 @@ La versión base usa clasificación por reglas y respuestas localizadas. Para co
 
 El dataset sirve para decisiones agregadas. No importar relaciones caso–producto o evento–producto a una sesión de cliente: fueron inconsistentes. El seed de la app usa fixtures ficticios con titularidad coherente.
 
-Mantener las limitaciones visibles: sin banco real, sin ejecución monetaria, sin LLM ni operador humano conectados. Autenticación local no equivale a una plataforma bancaria lista para producción. TLS, MFA, recuperación de cuentas, límites distribuidos, integración bancaria, observabilidad y revisión operativa necesitan trabajo específico antes de otro entorno.
+Documentar las limitaciones técnicas sin etiquetas repetitivas en la interfaz: sin banco real, sin ejecución monetaria, sin LLM ni operador humano conectados. Autenticación local no equivale a una plataforma bancaria lista para producción. TLS, MFA, recuperación de cuentas, límites distribuidos, integración bancaria, observabilidad y revisión operativa necesitan trabajo específico antes de otro entorno.

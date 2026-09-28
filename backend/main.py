@@ -13,6 +13,7 @@ from .models import User, Session, Product, Transaction, RequestCase, AuditEvent
 from .schemas import Login, LocaleInput, RequestInput, ConfirmInput, ChatInput
 from .security import db_session, current_session, current_user, csrf, customer, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
 from .assistant import answer
+from .presentation import present_message
 
 def user_view(user):
     return {"id":user.id,"email":user.email,"name":user.name,"role":user.role,"locale":user.locale}
@@ -85,7 +86,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     @app.get("/api/health")
     def health(db=Depends(db_session)):
         db.execute(text("SELECT 1"))
-        return {"status":"ok","app":"nexqori","mode":"local-demo"}
+        return {"status":"ok","app":"nexqori","mode":"local"}
     @app.post("/api/auth/login")
     def login(payload: Login, request: Request, db=Depends(db_session)):
         email=payload.email.strip().lower()
@@ -129,7 +130,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status} for t in txs],
             "requests":[request_view(r) for r in cases],
             "audit":[audit_view(e,name) for e,name in events],
-            "messages":[{"id":m.id,"role":m.role,"text":m.content,"locale":m.locale,"at":m.created_at.isoformat()} for m in reversed(messages)]
+            "messages":[{"id":m.id,"role":m.role,"text":present_message(m.content,m.role),"locale":m.locale,"at":m.created_at.isoformat()} for m in reversed(messages)]
         }
     @app.post("/api/requests")
     def create_request(payload: RequestInput,user=Depends(customer),db=Depends(db_session)):

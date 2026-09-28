@@ -25,3 +25,7 @@ Añadir un adaptador en servidor que reciba mensaje, locale y contexto autorizad
 El contexto del modelo sólo debe incluir datos autorizados del usuario. Un documento o mensaje puede aportar información, pero no cambiar permisos, identidad o instrucciones de aplicación. El modelo no confirma acciones por el cliente: pagos, bloqueos o contrataciones requerirían servicios propios, política explícita, confirmación fuera del chat, idempotencia y comprobación posterior. No están implementados en esta base.
 
 La reproducción de respuestas usa `speechSynthesis` del navegador, sujeta a las voces instaladas. No hay captura de micrófono, transcripción ni servicio de voz conectado.
+
+## Tono de la interfaz
+
+Por indicación de Bryan, las pantallas y respuestas utilizan lenguaje natural de producto, sin etiquetas de demo o simulación. Un caso registrado se describe como solicitud enviada a atención; no se afirma que una persona haya respondido ni que una operación monetaria se ejecutó. Las respuestas históricas generadas con las plantillas anteriores se presentan con el tono actual mediante una correspondencia exacta; su contenido original permanece en PostgreSQL y los mensajes escritos por usuarios no se modifican.

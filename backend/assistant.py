@@ -4,26 +4,26 @@ from .navigation import navigate_in_app
 
 COPY = {
 "es": {
-"balance": "Tu saldo disponible de demo es {amount} MXN. Abrí tus productos para ver el detalle.",
+"balance": "Tu saldo disponible es {amount} MXN. Abrí tus productos para ver el detalle.",
 "movements": "Abrí tus movimientos. Puedes buscar por comercio o estado y elegir el que quieres revisar.",
 "report": "Vamos paso a paso. Elige el movimiento y cuéntanos qué ocurrió. Revisarás los datos antes de confirmar la solicitud.",
 "requests": "Abrí tus solicitudes. Allí puedes consultar el seguimiento y pedir atención humana.",
-"human": "Puedo preparar una solicitud para una persona. La derivación es simulada: no hay un agente real conectado.",
-"unknown": "Para orientarte mejor, ¿quieres consultar tu saldo, revisar un movimiento o seguir una solicitud? Este asistente de demo usa respuestas guiadas."},
+"human": "Puedo ayudarte a preparar una solicitud de atención. Revisa el detalle antes de enviarla.",
+"unknown": "Puedo ayudarte a consultar tu saldo, navegar por tus servicios o seguir una solicitud. ¿Qué necesitas?"},
 "en": {
-"balance": "Your available demo balance is {amount} MXN. I opened your products so you can see the details.",
+"balance": "Your available balance is {amount} MXN. I opened your products so you can see the details.",
 "movements": "I opened your transactions. Search by merchant or status and choose one to review.",
 "report": "Let’s take it step by step. Choose a transaction and tell us what happened. You will review the details before confirming.",
 "requests": "I opened your requests. You can track progress and ask for human support there.",
-"human": "I can prepare a request for a person. This handoff is simulated: no real support agent is connected.",
-"unknown": "Would you like to check your balance, review a transaction or track a request? This demo assistant uses guided responses."},
+"human": "I can help you prepare a support request. Review the details before sending it.",
+"unknown": "I can help you check your balance, navigate your services or track a request. What would you like to do?"},
 "pt": {
-"balance": "Seu saldo disponível de demo é {amount} MXN. Abri seus produtos para você consultar os detalhes.",
+"balance": "Seu saldo disponível é {amount} MXN. Abri seus produtos para você consultar os detalhes.",
 "movements": "Abri suas movimentações. Busque por estabelecimento ou status e escolha uma para revisar.",
 "report": "Vamos por partes. Escolha a movimentação e conte o que aconteceu. Você revisará os dados antes de confirmar.",
 "requests": "Abri suas solicitações. Lá você pode acompanhar o andamento e pedir atendimento humano.",
-"human": "Posso preparar uma solicitação para uma pessoa. O encaminhamento é simulado: não há um atendente real conectado.",
-"unknown": "Você quer consultar seu saldo, revisar uma movimentação ou acompanhar uma solicitação? Este assistente de demo usa respostas guiadas."}
+"human": "Posso ajudar a preparar uma solicitação de atendimento. Revise os detalhes antes de enviá-la.",
+"unknown": "Posso ajudar a consultar seu saldo, navegar pelos serviços ou acompanhar uma solicitação. O que você precisa?"}
 }
 def classify(text):
     value="".join(c for c in unicodedata.normalize("NFD",text.lower()) if unicodedata.category(c)!="Mn")
@@ -68,6 +68,6 @@ def answer(text,locale,balance_minor,current_page="home"):
         response={"es":"Tu cuenta no tiene acceso al panel administrativo. Puedo ayudarte a navegar tus productos y solicitudes.","en":"Your account cannot access the admin panel. I can help you navigate your products and requests.","pt":"Sua conta não tem acesso ao painel administrativo. Posso ajudar a navegar seus produtos e solicitações."}[locale]
     elif intent in COPY[locale]: response=COPY[locale][intent].replace("{amount}",amount)
     else:
-        response={"es":"Abrí {screen}. Puedes consultar la información o preparar una solicitud; no se ha ejecutado ninguna operación.","en":"I opened {screen}. You can view the information or prepare a request; no operation has been executed.","pt":"Abri {screen}. Você pode consultar informações ou preparar uma solicitação; nenhuma operação foi executada."}[locale].replace("{screen}",NAV_LABELS[locale][intent])
+        response={"es":"Abrí {screen}. Puedes consultar la información o preparar una solicitud.","en":"I opened {screen}. You can view the information or prepare a request.","pt":"Abri {screen}. Você pode consultar informações ou preparar uma solicitação."}[locale].replace("{screen}",NAV_LABELS[locale][intent])
     command=navigate_in_app(destination,"customer") if destination and destination!="new-request" else None
     return {"text":response,"destination":destination,"intent":intent,"navigation":command}

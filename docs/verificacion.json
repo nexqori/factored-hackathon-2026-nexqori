@@ -1,7 +1,7 @@
 {
-  "date": "2026-09-28 16:58:06 -0500 America/Lima",
+  "date": "2026-09-28 17:10:34 -0500 America/Lima",
   "frontend_tests": 8,
-  "api_tests": 29,
+  "api_tests": 33,
   "build": "passed",
   "ui_pages": 56,
   "agent_navigation_ui": 6,
@@ -15,6 +15,7 @@
   "notebook_executed_cells": 5,
   "figures_inspected": 3,
   "skill_validation": "passed",
-  "scope": "local demo; UI tests leave explicitly marked fictional requests",
-  "warning": "Starlette TestClient httpx deprecation; tests pass"
+  "scope": "local application; UI checks leave marked fictional requests",
+  "warning": "Starlette TestClient httpx deprecation; 33 API tests pass",
+  "product_copy": "natural ES/EN/PT; original history and user messages preserved"
 }

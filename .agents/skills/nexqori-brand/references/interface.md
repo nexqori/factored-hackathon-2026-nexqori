@@ -19,8 +19,10 @@ Usar Segoe UI/system-ui para controles y lectura; Georgia puede dar calidez a ti
 ## Semántica
 Éxito verde apagado y advertencia ocre son auxiliares, no nuevos colores de marca. Acompañar siempre con texto/icono. Evitar gradientes saturados, brillo, decoración que compita con importes y avisos, y promesas de seguridad absoluta.
 
-## Contenido de demo
+## Contenido de producto
 Fixtures diseñados para la demo, separados del dataset del hackathon. El EDA mostró incoherencias caso–producto y textos repetitivos; no convertir esas fuentes en hechos individuales fiables. La cuenta y los movimientos de la demo deben enlazar por IDs coherentes. La base tiene autenticación y permisos de servidor; su auditoría local no es inmutable ni una certificación bancaria.
+
+La interfaz no debe mostrar etiquetas de demo, simulación o datos ficticios. Usar un tono natural; distinguir una solicitud registrada de una operación completada. Los límites del entorno se documentan técnicamente.
 
 El asistente base puede resolver consultas por reglas, pedir precisión o preparar una derivación. No diagnosticar fraude a partir de una palabra. Registrar un reclamo no significa resolver la disputa ni devolver dinero.
 

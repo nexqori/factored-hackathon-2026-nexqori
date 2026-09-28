@@ -88,7 +88,7 @@ try {
   results.createdRequest = (await page.locator('dialog .case-top strong').innerText()).trim();
   await page.getByRole('button', {name:'Pedir atención humana',exact:true}).click();
   await page.getByRole('button', {name:'Confirmar derivación',exact:true}).click();
-  await page.locator('dialog').getByText('Derivada a una persona',{exact:true}).waitFor();
+  await page.locator('dialog').getByText('Enviada a atención',{exact:true}).waitFor();
   await snapshot('request-handoff');
   await page.getByRole('button', {name:'Cerrar',exact:true}).click();
   await page.reload();
