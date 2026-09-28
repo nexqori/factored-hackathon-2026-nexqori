@@ -1,0 +1,10 @@
+{
+  "method": "csv.DictReader: todos los productos, clientes y casos",
+  "cases": 67095,
+  "case_product_refs": 44570,
+  "absent_product": 0,
+  "case_owner_mismatches": 44570,
+  "customers": 150000,
+  "branch_id_matches": 5,
+  "branch_code_matches": 0
+}

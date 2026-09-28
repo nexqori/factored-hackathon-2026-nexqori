@@ -1,0 +1,5 @@
+interface:
+  display_name: "Nexqori · Base e identidad"
+  short_description: "Identidad, idiomas y navegación de Nexqori"
+  brand_color: "#9A4B32"
+  default_prompt: "Usa $nexqori-brand para crear o adaptar esta pantalla de Nexqori con la paleta Terracota suave y soporte ES/EN/PT."

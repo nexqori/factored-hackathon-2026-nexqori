@@ -1,0 +1,386 @@
+{
+  "scope": "CENSO: todas las filas y columnas de las 13 tablas; sin muestreo",
+  "executed_at_utc": "2026-09-26T02:16:21.812329+00:00",
+  "engine_tabular": "DuckDB 1.5.5",
+  "python": "3.12.14",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+    "cupy": "14.2.0",
+    "cuda_runtime": 12090,
+    "cuda_driver": 13030,
+    "memory_free_MiB_after_context": 3295.7000007629395,
+    "memory_total_MiB": 4095.5,
+    "pool_limit_MiB": 192,
+    "smoke_test_sum": 49995000.0,
+    "documentation": "https://docs.cupy.dev/en/stable/install.html"
+  },
+  "source_files": 7671,
+  "source_bytes": 5349322481,
+  "raw_rows": 23495188,
+  "wall_seconds": 724.3972867999983,
+  "peak_process_RSS_MiB_observed": 2049.4609375,
+  "rss_interval_s": 0.2,
+  "memory_limit_DuckDB_MB": 1500,
+  "threads_DuckDB": 4,
+  "gpu_batch_rows": 131072,
+  "queries": [
+    {
+      "query": "calls_overall",
+      "rows_exported": 1,
+      "seconds": 0.2498149999883026
+    },
+    {
+      "query": "calls_by_reason",
+      "rows_exported": 6,
+      "seconds": 0.13897099997848272
+    },
+    {
+      "query": "calls_by_channel",
+      "rows_exported": 6,
+      "seconds": 0.15872720000334084
+    },
+    {
+      "query": "calls_monthly",
+      "rows_exported": 37,
+      "seconds": 0.1382646999845747
+    },
+    {
+      "query": "repeat_contact",
+      "rows_exported": 1,
+      "seconds": 1.0385861000104342
+    },
+    {
+      "query": "complaints_overall",
+      "rows_exported": 1,
+      "seconds": 0.07362010001088493
+    },
+    {
+      "query": "complaints_by_category",
+      "rows_exported": 5,
+      "seconds": 0.05022209999151528
+    },
+    {
+      "query": "complaints_by_type",
+      "rows_exported": 4,
+      "seconds": 0.030983899981947616
+    },
+    {
+      "query": "complaints_by_status",
+      "rows_exported": 6,
+      "seconds": 0.037316300004022196
+    },
+    {
+      "query": "complaints_monthly",
+      "rows_exported": 37,
+      "seconds": 0.05249179998645559
+    },
+    {
+      "query": "complaint_call_links",
+      "rows_exported": 1,
+      "seconds": 0.1721059999836143
+    },
+    {
+      "query": "transactions_status",
+      "rows_exported": 4,
+      "seconds": 0.12831040000310168
+    },
+    {
+      "query": "transactions_channel",
+      "rows_exported": 6,
+      "seconds": 0.18392960002529435
+    },
+    {
+      "query": "transactions_type",
+      "rows_exported": 6,
+      "seconds": 0.152746500010835
+    },
+    {
+      "query": "declined_response_codes",
+      "rows_exported": 5,
+      "seconds": 0.3941775000130292
+    },
+    {
+      "query": "events_type",
+      "rows_exported": 7,
+      "seconds": 0.49606899998616427
+    },
+    {
+      "query": "digital_channels",
+      "rows_exported": 4,
+      "seconds": 0.5107154999859631
+    },
+    {
+      "query": "digital_categories",
+      "rows_exported": 4,
+      "seconds": 0.4720085000153631
+    },
+    {
+      "query": "digital_sessions",
+      "rows_exported": 1,
+      "seconds": 13.383530599996448
+    },
+    {
+      "query": "digital_error_actions",
+      "rows_exported": 8,
+      "seconds": 0.876883099990664
+    },
+    {
+      "query": "monthly_samples",
+      "rows_exported": 37,
+      "seconds": 1.8533055000007153
+    },
+    {
+      "query": "process_date_lags",
+      "rows_exported": 4,
+      "seconds": 2.917093500000192
+    },
+    {
+      "query": "quality_rules",
+      "rows_exported": 12,
+      "seconds": 0.9995090999873355
+    },
+    {
+      "query": "complaints_claims_only",
+      "rows_exported": 5,
+      "seconds": 0.057935699995141476
+    },
+    {
+      "query": "linkage_by_case_type",
+      "rows_exported": 4,
+      "seconds": 0.15047839999897406
+    },
+    {
+      "query": "statuses_and_sla",
+      "rows_exported": 6,
+      "seconds": 0.041051299980608746
+    },
+    {
+      "query": "missingness_context",
+      "rows_exported": 31,
+      "seconds": 1.077748400013661
+    },
+    {
+      "query": "digital_session_identity",
+      "rows_exported": 1,
+      "seconds": 11.941284200001974
+    },
+    {
+      "query": "detalle_subcategories",
+      "rows_exported": 6,
+      "seconds": 0.06970230001024902
+    },
+    {
+      "query": "detalle_sla_priority",
+      "rows_exported": 4,
+      "seconds": 0.04669170000124723
+    },
+    {
+      "query": "detalle_sla_matrix",
+      "rows_exported": 20,
+      "seconds": 0.02297240000916645
+    },
+    {
+      "query": "detalle_sla_channels",
+      "rows_exported": 6,
+      "seconds": 0.037464699998963624
+    },
+    {
+      "query": "detalle_sla_resolution_bins",
+      "rows_exported": 5,
+      "seconds": 0.025828199984971434
+    },
+    {
+      "query": "detalle_sla_response_bins",
+      "rows_exported": 4,
+      "seconds": 0.035599100025137886
+    },
+    {
+      "query": "detalle_case_text_quality",
+      "rows_exported": 1,
+      "seconds": 0.05575450000469573
+    },
+    {
+      "query": "detalle_generic_text_by_category",
+      "rows_exported": 5,
+      "seconds": 0.06698419997701421
+    },
+    {
+      "query": "detalle_focus_outcomes",
+      "rows_exported": 2,
+      "seconds": 0.10360820000641979
+    },
+    {
+      "query": "detalle_focus_channels",
+      "rows_exported": 12,
+      "seconds": 0.10407229998963885
+    },
+    {
+      "query": "detalle_focus_sentiment",
+      "rows_exported": 10,
+      "seconds": 0.07330439999350347
+    },
+    {
+      "query": "detalle_technical_actions",
+      "rows_exported": 9,
+      "seconds": 3.110587700008182
+    },
+    {
+      "query": "detalle_transcript_quality",
+      "rows_exported": 1,
+      "seconds": 0.4679875999863725
+    },
+    {
+      "query": "detalle_transcript_topics",
+      "rows_exported": 6,
+      "seconds": 0.30200429999968037
+    },
+    {
+      "query": "detalle_transcript_reason_text",
+      "rows_exported": 6,
+      "seconds": 0.22837369999615476
+    },
+    {
+      "query": "detalle_transcript_metadata",
+      "rows_exported": 2,
+      "seconds": 0.041731800010893494
+    },
+    {
+      "query": "detalle_text_families",
+      "rows_exported": 2,
+      "seconds": 0.05020299999159761
+    },
+    {
+      "query": "detalle_transcript_top_concentration",
+      "rows_exported": 1,
+      "seconds": 0.025798199989367276
+    },
+    {
+      "query": "integral_customer_country",
+      "rows_exported": 3,
+      "seconds": 0.060971600003540516
+    },
+    {
+      "query": "integral_customer_segment",
+      "rows_exported": 4,
+      "seconds": 0.021454400004586205
+    },
+    {
+      "query": "integral_product_health",
+      "rows_exported": 8,
+      "seconds": 0.04023769998457283
+    },
+    {
+      "query": "integral_product_currency",
+      "rows_exported": 3,
+      "seconds": 0.04877190000843257
+    },
+    {
+      "query": "integral_branch_country",
+      "rows_exported": 3,
+      "seconds": 0.010648499999660999
+    },
+    {
+      "query": "integral_agent_experience",
+      "rows_exported": 4,
+      "seconds": 0.07943719998002052
+    },
+    {
+      "query": "integral_owner_consistency",
+      "rows_exported": 4,
+      "seconds": 2.668606200022623
+    },
+    {
+      "query": "integral_date_domain_rules",
+      "rows_exported": 7,
+      "seconds": 0.4600948999868706
+    },
+    {
+      "query": "integral_exchange_pairs",
+      "rows_exported": 12,
+      "seconds": 0.023098700010450557
+    },
+    {
+      "query": "integral_survey_scores",
+      "rows_exported": 3,
+      "seconds": 0.062349399988306686
+    },
+    {
+      "query": "integral_survey_distribution",
+      "rows_exported": 14,
+      "seconds": 0.029287999990629032
+    },
+    {
+      "query": "integral_survey_metrics",
+      "rows_exported": 3,
+      "seconds": 0.06047779999789782
+    },
+    {
+      "query": "integral_survey_resolution",
+      "rows_exported": 36,
+      "seconds": 0.16295910000917502
+    },
+    {
+      "query": "integral_campaigns_channel",
+      "rows_exported": 5,
+      "seconds": 0.2969477000006009
+    },
+    {
+      "query": "integral_campaign_failure_reason",
+      "rows_exported": 30,
+      "seconds": 0.15194209999754094
+    },
+    {
+      "query": "integral_campaign_rules",
+      "rows_exported": 5,
+      "seconds": 0.710029800015036
+    },
+    {
+      "query": "integral_campaign_catalog",
+      "rows_exported": 14,
+      "seconds": 0.016686199989635497
+    },
+    {
+      "query": "integral_campaign_date_alignment",
+      "rows_exported": 1,
+      "seconds": 0.21333030000096187
+    },
+    {
+      "query": "integral_currency_usd_coverage",
+      "rows_exported": 3,
+      "seconds": 0.3787700000102632
+    },
+    {
+      "query": "integral_survey_response_coverage",
+      "rows_exported": 6,
+      "seconds": 0.21478149999165908
+    },
+    {
+      "query": "integral_consent_send_flags",
+      "rows_exported": 5,
+      "seconds": 0.32678329999907874
+    },
+    {
+      "query": "integral_fraud_flags",
+      "rows_exported": 2,
+      "seconds": 0.41875439998693764
+    }
+  ],
+  "gpu_scope": "Mínimo, máximo, media, desviación poblacional, negativos y ceros de todos los valores numéricos documentados, por bloques; texto y joins en CPU.",
+  "cache_note": "Perfiles de tablas se reutilizan por huella de metadatos; la fecha de ejecución no significa relectura física de CSV. Consultas agregadas se recalculan.",
+  "key_rule": "Se excluyen de métricas de negocio todas las filas de grupos de clave repetida o nula. No se adivina una versión vigente. Perfil de columnas y GPU usa todas las filas originales.",
+  "fingerprints": {
+    "branches": "9c0efd7b2a3d0440f67d2177642e4a4c8bd1217ef874bcda3529730426a5919a",
+    "customers": "56aaf931a48e7357f4559300b3cececeaaf676f64cfd3a7750d8d15bcca46e1c",
+    "products": "7b4fd90bb343e028efb8e65b2d160fe0d22231f0a3fab44421c435e9f89da1e2",
+    "service_agents": "c11cbb2611d38cda5af1e3827d69b540c8dafbf98e9ea44b79dcc9ef7c7b2503",
+    "marketing_campaigns": "b2cd0e6ec0de7f523f48f9d0440cc911731a04f80f6a789dd5054af082ca17d1",
+    "daily_exchange_rates": "9fb4c3d773837885c5c0e8d0ee5f86ae88f19f77f849925915156d1498f5fc23",
+    "call_center_interactions": "0932a9cbc2b6d8ecf554564ebabd2c1606ae585d0dabd45a25e833831bc340aa",
+    "call_transcripts": "482135942e091ae43bb296c26540dc01c28bd94463e2771adb93e55ce62eb089",
+    "complaints": "6bae40a73fe38a9bd37f079167c1194882ab39dcd457294f32f9812ab557dd11",
+    "satisfaction_surveys": "46905f77c364621c5d55817848cc182b2a4cea791d654b46828f3e3372ad9bf0",
+    "transactions": "3f0d4e51bf484b3e47cedf3cdb1048fe4fef9353e5904a4c141e242d459dd826",
+    "digital_events": "aec33f631a833ca6ae74ac14c31912ca60da777304ec5dd9c412634db64192c3",
+    "campaign_sends": "802c5c457010a3831f6753a58f75401d91ed49cb93bb469e5a8c89d8b81d6a0b"
+  }
+}

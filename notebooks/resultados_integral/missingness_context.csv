@@ -1,0 +1,32 @@
+field,segment,rows,missing,missing_pct
+wait_time_seconds,App,26364,26364,100.0
+wait_time_seconds,Email,27543,27543,100.0
+wait_time_seconds,Phone,583250,102572,17.586283754822116
+wait_time_seconds,Web Chat,22856,22856,100.0
+wait_time_seconds,WhatsApp,22888,22888,100.0
+wait_time_seconds,Web,3395,3395,100.0
+duration_seconds_calls,Email,27543,27543,100.0
+duration_seconds_calls,Phone,583250,0,0.0
+duration_seconds_calls,WhatsApp,22888,22888,100.0
+duration_seconds_calls,Web Chat,22856,22856,100.0
+duration_seconds_calls,Web,3395,0,0.0
+duration_seconds_calls,App,26364,22947,87.039144287665
+resolution_date,Escalated,3321,3321,100.0
+resolution_date,Open,20125,20125,100.0
+resolution_date,Resolved,13512,632,4.677323860272351
+resolution_date,Closed,2609,140,5.366040628593331
+resolution_date,In Process,26823,26823,100.0
+resolution_date,Rejected,705,705,100.0
+first_response_date,In Process,26823,1331,4.962159340864184
+first_response_date,Rejected,705,705,100.0
+first_response_date,Escalated,3321,3321,100.0
+first_response_date,Open,20125,20125,100.0
+first_response_date,Resolved,13512,651,4.817939609236235
+first_response_date,Closed,2609,109,4.177845917976236
+customer_id_events,FormSubmit,596908,143343,24.014253452793394
+customer_id_events,Click,3585034,858970,23.959884341403736
+customer_id_events,Login,2434770,583821,23.97848667430599
+customer_id_events,Logout,2433612,583831,23.990307411370424
+customer_id_events,PageView,5972564,1431772,23.972484849053103
+customer_id_events,Purchase,239383,57649,24.082328319053566
+customer_id_events,Error,358723,86060,23.990655742731857

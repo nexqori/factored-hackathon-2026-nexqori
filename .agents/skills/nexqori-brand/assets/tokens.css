@@ -1,0 +1,19 @@
+/* Nexqori · P11 Terracota suave. Same portable tokens as the brand skill. */
+:root {
+  --nq-primary: #9A4B32;
+  --nq-accent: #F2D8C8;
+  --nq-background: #FFFCF9;
+  --nq-text: #392C27;
+  --nq-primary-hover: #7E3B27;
+  --nq-muted: #76645B;
+  --nq-border: #E6DCD5;
+  --nq-surface: #FFFFFF;
+  --nq-soft: #F8EFE8;
+  --nq-success: #36664C;
+  --nq-success-soft: #EDF3ED;
+  --nq-warning: #825715;
+  --nq-warning-soft: #FCF1DA;
+  --nq-danger: #A12E32;
+  --nq-radius: 18px;
+  --nq-font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}

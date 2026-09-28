@@ -1,0 +1,4 @@
+country,customers,active,email_known,mobile_known,no_email_or_mobile,credit_score_median
+México,74907,63804,73394,72548,50,632.0
+Colombia,45251,38476,44357,43848,29,631.0
+Argentina,29842,25420,29265,28897,26,631.0

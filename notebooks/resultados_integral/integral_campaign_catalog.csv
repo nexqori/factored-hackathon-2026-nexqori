@@ -1,0 +1,15 @@
+campaign_type,campaign_status,campaigns,first_start,last_end
+Email,Completed,57,2023-07-01,2026-07-09
+SMS,Completed,36,2023-07-02,2026-05-11
+WhatsApp,Completed,33,2023-09-05,2026-07-14
+Push,Completed,21,2023-07-06,2026-06-07
+Mix,Completed,18,2023-07-10,2026-07-30
+Email,Paused,10,2023-07-12,2026-07-20
+Voice,Completed,7,2023-12-01,2026-03-23
+SMS,Paused,5,2023-11-11,2026-01-24
+WhatsApp,Paused,4,2023-08-24,2026-04-04
+Mix,Paused,3,2024-02-23,2025-11-04
+Push,Active,2,2026-05-24,2026-08-20
+Voice,Paused,2,2023-11-11,2026-08-06
+Push,Paused,1,2026-01-22,2026-04-13
+SMS,Active,1,2026-05-04,2026-07-07

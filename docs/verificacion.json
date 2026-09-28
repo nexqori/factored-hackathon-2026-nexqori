@@ -1,0 +1,20 @@
+{
+  "date": "2026-09-28 16:58:06 -0500 America/Lima",
+  "frontend_tests": 8,
+  "api_tests": 29,
+  "build": "passed",
+  "ui_pages": 56,
+  "agent_navigation_ui": 6,
+  "axe_scans": 5,
+  "axe_violations": 0,
+  "javascript_errors": 0,
+  "postgres_persistence_after_restart": "passed",
+  "postgres_owner_constraint": "passed",
+  "analysis_queries": 18,
+  "analysis_checks": 13,
+  "notebook_executed_cells": 5,
+  "figures_inspected": 3,
+  "skill_validation": "passed",
+  "scope": "local demo; UI tests leave explicitly marked fictional requests",
+  "warning": "Starlette TestClient httpx deprecation; tests pass"
+}

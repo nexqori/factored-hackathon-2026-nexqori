@@ -1,0 +1,5 @@
+scope,rows,comparable,process_before_event_day,process_after_event_day,min_lag_days,max_lag_days,p95_lag_days
+complaints: completo,67095,67095,22585,0,-1,0,0.0
+interactions: completo,686296,686296,228318,0,-1,0,0.0
+transactions: completo,4425008,4425008,1106307,0,-1,0,0.0
+digital_events: completo,15620994,15620994,3930816,0,-1,0,0.0

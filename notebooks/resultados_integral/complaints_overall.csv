@@ -1,0 +1,2 @@
+cases,sla_known,sla_breached,sla_breached_pct,active_status,resolved_closed,repeat_flag,repeat_known,first_response_known,first_response_p50_hours,first_response_p95_hours,resolution_days_known_closed,resolution_days_p50_closed,resolution_days_p95_closed,min_date,max_date
+67095,67095,13495,20.113272225948283,50269,16121,10086,67095,40853,38.0,62.0,15363,16.0,29.0,2023-06-17 08:07:05,2026-06-18 07:56:52

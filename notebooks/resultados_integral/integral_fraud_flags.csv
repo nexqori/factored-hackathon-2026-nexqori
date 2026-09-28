@@ -1,0 +1,3 @@
+is_fraud,transactions,score_known,mean_fraud_score,approved,declined
+False,4420692,3536426,14.997817706350887,4066695,221019
+True,4316,3425,49.464484671532844,3986,215

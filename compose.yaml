@@ -1,0 +1,60 @@
+name: nexqori
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: nexqori
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run npm run setup}
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?Run npm run setup}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/01-app-role.sh:/docker-entrypoint-initdb.d/01-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nexqori"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+psycopg://nexqori_app:${APP_DATABASE_PASSWORD:?Run npm run setup}@db:5432/nexqori
+      CUSTOMER_PASSWORD: ${CUSTOMER_PASSWORD:?Run npm run setup}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run npm run setup}
+      SECOND_CUSTOMER_PASSWORD: ${SECOND_CUSTOMER_PASSWORD:?Run npm run setup}
+      APP_ORIGINS: http://localhost:5180,http://127.0.0.1:5180
+      COOKIE_SECURE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    ports:
+      - "127.0.0.1:5180:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+volumes:
+  postgres_data:

@@ -1,0 +1,13 @@
+rule,affected,eligible
+call_wait_negative,0,480678
+call_duration_negative,0,590062
+call_reason_equals_category,686296,686296
+first_response_before_creation,0,40853
+resolution_before_creation,0,15349
+closing_before_resolution,0,2343
+resolved_closed_without_resolution_date,772,16121
+active_status_with_resolution_date,0,50269
+resolution_days_disagree_elapsed,0,14626
+outcome_after_process_day,15349,15349
+event_duration_negative,0,5674785
+transaction_amount_usd_negative,0,1887552

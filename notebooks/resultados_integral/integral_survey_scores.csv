@@ -1,0 +1,4 @@
+survey_type,surveys,known_scores,min_score,max_score,mean_score,median_score,comments_known,distinct_comments
+CES,21235,21235,1.0,4.0,2.7685895926536377,3.0,10088,8
+CSAT,127856,127856,1.0,4.0,2.765243711675635,3.0,60928,10
+NPS,63668,63668,2.0,7.0,5.3068888609662626,6.0,30180,8

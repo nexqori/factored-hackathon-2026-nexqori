@@ -1,0 +1,27 @@
+product_type,transaction_type,transactions,customers
+Cuenta Ahorro,Transfer,465507,73583
+Cuenta Ahorro,Withdrawal,399588,73066
+Cuenta Ahorro,Deposit,332203,72111
+Cuenta Ahorro,Payment,132835,58820
+Cuenta Corriente,Transfer,386990,64311
+Cuenta Corriente,Withdrawal,332693,63870
+Cuenta Corriente,Deposit,277206,62996
+Cuenta Corriente,Payment,110234,50631
+Inversión,Payment,39121,4941
+Inversión,Adjustment,19577,4853
+Inversión,Transfer,6367,3532
+Préstamo Hipotecario,Payment,78908,9797
+Préstamo Hipotecario,Adjustment,39352,9605
+Préstamo Hipotecario,Transfer,13125,7222
+Préstamo Personal,Payment,132653,15983
+Préstamo Personal,Adjustment,66330,15685
+Préstamo Personal,Transfer,22181,11871
+Seguro,Payment,13579,1736
+Seguro,Adjustment,6859,1703
+Seguro,Transfer,2268,1266
+Tarjeta Crédito,Purchase,775834,64973
+Tarjeta Crédito,Withdrawal,166613,57794
+Tarjeta Crédito,Payment,165838,57917
+Tarjeta Débito,Purchase,307572,30183
+Tarjeta Débito,Payment,65796,26289
+Tarjeta Débito,Withdrawal,65779,26236

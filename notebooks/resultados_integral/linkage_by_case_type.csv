@@ -1,0 +1,5 @@
+case_type,cases,declared_links,matched_links,customer_mismatches,complaint_before_interaction
+Claim,16598,0,0,0,0
+Complaint,40452,0,0,0,0
+Request,6761,0,0,0,0
+Suggestion,3284,0,0,0,0

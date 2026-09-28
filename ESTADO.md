@@ -1,0 +1,259 @@
+# Estado del proyecto Factored AI & Data Hackathon
+
+## Frente: EDA y medición de problemas del dataset
+- Fecha: 2026-09-25 21:25:33 -05:00, America/Lima.
+- Objetivo vigente: analizar todas las filas y columnas de las 13 tablas con uso real de GPU, profundizar quejas, problemas técnicos y SLA, y conservar resultados ejecutados y reproducibles en el mismo `.ipynb`.
+- Antecedentes: las mediciones acotadas siguientes se conservan como historial; el resultado vigente es el censo integral al final de este frente.
+- [x] Revisar hardware: Intel i7-11800H, 8 núcleos/16 hilos; RTX 3050 Ti de 4 GB con sólo 201 MiB libres; aproximadamente 4,38 GiB de RAM disponibles. Seleccionado procesamiento local con DuckDB, memoria acotada y apoyo en disco.
+- [x] Medir calidad de los campos necesarios de interacciones y reclamos; examinar transacciones y eventos digitales sólo en una muestra de dos días por mes.
+- [x] Cuantificar fricciones en atención, reclamos, transacciones y canales digitales, con denominadores y límites explícitos.
+- [x] Ejecutar y revisar visualmente el notebook; dejar dependencias e instrucciones de reproducción.
+- Resultado exploratorio anterior: [EDA](notebooks/EDA_PROBLEMAS.ipynb), con [HTML de lectura](notebooks/EDA_PROBLEMAS.html), entonces seis gráficos y 29 comprobaciones satisfactorias. Las 17 celdas de código se ejecutaron sin errores. Revisados los seis PNG y el resumen/tablas del HTML renderizado. La vista integrada falló por ACL del entorno; se comprobó con Edge headless y un perfil local temporal. Estos archivos fueron sustituidos por la versión integral.
+- Alcance respetado tras «no cargues todo»: 2.342 archivos seleccionados, 453.788.739 bytes (8,48 % del inventario); sólo cuatro tablas y columnas necesarias. 686.296 interacciones y 67.095 casos completos; muestras de 74 particiones en 37 meses con 292.249 transacciones y 1.009.128 eventos. No se examinaron las otras nueve tablas ni las transcripciones.
+- Resultados comprobados: Queja tiene 66.000/117.021 interacciones no resueltas (56,40 %); Técnico 30.940/102.899 (30,07 %). Ambos reúnen 60,49 % de las 160.266 no resueltas. Hay 13.495/67.095 casos etiquetados con SLA incumplido (20,11 %). Los 67.095 casos carecen de origin_interaction_id. No aparecen IDs duplicados ni conversiones inválidas en los campos y selecciones examinados.
+- Muestras: 14.590/292.249 transacciones rechazadas (4,99 %); 20.558/118.602 sesiones observadas con algún Error (17,33 %). Sin extrapolación al universo ni inferencia causal. Los nulos se distinguen por canal/estado; 772/16.121 casos Resolved/Closed carecen de fecha de resolución (4,79 %).
+- Rendimiento: preparación inicial de las cuatro selecciones, suma de fases, 110,34 s; recálculo final desde caché 1,80 s y pico RSS observado 484,43 MiB. Este pico corresponde al recálculo, no a la lectura inicial. DuckDB limitado a 1.500 MB y cuatro hilos; sin benchmark GPU/CPU.
+- Reproducción: [preparación](scripts/eda_problemas.py), [consultas SQL](sql/eda/), [validación](scripts/validar_eda.py), [dependencias](requirements-eda.txt) e [instrucciones](README.md). Los CSV originales no se modificaron. Entorno y caché locales bajo rutas excluidas de Git; las salidas compartibles son agregados. No se publicó nada ni se implementó/desplegó una solución bancaria.
+- Límites: datos sintéticos; estados históricos no demuestran backlog vigente; SLA es una etiqueta sin reglas contractuales verificadas. La semántica de process_date y las fechas de desenlace requieren revisión antes de evaluar disponibilidad temporal o entrenar. La falta de enlaces impide validar recorridos reclamo–interacción por esa llave.
+- Bloqueos: ninguno para entregar el EDA solicitado. Las limitaciones de datos quedan documentadas.
+- Ampliación solicitada 2026-09-25 20:50:18 -05:00, America/Lima: profundizar en tipos de quejas, problemas técnicos, SLA y fricciones relacionadas, conservando la lectura acotada.
+- [x] Desglosar subcategorías, prioridad, canal, seguimiento y tiempos usando las selecciones existentes.
+- [x] Examinar descripciones de casos y una muestra de transcripciones; comprobar si aportan detalle fiable y si sus etiquetas corresponden al texto.
+- [x] Actualizar y ejecutar el mismo notebook con hallazgos, evidencia, gráficos y limitaciones del análisis detallado.
+- Ampliación de detalle comprobada: notebook con 49 celdas, 25 ejecutables, diez gráficos y 42 comprobaciones (29 base + 13 adicionales). Casos: cinco descripciones genéricas para 67.095 filas; transcripciones: las 11.459 de 74 particiones contienen consultas de saldo, con sólo 42 variantes textuales en dos familias y placeholders del agente. Todos los IDs enlazan al mismo cliente/interacción; los textos no respaldan los temas Queja/Técnico. Los cuatro nuevos gráficos se revisaron visualmente. Esta fase usa sólo 9,2 MB de archivos nuevos y no demuestra el contenido del resto de transcripciones.
+- Nuevo alcance autorizado 2026-09-25 20:57:54 -05:00, America/Lima: «ahora sí de todo el dataset con mi GPU», conservar todo en el mismo ipynb. Reemplaza la restricción anterior de muestrear.
+- [x] Preparar uso real de GPU: CuPy 14.2.0/CUDA 12.9 instalados sólo en `.venv`; prueba CUDA satisfactoria en RTX 3050 Ti Laptop de 4 GB. Perfilados 42 campos numéricos completos por bloques de 131.072 filas; pool limitado a 192 MiB (máximo observado del pool 7,21 MiB, distinto del contexto CUDA total).
+- [x] Examinar todas las filas/columnas de las 13 tablas y validar claves, 24 relaciones, tiempos, texto y métricas de problemas. Inventario completo: 7.671 CSV, 5.349.322.481 bytes, 23.495.188 filas y 260 columnas sumadas. Sin claves primarias nulas/repetidas ni conversiones inválidas según los tipos examinados.
+- [x] Sustituir muestras por resultados completos en el mismo notebook, ejecutar, revisar gráficos y conservar la reproducción. Versión final: 38 celdas, 17 ejecutables sin errores, diez gráficos incrustados, anexo con 75 tablas de resultados sin recortar y 79 comprobaciones satisfactorias. Revisados los diez PNG y resumen/tablas del HTML en Edge headless; nueva escala de campañas también revisada.
+- Último avance comprobado: [notebook integral ejecutado](notebooks/EDA_PROBLEMAS.ipynb) y [HTML](notebooks/EDA_PROBLEMAS.html), con perfiles de todas las columnas, quejas por cinco subcategorías explícitas, SLA por prioridad/canal/duración, acciones digitales, textos, transacciones, satisfacción, productos y campañas. Pasar las comprobaciones valida las mediciones, no la calidad del origen.
+- Hallazgos integrales críticos: 44.570/44.570 casos con producto asociado corresponden a un titular distinto del cliente del caso; 149.995/150.000 referencias de sucursal del cliente no encuentran padre. Confirmados con otro parser sobre todos los CSV pertinentes, en [cruce independiente](notebooks/resultados_integral/source_crosscheck.json). Las transacciones sí concuerdan con el cliente propietario (0 discrepancias en 4.425.008).
+- Textos completos: 171.321/171.321 mencionan saldo; 42 variantes exactas en dos familias, también bajo etiquetas Queja/Técnico. Todas las respuestas del agente conservan placeholders. Los 67.095 casos usan cinco descripciones genéricas; no hay evidencia textual suficiente para inferir causas técnicas detalladas o entrenar esas etiquetas sin revisión.
+- Métricas del censo: 221.234/4.425.008 transacciones rechazadas (5,00 %); 319.214/1.837.415 sesiones con algún Error (17,37 %). Se mantienen 13.495/67.095 casos con SLA marcado (20,11 %) y 2.005 registros con prioridad alta/crítica, estado activo y SLA marcado, sin afirmar backlog actual. Las cinco subcategorías y sus tasas están en el notebook.
+- Rendimiento integral: primera preparación/perfilado y consultas, 724,40 s; pico RSS observado 2.049,46 MiB. No incluye validación posterior ni demuestra ventaja frente a CPU. Conservado en [primera ejecución](notebooks/resultados_integral/primera_ejecucion.json), separado de los recálculos con caché. Los 42 perfiles CUDA coinciden con agregaciones CPU sobre todos los valores.
+- Reproducción vigente: [motor integral](scripts/eda_integral.py), [validación](scripts/validar_integral.py), [generador del notebook](scripts/crear_notebook_integral.py), [dependencias GPU](requirements-eda-gpu.txt) y [README actualizado](README.md). CSV originales intactos, procesamiento acotado y caché en disco; no se publicó ni implementó/desplegó una solución bancaria.
+- Límites vigentes: datos sintéticos, semántica textual y vínculos inconsistentes; sin política contractual para recalcular SLA, sin causa de backend para eventos Error y sin garantías temporales de disponibilidad de desenlaces. Ceros de conversión por canal pueden reflejar cobertura de medición. No se hicieron afirmaciones causales ni se mezclaron monedas.
+- Bloqueos del pedido vigente: ninguno. Análisis, artefactos y revisión terminados.
+- Siguiente paso sugerido si el usuario continúa: elegir un flujo sustentado por estos resultados y definir cómo tratar vínculos incoherentes y etiquetas textuales antes de su implementación; no se inicia automáticamente.
+
+## Frente: revisión de la convocatoria 2026
+- Fecha: 2026-09-21, America/Lima (UTC-05:00).
+- Proyecto: E:\factoredai; carpeta sin Git, inicialmente vacía.
+- Objetivo: revisar a fondo la convocatoria oficial y los avisos aportados por el usuario; distinguir hechos, interpretaciones y dudas.
+- [x] Identificar el proyecto y consultar la página oficial.
+- [x] Verificar cronograma, inscripción, alcance y criterios publicados.
+- [x] Guardar conclusiones y dudas en [REVISION-HACKATHON.md](REVISION-HACKATHON.md).
+- Último avance: revisión pública completada; contrastados avisos, artículo oficial, cronograma gráfico y configuración del formulario. No se realizó inscripción, implementación ni despliegue.
+- Siguiente paso: al contar con el enunciado del 25 de septiembre, contrastar bases, datos y entregables; los horarios y reglas específicas siguen sin confirmar. No hay seguimiento automático programado.
+
+- Cierre de revisión: 2026-09-21 11:56:35 -05:00, America/Lima.
+
+
+## Frente: lectura de los documentos del reto
+- Fecha: 2026-09-25 16:55:17 -05:00, America/Lima.
+- Objetivo: revisar los cuatro PDF de documentos y explicar qué contienen y qué aclaran del reto.
+- [x] Leer el enunciado (6 páginas), kickoff (24), resumen (5) y diccionario (18); comprobar visualmente cronograma, entrega y páginas clave.
+- [x] Contrastar requisitos, datos, entregables y dudas con la revisión del 21 de septiembre.
+- Último avance: revisión documental completada. Se exige un flujo bancario enfocado, español y portugués, resolución normal, ambigüedad y derivación humana, permisos fuera del modelo, evaluación contra baseline y casos reservados. Se permiten herramientas simuladas; no se exige entrenar un modelo nuevo, usar múltiples agentes, streaming ni dashboard.
+- Entrega comprobada en kickoff, páginas 6 y 18: cierre 5 de octubre; repositorio público factored-hackathon-2026-[nombre del equipo], aplicación desplegada, 4-6 diapositivas y video obligatorio; envío a hackathon.admin@factored.ai. Finalistas 15 de octubre y premiación 16. No se especifican hora/zona de cierre, duración del video ni ponderaciones numéricas.
+- Datos documentados: aproximadamente 19 millones de registros sintéticos, 13 tablas, México/Colombia/Argentina, 2023-06-17 a 2026-06-17. Incluyen duplicados (~2%), nulos (~5%), llegadas tardías, cambios de esquema y registros huérfanos. El diccionario contiene acceso S3 de solo lectura y credenciales para participantes, que no se reproducen aquí.
+- Límites de lo comprobado: sólo hay documentación local, sin descarga ni perfilado del dataset. El corpus se declara en español pese al requisito de portugués; no se documenta una tabla de políticas bancarias. No se implementó ni desplegó una solución y no se validó el acceso S3.
+- Evidencia: [enunciado](documentos/Factored%20AI%20%26%20Data%20Hackathon%202026%20%281%29.pdf), [kickoff](documentos/Datathon_2026_Kickoff.pdf), [resumen](documentos/LATAM_Bank_Dataset_Summary%20%281%29.pdf), [diccionario](documentos/LATAM_Bank_Complete_Data_Dictionary%20%282%29.pdf).
+- Bloqueos: ninguno para esta revisión; las dudas anteriores limitan decisiones posteriores.
+- Siguiente paso propuesto, pendiente de un nuevo pedido: perfilar los datos relevantes para seleccionar el flujo y definir su evaluación bilingüe. No se ha iniciado implementación.
+
+## Frente: descarga del dataset y script compartible
+- Fecha: 2026-09-25 19:49:32 -05:00, America/Lima.
+- Objetivo: dejar los datos descargándose en `dataset/` y un script sin credenciales para compartir en GitHub.
+- [x] Validar acceso de solo lectura a S3 y listar 7.671 archivos, 5.349.322.481 bytes.
+- [x] Crear [script portable](scripts/descargar_dataset.py), [instrucciones](README.md) y exclusiones de Git para datos y credenciales.
+- [x] Comprobar sintaxis, ayuda, inventario real, consulta de estado y ausencia de las credenciales del PDF en los tres archivos compartibles.
+- [x] Iniciar descarga en segundo plano (PID 35804), comprobar proceso activo y primeros CSV legibles: branches, marketing_campaigns y service_agents.
+- [x] Completar la descarga y verificar tamaños contra el inventario.
+- [x] Responder qué datos hay disponibles: comprobar las 13 tablas, leer cabeceras de 27 CSV y contrastar con resumen y páginas 8–13 del diccionario, sin exponer credenciales ni valores personales.
+- Último avance: el registro marca descarga completada el 25 de septiembre a las 17:06:18 -05:00. Nueva comprobación local a las 19:47:15 -05:00: los 7.671 archivos existen y coinciden en tamaño con el inventario, 5.349.322.481 bytes; cero faltantes y cero diferencias. Todos son CSV. No se publicó en GitHub.
+- Seguimiento: [progreso](dataset/_descarga/progreso.json), [inventario](dataset/_descarga/inventario-s3.json) y [registro](dataset/_descarga/transferencias.log). El script también ofrece `--status`.
+- Credenciales: usadas sólo en el entorno del proceso local; el script público requiere perfil o variables de entorno de cada participante. No se modificó la configuración global de AWS.
+- Validación: [disponibilidad y cabeceras](dataset/_descarga/disponibilidad.json). Las aproximadamente 19 millones de filas y los volúmenes por tabla proceden del PDF; no se hizo recuento completo, comprobación criptográfica ni perfilado de calidad/relaciones. Los CSV contienen etiquetas de fraude, texto de conversaciones, estados/SLA de reclamos y eventos de app/web. No hay archivos de audio o vídeo en este inventario.
+- Bloqueos: ninguno para consultar los archivos descargados y explicar el catálogo.
+- Siguiente paso: si se continúa con la selección del caso, perfilar las tablas pertinentes y comprobar sus relaciones y etiquetas. No se inició análisis de negocio ni implementación en esta consulta.
+
+## Frente: análisis de requisitos del hackathon
+- Fecha: 2026-09-25 21:35:15 -05:00, America/Lima.
+- Objetivo: analizar qué exige el hackathon según los cuatro PDF y aclarar si se debe resolver una tarea o varias.
+- [x] Contrastar el enunciado con kickoff, resumen y diccionario.
+- [x] Explicar obligaciones, opciones, evaluación, límites y entrega en [ANALISIS-REQUISITOS-HACKATHON.md](ANALISIS-REQUISITOS-HACKATHON.md), con referencias de página.
+- [x] Aclarar la duda vigente: se puede elegir un único flujo bancario; cuentas/pagos, tarjetas, disputas y crédito son ejemplos, no cuatro trabajos obligatorios. El mismo proyecto debe incluir análisis de datos, sistema funcional, evaluación y entrega.
+- Último avance: confirmado en enunciado pp. 2–3 que los ejemplos no son tracks separados y añadir flujos no otorga una bonificación automática. La solución debe demostrar resolución normal, ambigüedad y derivación humana, con español y portugués.
+- Resultado: análisis documental terminado y matriz disponible. No se seleccionó caso, no se implementó solución ni se ejecutó evaluación; la descarga previa no se modificó.
+- Bloqueos: ninguno para aclarar el alcance. Siguen sin especificarse en los PDF hora/zona de cierre, duración del video y pesos numéricos.
+- Siguiente paso: cuando el usuario lo pida, elegir un flujo y concretar qué significa resolverlo de extremo a extremo.
+- Consulta adicional corregida el 2026-09-25 21:38:18 -05:00, America/Lima: sí existe copia de source-command-transcribir en C:/Users/ACER/Codex-respaldo-2026-09-08-120735/skills-boveda/source-command-transcribir/SKILL.md. La búsqueda anterior fue incompleta. El manifiesto y traslados.csv sitúan su origen en E:/Segundo cerebro/.agents/skills; ya no existe en esa ruta ni está en el catálogo activo de este chat. El motor y Python siguen en scripts/transcribe del Segundo Cerebro. El README vigente usa .local/transcribe/pendientes desde el 12 de septiembre; la skill respaldada conserva la ruta antigua. No se transcribió ni restauró nada.
+- [x] Buscar las skills antiguas solicitadas: localizado respaldo del 8 de septiembre con 56 archivos SKILL.md y 53 nombres distintos, todos coincidentes con los SHA-256 del manifiesto. Inventario y enlaces en [SKILLS-ANTIGUAS.md](SKILLS-ANTIGUAS.md). Incluye 12 generales, 10 de Codex, 6 de la bóveda y 28 copias de plugins KUIDDA. Algunas también existen bajo Claude. Búsqueda terminada; cualquier restauración deberá revisar rutas y compatibilidad, sin reabrir tareas de esas skills.
+- [x] Aclaración de alcance, 2026-09-25 21:35:15 -05:00, America/Lima: releídas directamente E pp. 2–3 y K pp. 10–11. Los cuatro ejemplos son cuentas/pagos, tarjetas, ingreso de disputas e información/elegibilidad crediticia. K pide un flujo enfocado; E contempla más flujos sin bonificación automática. No se afirma una prohibición absoluta de varios. Registrada la distinción en el análisis documental; no se eligió ni implementó un flujo.
+
+- [x] Aclaración conceptual, 2026-09-25 22:11:48 -0500, America/Lima: contrastada la reunión (15:13–18:19) con el análisis del enunciado. Flujo significa recorrido completo de una solicitud bancaria con resultado verificable; puede integrar varias capacidades y ramificaciones. Se pueden combinar clasificación, consulta, registro, seguimiento y derivación dentro del mismo recorrido. Agregar flujos distintos no aporta bonificación automática. Ejemplo ilustrativo: recepción y seguimiento de un reclamo, sin confundir registrar el caso con resolver la disputa financiera. Consulta respondida; no se eligió ni implementó solución.
+
+## Frente: referentes de hackathones y soluciones ganadoras
+- Fecha: 2026-09-25 21:30:00 -05:00, America/Lima.
+- Objetivo: buscar varias hackathones anteriores y recientes similares, variando organizador, año, banca, atención al cliente e IA; analizar cómo abordaron el reto sus ganadores.
+- [x] Identificar nueve soluciones premiadas de siete ediciones de 2024–2026 con evidencia pública y fuentes primarias.
+- [x] Revisar alcance y funcionamiento publicados, documentación de repositorios y evaluaciones disponibles; dejar enlaces a demos sin afirmar que se reprodujeron.
+- [x] Comparar aprendizajes aplicables al reto Factored 2026 y guardar fuentes, consultas y límites en [REFERENTES-HACKATHONES.md](REFERENTES-HACKATHONES.md).
+- Último avance: ampliada la selección de casos premiados innovadores o útiles con TNG Digital FINHACK y V HACK 2026; confirmados Fatimah, GOpulse y Realytic, y profundizados Sangrah y A-SPARSH. Seleccionados también Agent Halo, consentimiento por voz de Reverie/Accion y la suite BBVA Perú para explicar enfoques distintos del asistente de reclamos inicial.
+- Resultado comprobado: [DOSSIER-GANADORES-HACKATHONES.md](DOSSIER-GANADORES-HACKATHONES.md) actualizado y verificado con 18 fichas de ediciones; actualizado el enlace del primer informe. Conserva las revisiones anteriores de nueve repositorios; esta ampliación verificó premios y descripciones públicas, sin añadir código ejecutado. Las propuestas Caso Vivo y radar de incidentes siguen como hipótesis de diseño sin seleccionar.
+- Límites: no se ejecutaron aplicaciones, reprodujeron métricas ni vieron vídeos; no se confirmó una lista de ganadores de Factored 2025. Se distinguen premios generales y por categoría, resultados declarados, implementaciones parciales y material que sólo documenta una propuesta. Las revisiones consultadas no se certifican como commits de entrega al concurso.
+- Bloqueos: ninguno para el alcance de investigación solicitado. No se seleccionó ni implementó un caso de uso.
+- Siguiente paso: el EDA integral ya comprobó vínculos y texto (véase frente EDA). Si se elige un flujo, definir datos de prueba coherentes, políticas explícitas y resultados verificables; no se inicia implementación por esta consulta.
+- Ampliación solicitada, 2026-09-25 17:22:43 -05:00, America/Lima: ampliar los parámetros de búsqueda y profundizar en los ganadores de cada evento pertinente.
+- [x] Buscar nuevos eventos por región, idioma, voz, reclamos, fraude, inclusión y banca abierta; contrastar premios con fuentes primarias.
+- [x] Profundizar en los ganadores de los eventos previos y nuevos: problema, recorrido, arquitectura, evidencia, evaluación y límites publicados; explicitar dónde no hay detalle técnico público suficiente.
+- [x] Guardar un dossier ampliado y una comparación útil para nuestro reto, separando hechos de propuestas; enlazarlo desde la primera investigación.
+- [x] Responder qué enfoque ofrece mejor encaje para competir: InvoiceCloud como referente principal, Heydesk para casos y seguimiento, DocuFlow para evidencia y Neutrino para preparación de datos. Contrastados otra vez el anuncio oficial de Vista, el repositorio de Heydesk y la guía de DocuFlow.
+- Límite de la recomendación: juicio de diseño basado en los [requisitos](ANALISIS-REQUISITOS-HACKATHON.md) y el [dossier](DOSSIER-GANADORES-HACKATHONES.md), no una probabilidad estadística de ganar; faltan pesos del jurado, información sobre competidores y perfilado del caso. No se inició implementación. Registrar o derivar un reclamo no demuestra resolver la disputa financiera.
+- [x] Revisar la diferenciación tras la observación del usuario y proponer dos direcciones más originales. Consultada documentación primaria de Salesforce sobre gestión de reclamos y atención proactiva; no se afirma novedad mundial ni se confunde una propuesta con una capacidad validada.
+- Límites de las nuevas ideas: la ausencia de un registro puede deberse a datos incompletos o tardíos, no demuestra incumplimiento; similitud entre reclamos no prueba una causa común. La evaluación debe usar hechos disponibles a cada instante, incluir falsos positivos y distinguir escenarios controlados de casos encontrados. Mantener un flujo bancario completo y las métricas del reto.
+- [x] Aportar otros casos ganadores y explicar su utilidad/diferenciación, con premio exacto y fuentes primarias. El dossier incorpora dos ediciones nuevas y distingue campeón, segundo/quinto puesto, premio del público y ganadores por categoría.
+- Límites de esta ampliación: sin repositorio inequívoco ni evaluación reproducida de Fatimah, GOpulse o Realytic; el detalle de GOpulse procede del texto público indexado del autor, con equipo y puesto corroborados por organizador/universidad. No se presentan afirmaciones promocionales de seguridad o impacto como resultados verificados.
+- [x] Cruzar los problemas del censo integral con los proyectos premiados, a pedido del usuario. Reconsultados Vista 2026, guía de DocuFlow, resultados TiDB 2025 y repositorios/fichas de Heydesk, AutoIR y Neutrino. Comparación: InvoiceCloud para enrutamiento/resolución controlada, Heydesk para continuidad del caso, DocuFlow para cobros contrastados con reglas, AutoIR/Sonatype para diagnóstico técnico; estos últimos requieren logs/código ausentes del dataset.
+- Resultado de la comparación: mejor encaje de flujo completo, resolución de solicitudes; evidencia cuantitativa publicada más concreta entre los casos comparados, DocuFlow (pruebas declaradas, no reproducidas). Reducción de tiempo de InvoiceCloud es estimada. No hay comparación experimental entre ganadores ni evidencia de reparación de nuestros vínculos/textos. Un eventual reclamo por cobro requiere políticas y relaciones coherentes; clasificar o registrar no demuestra devolución ni resolución financiera.
+- [x] Ampliación 2026-09-26 11:16:21 -0500, America/Lima: a pedido de Bryan, investigar otros ganadores para priorizar problemas. Añadidas seis ediciones (24 en total): SAS 2024 y 2025, BBVA Perú Hack-a-Prompt 2025, Alkami 2025, Alternatif Bank/Microsoft 2025 y Hackathon@Sea 2025. Premios y categorías contrastados con organizadores o institución participante; profundizados Agatha y AURORA. [Dossier actualizado](DOSSIER-GANADORES-HACKATHONES.md).
+- Resultado de esta ampliación: Agatha aporta un precedente directo de respuesta a operaciones sospechosas con decisiones controladas; otros premios muestran valor en políticas, accesibilidad, formación y experiencia de uso. No hay base para declarar fraude como problema universalmente superior, reconstruir el veredicto o asignarle puntos extra en Factored. Sin demos ejecutadas ni impactos externos reproducidos.
+- Siguiente acción de este frente: utilizar los hallazgos para decidir alcance; ampliación solicitada completada, sin bloqueos de investigación.
+
+## Frente: transcripción de la reunión del 25 de septiembre
+- Fecha: 2026-09-25 21:55:03 -0500, America/Lima.
+- Objetivo vigente: restaurar la skill de transcripción desde el respaldo, copiar el último video a pendientes y transcribir/revisar la reunión y sus detalles.
+- [x] Restaurar source-command-transcribir en C:/Users/ACER/.codex/skills, adaptando rutas e identificación del idioma al motor vigente. Instalación leída y estructura básica comprobada; disponible para descubrimiento en el siguiente turno.
+- [x] Identificar y copiar a pendientes el último video de Videos: 2026-09-25 13-03-54.mp4, 142.317.126 bytes y 2.381,59 s. Original conservado.
+- [x] Completar la transcripción en inglés con faster-whisper small sobre CUDA: 277 segmentos, último extremo 2.381,49 s, ejecución completa exitosa 105,07 s. La copia pasó a E:/Segundo cerebro/.local/transcribe/procesado; SHA-256 de original y copia procesada iguales al registro inicial.
+- [x] Archivar el texto completo con contexto en E:/Segundo cerebro/RAW/2026-09-25.md y dejar puntero en OUTPUTS, sin modificar motor compartido ni staging.
+- [x] Revisar reunión y detalles; retranscribir cinco recortes sobre plazo, alcance, evaluación, entrega y premios con el mismo modelo CUDA. No es una validación humana o con un modelo independiente.
+- Último avance comprobado: [review en español](reuniones/2026-09-25-130354/REVIEW.md), [transcripción con tiempos](reuniones/2026-09-25-130354/transcripcion-con-tiempos.txt) y [comprobaciones](reuniones/2026-09-25-130354/validacion.json). Análisis de requisitos complementado con aclaraciones orales: profundidad en un flujo, participación individual, repositorio privado con acceso/aviso y posible coordinación de disponibilidad de la demo.
+- Límites: audio analizado, sin inspección visual del video ni diarización; texto automático con posibles errores. El control medium no pudo cargarse por caché incompleta y descarga fallida; resultados entregados corresponden a small. La grabación termina durante el cierre, sin ronda final completa de preguntas. Medianoche del 5 de octubre, hora Colombia, requiere precisar el instante con el aviso escrito anunciado.
+- Bloqueos del pedido: ninguno para la grabación disponible; restauración, copia, transcripción y review terminados. No se seleccionó flujo, implementó solución ni ejecutaron acuerdos de la reunión.
+- Siguiente paso si se continúa: usar el review y EDA para elegir un flujo; no se inicia implementación automáticamente.
+
+## Frente: selección de ideas para el hackathon
+- Fecha: 2026-09-26 10:57:05 -0500, America/Lima.
+- Objetivo vigente: comparar ideas en una tabla; Bryan indicará cuáles conservar antes de preparar el archivo de ideas.
+- [x] Cruzar requisitos y reunión con resultados existentes del EDA y referentes. Reconsultados Vista/InvoiceCloud, Heydesk y DocuFlow; sin recalcular el dataset.
+- [x] Preparar 12 opciones con función, datos/faltantes y recomendación provisional: 1 cargos desconocidos; 2 cobros indebidos; 3 pagos fallidos; 4 seguimiento/SLA; 5 soporte de app; 6 sospecha de estafa; 7 elegibilidad crediticia; 8 control de evidencia y titularidad; 9 simulador de evaluación bilingüe; 10 agrupación de incidencias; 11 reparación automática de backend; 12 marketing y venta cruzada.
+- Último avance: priorización propuesta de 1 como flujo, 4 acotado al propio caso y 8 como control; 2 y 3 como alternativas. 9 complemento de evaluación. 10 condicionado por ausencia de causalidad; 11 sin código/logs y 12 fuera del centro del reto. La recepción de una disputa no equivale a reembolso ni resolución financiera.
+- [ ] Recibir la selección de Bryan y guardar sólo las ideas que indique en el archivo de ideas. No se ha creado IDEAS.md ni tomado una decisión por él.
+- Límites: vínculos caso-producto inconsistentes, textos repetitivos, políticas ausentes. Cifras sintéticas orientan el problema, no prueban causas ni impacto de una solución. Tabla de propuestas, sin implementación o despliegue.
+- Siguiente paso: Bryan indica los números a conservar, descartar o combinar; después preparar el archivo.
+- [x] Revisión de prioridad, 2026-09-26 11:16:21 -0500, America/Lima: recomendación afinada a atención segura de un cargo no reconocido, incluyendo una medida de protección simulada sólo cuando política, identidad y confirmación la permitan, con estado verificado y derivación. Mantiene idea 1 como candidata, 4/8 como partes y 9 para evaluar; no selecciona toda la idea 6. Alternativas: cobros con reglas y consulta de pagos.
+- Evidencia y límites de la decisión: las subcategorías tienen cantidades cercanas; no prueban importancia relativa. La etiqueta is_fraud histórica no puede usarse sin revisar disponibilidad temporal ni como permiso de acción. No se fijan porcentajes de ganar o pesos inventados.
+- Pendiente preservado: selección explícita de Bryan antes del archivo de ideas; no se creó IDEAS.md ni se inició implementación.
+
+
+## Frente: explorador visual de flujos
+- Fecha: 2026-09-26 11:49:33 -0500, America/Lima.
+- Objetivo vigente: mini página local HTML/CSS/JS con fondo transparente, animaciones y letra mayor; evaluar nuestros problemas, flujos de referentes con fuentes y propuestas revisables.
+- [x] Implementado [explorador-flujos/index.html](explorador-flujos/index.html), con CSS y JS locales: siete problemas, tres desenlaces por problema, navegación animada, pausa y capa opcional de posibles soluciones y comprobaciones.
+- [x] Añadida comparación de dolor, evidencia y faltantes; selección voluntaria persistida en el navegador y descarga explícita de ideas-flujos.md. No se creó IDEAS.md ni se eligió una propuesta por Bryan.
+- [x] Validados los 21 recorridos, controles, teclado, pausa, persistencia, descarga, diálogo, temas, movimiento reducido y apertura sin servidor. JavaScript sin errores; cifras cotejadas con agregados del EDA, sin recargar el dataset.
+- [x] Verificados fondo transparente y ausencia de desbordamiento en 1440, 1024, 768, 390 y 320 px; inspeccionadas capturas de escritorio, móvil, tema oscuro y comparación. [Registro de comprobación](explorador-flujos/.verificacion/resultado.json).
+- Último avance: tres secciones implementadas y validadas localmente, sin despliegue público. Vista en http://127.0.0.1:8779, listener comprobado PID 37444. También funciona abriendo index.html directamente; [instrucciones y fuentes](explorador-flujos/README.md). Apertura actualizada solicitada en Codex, devuelta como queued; la recarga automática por CUA falló por ACL del entorno. Enlace actualizado disponible para el usuario.
+- Límites: recorridos ilustrativos y datos sintéticos; no ejecuta operaciones bancarias ni asigna probabilidades de ganar. Pendientes del pedido: ninguno. Selección final de ideas sigue en el frente correspondiente.
+- Siguiente paso: Bryan revisa referentes y propuestas, anota qué conservar o cambiar y decide el alcance de la solución. Ninguna propuesta fue seleccionada por defecto.
+- Ampliación solicitada, 2026-09-26 11:32:48 -0500, America/Lima: aumentar el tamaño de letra para presentar y añadir una sección gráfica con flujos de proyectos premiados revisados, para evaluarlos.
+- [x] Ampliada la tipografía (texto principal de 14–16 px) y añadido modo de presentación con 16 % adicional, persistido en el navegador.
+- [x] Incorporados 20 referentes a petición de Bryan, con 89 pasos, filtro por problema, premio exacto, fuentes y límites; conexiones con nuestros problemas. Revisados controles, 20 combinaciones de ancho/modo, captura de escritorio/móvil y los 21 recorridos originales. [Comprobación de referentes](explorador-flujos/.verificacion/referentes-resultado.json).
+- Ampliación adicional, 2026-09-26 11:41:44 -0500, America/Lima: añadir otra sección de propuestas y avisar al terminar para revisarlas.
+- [x] Preparadas seis propuestas en [propuestas.js](explorador-flujos/propuestas.js), con 30 pasos, alcance, dependencias, criterios de evaluación y tres desenlaces por propuesta. Estados y notas locales editables; descarga explícita de propuestas-en-revision.md.
+- [x] Comprobados persistencia y exportación de notas, almacenamiento no disponible, teclado, pausa entre secciones, 20 enlaces internos hacia referentes, navegación hacia problemas y apertura sin servidor. Revisadas 30 combinaciones de sección/ancho/modo y capturas de propuestas en escritorio y móvil. [Resultado](explorador-flujos/.verificacion/propuestas-resultado.json).
+- [x] Pedido adicional de fuentes completado: 40 enlaces visibles en las 20 fichas, identificados como GitHub/publicación/artículo/PDF/web; apertura en otra pestaña. Verificadas coincidencia de destinos, visibilidad, adaptación y enlaces directos #referentes/#propuestas/#problemas, también en archivo local. No equivale a comprobar disponibilidad actual de cada URL externa. [Resultado](explorador-flujos/.verificacion/fuentes-resultado.json).
+- Cierre de esta ampliación: 2026-09-26 11:49:33 -0500, America/Lima. Implementación y comprobaciones terminadas, cero errores JavaScript observados. Conservados favoritos anteriores; sin IDEAS.md ni cambios automáticos a una selección final. Avisar a Bryan para revisar la versión actualizada.
+- [x] Cierre documental solicitado por Bryan, 2026-09-26 11:52:23 -0500, America/Lima: guardada [nota en el Segundo Cerebro](<E:/Segundo cerebro/OUTPUTS/2026-09-26-factored-explorador-y-propuestas.md>) con entregables, antecedentes, fuentes, límites y decisión pendiente; añadidas entradas al RAW del día y al estado de la bóveda preservando otros frentes. Trece enlaces locales comprobados, cero faltantes. Documentación terminada localmente, sin commit/push ni lectura de anotaciones del navegador. Queda para revisión del usuario; no se inicia trabajo adicional.
+
+## Frente: liderazgo, reunión y plan de ocho días
+- Fecha: 2026-09-26 21:11:42 -05:00, America/Lima.
+- Objetivo vigente: preparar la reunión de hoy y los pasos hasta demo, documentación, presentación y entrega; creación de GitHub pospuesta por Bryan.
+- [x] Contrastar estado, análisis de requisitos y aclaraciones de la reunión oficial.
+- [x] Preparar [agenda y plan de entrega](PLAN-REUNION-Y-DEMO.md): decisiones de 75 minutos, funciones, hitos del 27 de septiembre al 4 de octubre, evaluación, documentación, seis diapositivas y ensayo.
+- Resultado comprobado: plan documental guardado; requisitos oficiales separados de recomendaciones internas. No se seleccionó idea, asignaron personas, creó repositorio, implementó aplicación ni envió mensajes.
+- [ ] Equipo define flujo, disponibilidad, responsables y definición de éxito en la reunión.
+- [ ] Confirmar instante escrito de cierre y condiciones de video/defensa; el plan propone entrega interna el 4 de octubre.
+- Siguiente acción: usar la agenda hoy y convertir las decisiones reales en asignaciones; preservar la selección pendiente del frente de ideas.
+- Bloqueo de planificación: ninguno. Ejecución depende de las decisiones del equipo; plan no equivale a acuerdos ni a entregables implementados.
+
+- [x] Corrección solicitada, 2026-09-26 21:14:48 -05:00, America/Lima: el desarrollo quedaba demasiado implícito. Reemplazado el calendario por tareas de programación de datos, backend, IA, interfaz, evaluación y operación durante días 1–6, con dependencias y criterios diarios. Documentación/PPT avanzan en paralelo. Plan actualizado, sin implementación; siguiente acción: asignar módulos y horas en la reunión.
+
+- [x] Ajuste solicitado, 2026-09-26 21:20:05 -05:00, America/Lima: reemplazado reparto excesivo por plan base de tres personas (A producto/datos/evaluación, B backend/IA, C interfaz/integración), cuarta opcional sin dependencias. Documento actualizado con reunión de 60 minutos, alcance incluido/excluido, calendario por persona, hitos, responsables de materiales y acta. Nombres/horas/flujo por acordar; no se espera al cuarto ni se inició desarrollo o GitHub. Siguiente acción: completar acta y asignar primeras entregas en la reunión.
+
+- [x] Entrega ampliada, 2026-09-26 22:08:31 -05:00, America/Lima: creada [guía rellenable con EDA y Gantt](GUIA-SESION-EQUIPO-EDA.md). Incluye plan/reunión, nombres/horas/decisiones, Gantt Mermaid de ocho días, 24 tareas diarias para A/B/C, evaluación, demo y cierre; doce frentes del EDA y anexo completo de 75 CSV (982 filas). Celdas del anexo cotejadas contra fuentes y enlaces locales comprobados. Distinguidas sesiones globales/con cliente, calidad estructural/semántica y censos/muestras anteriores. No se reejecutó el EDA ni se implementó solución; Mermaid revisado estructuralmente, sin validación visual del renderizador. Siguiente acción: rellenar nombres, alcance, fechas y compromisos en reunión.
+
+- [x] Corrección, 2026-09-26 22:57:39 -05:00, America/Lima: añadido al inicio de la guía el HTML de comparaciones (20 referentes), el dossier de 24 ediciones y la primera investigación, con tabla rellenable para decidir qué adaptar. Enlaces comprobados; Gantt/EDA/anexo preservados. No se reejecutaron demos externas.
+
+## Frente: paquete compartible de descarga del dataset
+- Fecha: 2026-09-26 23:18:26 -05:00, America/Lima.
+- Objetivo: entregar el script existente con instrucciones para compartir entre integrantes.
+- [x] Revisado script completo, sintaxis y ayuda local; sin ejecutar descarga ni conectar a S3.
+- [x] Creado [ZIP compartible](descarga-dataset-factored.zip) con scripts/descargar_dataset.py, README acotado y .gitignore. Integridad del ZIP y bytes del script comprobados; no incluye dataset, credenciales ni PDF. Cada integrante debe configurar su acceso autorizado.
+- Resultado: paquete preparado localmente; no enviado a terceros ni publicado. Sin pendientes de preparación.
+- Siguiente paso: Bryan comparte el ZIP con el equipo; cada integrante lo extrae y sigue el README.
+
+## Frente: tres diagramas para decidir el flujo bancario
+- Fecha: 2026-09-27 21:49:29 -05:00, America/Lima.
+- Objetivo: proponer tres mini diagramas del proyecto Factored, conectando atención bancaria con ingeniería de datos y evidencia del EDA.
+- [x] Recuperar contexto del proyecto sin Git y contrastar requisitos, propuestas existentes y agregados calls_by_reason.csv y detalle_subcategories.csv.
+- [x] Corregir la respuesta genérica: comparar cargo no reconocido, pago dudoso y continuidad del reclamo. Recomendación provisional: cargo no reconocido con evidencia, controles y seguimiento del propio caso.
+- Evidencia: Queja y Técnico suman 96.940 de 160.266 interacciones no resueltas (60,49 %), no 80 %. Cargo no reconocido tiene 12.297 casos; ninguna cifra prueba cobertura o resolución del 80 %.
+- Corrección de alcance: las opciones deben responder al reto bancario y al EDA existente; un pipeline genérico no responde al pedido. No atribuir habilidades personales no verificadas.
+- [ ] Bryan elige una de las tres variantes; preservar la selección pendiente del frente de ideas.
+- Resultado: propuesta conceptual en chat, sin implementación, despliegue ni validación de impacto. Datos sintéticos; vínculos caso-producto inconsistentes y políticas operativas por definir para la demo.
+- Siguiente paso: tras la elección, concretar bloques, tablas y contratos del único flujo seleccionado.
+- Revisión 2026-09-27 21:51:41 -05:00, America/Lima: Bryan rechaza propuestas lineales y solicita novedad sustentada en ganadores recientes. La recomendación anterior queda sustituida provisionalmente por un investigador adaptativo de incidencias bancarias con evidencia verificada; no es elección final del usuario.
+- [x] Reconsultar anuncios oficiales de Vista (10/09/2026), TiDB AgentX 2025 y Salesforce TDX 2025, además de SAS 2025 y descripción técnica de abril de 2026. Premios confirmados no equivalen a eficacia reproducida.
+- [x] Preparar tres alternativas conceptuales no lineales: investigador con mapa de evidencia y preguntas adaptativas; ensayo de acciones en simulador antes de ejecutar; coordinación de especialistas con memoria compartida y reevaluación por eventos.
+- Recomendación vigente: primera alternativa, acotada a un movimiento cuestionado, explotando controles de titularidad y procedencia del EDA. Las otras son alternativas, no módulos aprobados. Validar contra flujo fijo en casos reservados ES/PT, incluyendo contradicciones, datos faltantes y fallo de herramientas.
+- Límites: no se ha probado novedad mundial, cobertura del 80 %, eficacia de las propuestas ni probabilidad de ganar. Simulaciones y reglas deben identificarse; el dataset no permite inferir causas técnicas detalladas.
+- Siguiente paso: Bryan selecciona el mecanismo; después concretar el alcance implementable. Sin código, despliegue ni cambio en la elección pendiente.
+- Profundización 2026-09-27 21:54:42 -05:00, America/Lima: Bryan pide concretar el flujo 1 con problemas y acciones sustentados en el dataset; se profundiza esa opción sin asumir aprobación de implementación.
+- [x] Verificados agregados de subcategorías, estados transaccionales, fraude histórico, acciones digitales, titularidad y enlaces de casos.
+- [x] Definido un solo investigador para movimientos cuestionados con rutas combinables: cargo no reconocido, cobro cuestionado, pago pendiente/rechazado y seguimiento de reclamo. Problema de app es contexto; fraude es hipótesis/señal, reclamo es proceso, por lo que pueden coexistir.
+- Evidencia: 12.297 cargos no reconocidos, 12.194 cobros indebidos, 12.128 problemas con app; 4.316 transacciones is_fraud=True, 88.343 Pending, 221.234 Declined. No sumar poblaciones ni asumir vínculos entre ellas. Etiquetas históricas no autorizan decisiones en tiempo real.
+- Controles: caso-producto tiene 44.570/44.570 discrepancias; eventos-producto tiene 1.094.226/1.094.242 discrepancias comparables. No enlazar automáticamente por esos productos ni por cercanía temporal; transacción-producto-cliente sí concuerda en 4.425.008 filas. Los 67.095 casos carecen de origin_interaction_id.
+- Resultado conceptual: diagrama con rutas que vuelven a evidencia, acciones simuladas condicionadas por política, confirmación y permisos, y ejemplos de cambio de hipótesis. No se ha creado detector de fraude ni demostrado resolución del 80 %.
+- Siguiente paso: acordar alcance del MVP y definir contratos de herramientas y escenarios bilingües reservados para esas rutas; no se inicia implementación.
+- Alternativa 2026-09-27 22:08:49 -05:00, America/Lima: Bryan muestra su diagrama de reclamos y pide un problema distinto. Se propone asistencia ante dificultad de pago: consultar obligaciones propias, recoger capacidad declarada, consultar opciones autorizadas de demo, simular, comparar, ajustar y enviar solicitud a revisión con seguimiento.
+- [x] Verificar integral_product_health.csv: 14.202 productos Tarjeta Crédito, 2.840 Préstamo Personal y 1.723 Préstamo Hipotecario con atraso. Son registros de productos, no clientes únicos ni prueba de insolvencia; 9.502, 1.882 y 1.150 respectivamente superan 30 días.
+- Resultado: alternativa conceptual independiente de movimientos cuestionados. Política de elegibilidad, tasas, cronogramas y ofertas requieren servicio/reglas explícitas de demo; no se infieren de los atrasos. No equivale a asesoría financiera individual ni aprobación de refinanciación.
+- Siguiente paso: Bryan compara investigación de reclamos con asistencia de pagos y elige alcance; no se implementa ni selecciona automáticamente esta alternativa.
+
+- Revisión 2026-09-27 22:19:39 -05:00, America/Lima: Bryan no considera convincente el flujo de acuerdos de pago; se deja descartado para esta selección. Nueva alternativa conceptual: recuperar uso de un producto bloqueado/suspendido, con diagnóstico adaptativo, requisitos de política, acción simulada autorizada y comprobación posterior. EDA: 6.959 tarjetas de crédito y 2.945 tarjetas de débito bloqueadas/suspendidas; no demuestra bloqueos erróneos ni causas. Para demo se requieren motivos y reglas explícitas, sin inferirlos del estado. Sin implementación; siguiente paso: Bryan evalúa si este problema le interesa.
+
+## Frente: objetivo de la app e identidad para votación
+- Fecha: 2026-09-28 13:24:53 -05:00, America/Lima.
+- Objetivo vigente: registrar el alcance de los cuatro gráficos aportados y preparar nombres compuestos y paletas para votar antes de iniciar la app de usuario.
+- [x] Guardar [objetivo y alcance de la app](OBJETIVO-APP.md): asistente bancario multiservicios ES/PT, texto/voz, consultas, reclamos, gestiones, navegación, panel de usuario/admin, acciones con permisos y auditoría. Distingue elementos propuestos y decisiones pendientes.
+- [x] Conservar los cuatro [gráficos originales](documentos/diseno-2026-09-28/) con hashes coincidentes respecto a los adjuntos.
+- [x] Preparar [ocho nombres y cinco paletas](IDENTIDAD-PARA-VOTAR.md), con composición de nombres, HEX, recomendación provisional y dinámica de voto independiente. Muestras visuales disponibles en el chat. No se comprobó disponibilidad de marca/dominio.
+- Resultado comprobado: documentación y muestras guardadas; archivos y copias leídos/verificados. No se implementó ni desplegó la app ni se creó GitHub o votación compartida. Las paletas aún no tienen evaluación completa de accesibilidad en una interfaz.
+- [x] Bryan elige Nexqori y P11 Terracota suave el 28 de septiembre de 2026; implementación en el frente Nexqori.
+- [ ] Concretar pantallas y recorrido inicial de la app de usuario antes de comenzar su construcción.
+- Siguiente paso: votar dos nombres y una paleta; después definir la primera versión del panel de usuario. Los gráficos sustituyen como referencia vigente la exploración previa de alternativas, sin aprobar todas las funciones para el MVP.
+
+- Ajuste 2026-09-28 13:50:05 -05:00, America/Lima: Bryan prefiere Atlántico, pide variantes azul/blanco, considera Bosque y Terracota y no ve encaje con Océano. [x] Actualizada identidad con seis variantes P6–P11 y muestras en chat; IDs anteriores conservados. Nueva recomendación provisional P6 Atlántico limpio, con P7 Marino y P9 Azul y arcilla como finalistas. Comprobadas seis paletas y 24 muestras; sin validación visual completa de app. Nombre y paleta siguen pendientes de elección. Siguiente paso: votar o elegir variante para aplicar al diseño del panel de usuario.
+
+- Nombres 2026-09-28 13:55:07 -05:00, America/Lima: Bryan no considera convincentes las propuestas anteriores y pide más variedad. [x] Añadida segunda ronda N9–N20 en IDENTIDAD-PARA-VOTAR.md: compuestos, conversacionales y conceptuales; primera recomendación retirada. Finalistas propuestos Entiva, Dilo, Cauce y Accora, sin selección ni verificación de disponibilidad. Siguiente paso: Bryan/equipo identifica candidatos para votar; paletas conservadas.
+
+## Frente: Nexqori — identidad, skill compartible y aplicativo base
+- Fecha: 2026-09-28 16:58:06 -0500, America/Lima.
+- Objetivo vigente: base Nexqori con P11 Terracota suave, skill compartible, Docker local, React + FastAPI + PostgreSQL, login/seguridad/tablas, servicios basados en datos, ES/EN/PT y agente de navegación. GitHub privado en la organización nexqori indicada por Bryan.
+- Proyecto y Git principal: E:/factoredai; rama main; un único ESTADO.md. Conservados los antecedentes y el prototipo Express en .local/prototipo-express (excluido de Git).
+- [x] Implementar React, FastAPI, siete tablas, Alembic, fixtures coherentes y PostgreSQL; tres contenedores saludables en http://localhost:5180.
+- [x] Login Argon2, cookie HttpOnly, sesiones revocables, CSRF/origen, límites de intentos, roles, consultas por titular y FK compuestas.
+- [x] Pantallas de inicio, productos, movimientos, servicios, solicitudes, ayuda y administración; confirmación, idempotencia y auditoría en las gestiones de demo.
+- [x] ES/EN/PT en interfaz, formularios, errores, agente y perfil persistido; moneda MXN preservada al cambiar idioma.
+- [x] Agente guiado: 14 destinos permitidos, contexto de pantalla, filtros cuentas/tarjetas, saldo propio, formulario revisable y contrato para futuro modelo. Sin LLM, banco u operador humano conectados.
+- [x] Crear y validar [.agents/skills/nexqori-brand/SKILL.md](.agents/skills/nexqori-brand/SKILL.md), recursos de marca y ZIP portable local en .local/distribution/nexqori-brand.zip.
+- [x] [Análisis profundo de servicios](docs/servicios-basados-en-datos.md): 18 consultas censales, 13 comprobaciones, [cuaderno ejecutado](notebooks/SERVICIOS_NEXQORI.ipynb) y tres gráficos inspeccionados. Las relaciones inconsistentes del dataset no entran a cuentas de la demo.
+- [x] Validar build, 8 pruebas frontend y 29 API; 56 combinaciones de pantalla/idioma/ancho, 6 navegaciones del agente y 5 revisiones axe sin infracciones observadas ni errores JavaScript. Corregido foco del historial para teclado.
+- [x] Verificar PostgreSQL real: rol sin superusuario, migración vigente, rechazo de titular ajeno y mismo contenido antes/después de reiniciar db/api/web. Evidencia local: .local/verification/postgres-before.json y postgres-after.json.
+- [x] Crear repositorio privado [nexqori/nexqori](https://github.com/nexqori/nexqori), organización confirmada y acceso admin. Credenciales, dataset, originales y entornos excluidos.
+- [ ] Subir el código revisado y comprobar el resultado de CI en GitHub.
+- Último avance: aplicación implementada y validada localmente; documentación, skill y análisis listos. No desplegada públicamente; operaciones bancarias y atención humana simuladas.
+- Siguiente paso: publicar el primer commit privado, verificar CI y entregar enlaces y acceso local. Un modelo de IA y servicios bancarios reales quedan como integraciones posteriores a definir, sin credenciales de proveedor disponibles.
+- Limitación conocida: TestClient emite aviso de deprecación httpx; las 29 pruebas pasan. No equivale a una plataforma bancaria certificada o lista para producción.

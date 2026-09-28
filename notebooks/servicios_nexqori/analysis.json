@@ -1,0 +1,5422 @@
+{
+  "metadata": {
+    "executed_at_utc": "2026-09-28T21:09:50.227100+00:00",
+    "source": "dataset/_eda_integral/integral.duckdb",
+    "raw_source": "dataset/ — censo previo de 7671 archivos y 23495188 filas",
+    "read_only": true,
+    "engine": "DuckDB 1.5.5",
+    "seconds": 42.6,
+    "unit_note": "Products are a snapshot; transactions and events are historical records, not unique services. Distinct customers overlap across groups.",
+    "queries": {
+      "product_adoption": "SELECT product_type, count(*) products, count(DISTINCT customer_id) customers,\ncount(*) FILTER(WHERE product_status='Active') active_products,\ncount(*) FILTER(WHERE has_linked_app=true) linked_app_products,\n100.0*count(*)/sum(count(*)) over() product_share_pct,\n100.0*count(DISTINCT customer_id)/(SELECT count(*) FROM customers) customer_reach_pct\nFROM products GROUP BY 1 ORDER BY products DESC",
+      "transaction_usage": "SELECT transaction_type, count(*) transactions, count(DISTINCT customer_id) customers,\ncount(*) FILTER(WHERE transaction_status='Approved') approved,\ncount(*) FILTER(WHERE transaction_status='Declined') declined,\ncount(*) FILTER(WHERE transaction_status='Pending') pending,\ncount(*) FILTER(WHERE transaction_status='Reversed') reversed,\n100.0*count(*)/sum(count(*)) over() share_pct,\n100.0*count(*) FILTER(WHERE transaction_status='Declined')/count(*) declined_pct\nFROM transactions GROUP BY 1 ORDER BY transactions DESC",
+      "transaction_product": "SELECT p.product_type,t.transaction_type,count(*) transactions,count(DISTINCT t.customer_id) customers\nFROM transactions t JOIN products p ON t.product_id=p.product_id AND t.customer_id=p.customer_id\nGROUP BY 1,2 ORDER BY 1,transactions DESC",
+      "transaction_channel": "SELECT channel,transaction_type,count(*) transactions,count(DISTINCT customer_id) customers,\ncount(*) FILTER(WHERE transaction_status='Declined') declined FROM transactions\nGROUP BY 1,2 ORDER BY 1,transactions DESC",
+      "transaction_country": "SELECT c.country,t.transaction_type,count(*) transactions,count(DISTINCT t.customer_id) customers,\n100.0*count(*)/sum(count(*)) over(partition by c.country) country_share_pct,\ncount(*) FILTER(WHERE t.transaction_status='Declined') declined\nFROM transactions t JOIN customers c ON t.customer_id=c.customer_id GROUP BY 1,2 ORDER BY 1,transactions DESC",
+      "transaction_monthly": "SELECT date_trunc('month',transaction_date)::DATE AS month_start,transaction_type,count(*) transactions,\ncount(DISTINCT customer_id) customers,count(*) FILTER(WHERE transaction_status='Declined') declined\nFROM transactions GROUP BY 1,2 ORDER BY 1,2",
+      "transaction_recent": "SELECT transaction_type,count(*) transactions,count(DISTINCT customer_id) customers,\n100.0*count(*)/sum(count(*)) over() share_pct FROM transactions\nWHERE transaction_date >= TIMESTAMP '2026-03-01' AND transaction_date < TIMESTAMP '2026-06-01'\nGROUP BY 1 ORDER BY transactions DESC",
+      "digital_action": "SELECT coalesce(action,'(sin acción)') AS action_name,count(*) events,\ncount(DISTINCT customer_id) identified_customers,count(DISTINCT session_id) sessions,\ncount(*) FILTER(WHERE customer_id IS NULL) anonymous_events,\ncount(*) FILTER(WHERE event_type='Error') errors,\n100.0*count(*)/sum(count(*)) over() share_pct\nFROM digital_events GROUP BY 1 ORDER BY events DESC",
+      "digital_action_type": "SELECT coalesce(action,'(sin acción)') AS action_name,event_type,count(*) events\nFROM digital_events GROUP BY 1,2 ORDER BY 1,events DESC",
+      "digital_channel": "SELECT channel,count(*) events,count(DISTINCT customer_id) identified_customers,\ncount(*) FILTER(WHERE customer_id IS NULL) anonymous_events,\ncount(*) FILTER(WHERE event_type='Error') errors FROM digital_events GROUP BY 1 ORDER BY events DESC",
+      "digital_monthly": "SELECT date_trunc('month',event_date)::DATE AS month_start,coalesce(action,'(sin acción)') AS action_name,count(*) events,\ncount(DISTINCT customer_id) identified_customers FROM digital_events GROUP BY 1,2 ORDER BY 1,2",
+      "digital_pages": "SELECT coalesce(page_title,'(sin página)') page_title,count(*) events,\ncount(DISTINCT customer_id) identified_customers FROM digital_events GROUP BY 1 ORDER BY events DESC",
+      "contact_needs": "SELECT coalesce(contact_reason,'(sin motivo)') reason,count(*) interactions,count(DISTINCT customer_id) customers,\ncount(*) FILTER(WHERE was_resolved=false) unresolved,count(*) FILTER(WHERE was_resolved IS NOT NULL) resolution_known,\n100.0*count(*) FILTER(WHERE was_resolved=false)/nullif(count(*) FILTER(WHERE was_resolved IS NOT NULL),0) unresolved_pct,\ncount(*) FILTER(WHERE requires_followup=true) followups FROM call_center_interactions GROUP BY 1 ORDER BY interactions DESC",
+      "contact_channels": "SELECT channel,count(*) interactions,count(DISTINCT customer_id) customers\nFROM call_center_interactions GROUP BY 1 ORDER BY interactions DESC",
+      "complaint_needs": "SELECT coalesce(subcategory,'(sin subcategoría)') subcategory,count(*) cases,\ncount(DISTINCT customer_id) customers,count(*) FILTER(WHERE sla_breached=true) sla_flagged,\ncount(*) FILTER(WHERE sla_breached IS NOT NULL) sla_known FROM complaints GROUP BY 1 ORDER BY cases DESC",
+      "campaign_products": "SELECT coalesce(promoted_product,'(sin producto)') promoted_product,count(*) campaigns FROM marketing_campaigns GROUP BY 1 ORDER BY campaigns DESC",
+      "quality": "SELECT\n(SELECT count(*) FROM customers) customers,\n(SELECT count(*) FROM products) products,\n(SELECT count(DISTINCT customer_id) FROM products) product_owners,\n(SELECT count(*) FROM transactions) transactions,\n(SELECT count(*) FROM digital_events) digital_events,\n(SELECT count(*) FROM call_center_interactions) interactions,\n(SELECT count(*) FROM complaints) complaints,\n(SELECT count(*) FROM digital_events WHERE customer_id IS NULL) anonymous_events,\n(SELECT count(*) FROM digital_events WHERE action IS NULL) missing_actions,\n(SELECT count(*) FROM transactions t JOIN products p ON t.product_id=p.product_id WHERE t.customer_id<>p.customer_id) transaction_owner_mismatches,\n(SELECT count(*) FROM complaints c JOIN products p ON c.affected_product_id=p.product_id WHERE c.customer_id<>p.customer_id) complaint_owner_mismatches,\n(SELECT count(*) FROM complaints WHERE affected_product_id IS NOT NULL) complaint_product_links,\n(SELECT count(*) FROM digital_events e JOIN products p ON e.product_id=p.product_id WHERE e.customer_id IS NOT NULL) event_product_comparable,\n(SELECT count(*) FROM digital_events e JOIN products p ON e.product_id=p.product_id WHERE e.customer_id<>p.customer_id) event_product_mismatches,\n(SELECT min(transaction_date) FROM transactions) tx_first,\n(SELECT max(transaction_date) FROM transactions) tx_last,\n(SELECT min(event_date) FROM digital_events) event_first,\n(SELECT max(event_date) FROM digital_events) event_last",
+      "status_domains": "SELECT 'products' AS source_table,product_status AS status_label,count(*) records FROM products GROUP BY 2\nUNION ALL SELECT 'transactions',transaction_status,count(*) FROM transactions GROUP BY 2"
+    },
+    "checks": {
+      "product_total": true,
+      "transactions_total": true,
+      "digital_total": true,
+      "contacts_total": true,
+      "complaints_total": true,
+      "country_join": true,
+      "product_join": true,
+      "monthly_transactions": true,
+      "monthly_events": true,
+      "valid_owner_join": true,
+      "status_totals": true,
+      "independent_raw_product_counts": true,
+      "previous_census_reconciled": true
+    },
+    "result_sha256": {
+      "campaign_products.csv": "2ba6e749e13090ef72e031728b3072a2c453fc27747b49bc5197c83d5edfa742",
+      "complaint_needs.csv": "0cb43ae0e73e838623af630ab41b54e7206c4d0a9bb21f4d4caa0e84189fca7e",
+      "contact_channels.csv": "c65f142fe51552f3c2a87bbcc6c48f976dc407dca25cb94b40ebb8933fe894a8",
+      "contact_needs.csv": "18797ab979ebcd9816f0e234b0b65a66222f5c69ab2999a0cffffb92dcd3b70d",
+      "digital_action.csv": "913e5e6c744898b2d0268b22c31e8ccd5e828dd41b5a225c8c9947ace6303774",
+      "digital_action_type.csv": "da5d348cfb952c6261c802c418339b813f226dec392eb944d76e4898396d45a2",
+      "digital_channel.csv": "bc7b26fc07266be8988bc418121bf0ba1902d67c8a0fa5840828259e85ee23cf",
+      "digital_monthly.csv": "59bf2ca72c58ad4159bc89c581cd7161cbbee7a2c6fa2bd4d26fef09e98ca9a4",
+      "digital_pages.csv": "592ed0cf22060fe265deaef74b47f2e5b55a9c64d99af37e6f1f19a48fc40f6f",
+      "product_adoption.csv": "8c151a27a6ef0a655564688ca7c4f90b44ea2e15852a6ef145125019132383ea",
+      "quality.csv": "ff6333eefd2fcb96165bccc997a2b39e50683f68837983080afe520446d70127",
+      "status_domains.csv": "2b2fd4d78df73f94104a6b4fcfd185e5b912840b685e0afb7900ba61273b5df2",
+      "transaction_channel.csv": "58855fbf0d8fd2ec19e8c2d0cd07a46dde8394a78a91e6b7acaf4c262480b087",
+      "transaction_country.csv": "89f1d56bcd4ae69052b9346dfa081c55419930b4741c869f58abe9a68d783036",
+      "transaction_monthly.csv": "f25f29144a03e214b3ddbd543370bdf8f7679ebae5dddf830750939476fec6c8",
+      "transaction_product.csv": "40ca115b3d28870913f99f99c2b69d255bc6b987c4ef326101d7dae41efa42b0",
+      "transaction_recent.csv": "af1dba074952c1f2d552dd270bda7f3b3872068bd708e385ace8c5665c5240dc",
+      "transaction_usage.csv": "394f91173753f53641b0ab91a09fbbf4a3bc212872e1415e8afd7c1e52409cf1"
+    },
+    "serialization": "CSV UTF-8, LF; numeric values unchanged. LF serialization standardized after query execution for cross-platform SHA-256 verification."
+  },
+  "results": {
+    "product_adoption": [
+      {
+        "product_type": "Cuenta Ahorro",
+        "products": 120203,
+        "customers": 82695,
+        "active_products": 102148,
+        "linked_app_products": 59976,
+        "product_share_pct": 30.05075,
+        "customer_reach_pct": 55.13
+      },
+      {
+        "product_type": "Tarjeta Crédito",
+        "products": 100102,
+        "customers": 73177,
+        "active_products": 85090,
+        "linked_app_products": 50073,
+        "product_share_pct": 25.0255,
+        "customer_reach_pct": 48.7846666667
+      },
+      {
+        "product_type": "Cuenta Corriente",
+        "products": 99979,
+        "customers": 72843,
+        "active_products": 85079,
+        "linked_app_products": 49956,
+        "product_share_pct": 24.99475,
+        "customer_reach_pct": 48.562
+      },
+      {
+        "product_type": "Tarjeta Débito",
+        "products": 39938,
+        "customers": 35015,
+        "active_products": 33749,
+        "linked_app_products": 19830,
+        "product_share_pct": 9.9845,
+        "customer_reach_pct": 23.3433333333
+      },
+      {
+        "product_type": "Préstamo Personal",
+        "products": 19960,
+        "customers": 18615,
+        "active_products": 16977,
+        "linked_app_products": 9959,
+        "product_share_pct": 4.99,
+        "customer_reach_pct": 12.41
+      },
+      {
+        "product_type": "Préstamo Hipotecario",
+        "products": 11910,
+        "customers": 11417,
+        "active_products": 10157,
+        "linked_app_products": 6067,
+        "product_share_pct": 2.9775,
+        "customer_reach_pct": 7.6113333333
+      },
+      {
+        "product_type": "Inversión",
+        "products": 5859,
+        "customers": 5750,
+        "active_products": 5022,
+        "linked_app_products": 2978,
+        "product_share_pct": 1.46475,
+        "customer_reach_pct": 3.8333333333
+      },
+      {
+        "product_type": "Seguro",
+        "products": 2049,
+        "customers": 2036,
+        "active_products": 1743,
+        "linked_app_products": 1019,
+        "product_share_pct": 0.51225,
+        "customer_reach_pct": 1.3573333333
+      }
+    ],
+    "transaction_usage": [
+      {
+        "transaction_type": "Purchase",
+        "transactions": 1083406,
+        "customers": 82134,
+        "approved": 996168,
+        "declined": 54565,
+        "pending": 21595,
+        "reversed": 11078,
+        "share_pct": 24.4837071481,
+        "declined_pct": 5.0364314024
+      },
+      {
+        "transaction_type": "Withdrawal",
+        "transactions": 964673,
+        "customers": 127531,
+        "approved": 887765,
+        "declined": 47911,
+        "pending": 19247,
+        "reversed": 9750,
+        "share_pct": 21.8004803607,
+        "declined_pct": 4.9665534331
+      },
+      {
+        "transaction_type": "Transfer",
+        "transactions": 896438,
+        "customers": 112914,
+        "approved": 824676,
+        "declined": 44979,
+        "pending": 17841,
+        "reversed": 8942,
+        "share_pct": 20.2584492503,
+        "declined_pct": 5.0175249153
+      },
+      {
+        "transaction_type": "Payment",
+        "transactions": 738964,
+        "customers": 125736,
+        "approved": 679954,
+        "declined": 36851,
+        "pending": 14684,
+        "reversed": 7475,
+        "share_pct": 16.6997212208,
+        "declined_pct": 4.9868464499
+      },
+      {
+        "transaction_type": "Deposit",
+        "transactions": 609409,
+        "customers": 104719,
+        "approved": 560724,
+        "declined": 30240,
+        "pending": 12268,
+        "reversed": 6177,
+        "share_pct": 13.7719299039,
+        "declined_pct": 4.962184674
+      },
+      {
+        "transaction_type": "Adjustment",
+        "transactions": 132118,
+        "customers": 29746,
+        "approved": 121394,
+        "declined": 6688,
+        "pending": 2708,
+        "reversed": 1328,
+        "share_pct": 2.9857121162,
+        "declined_pct": 5.062141419
+      }
+    ],
+    "transaction_product": [
+      {
+        "product_type": "Cuenta Ahorro",
+        "transaction_type": "Transfer",
+        "transactions": 465507,
+        "customers": 73583
+      },
+      {
+        "product_type": "Cuenta Ahorro",
+        "transaction_type": "Withdrawal",
+        "transactions": 399588,
+        "customers": 73066
+      },
+      {
+        "product_type": "Cuenta Ahorro",
+        "transaction_type": "Deposit",
+        "transactions": 332203,
+        "customers": 72111
+      },
+      {
+        "product_type": "Cuenta Ahorro",
+        "transaction_type": "Payment",
+        "transactions": 132835,
+        "customers": 58820
+      },
+      {
+        "product_type": "Cuenta Corriente",
+        "transaction_type": "Transfer",
+        "transactions": 386990,
+        "customers": 64311
+      },
+      {
+        "product_type": "Cuenta Corriente",
+        "transaction_type": "Withdrawal",
+        "transactions": 332693,
+        "customers": 63870
+      },
+      {
+        "product_type": "Cuenta Corriente",
+        "transaction_type": "Deposit",
+        "transactions": 277206,
+        "customers": 62996
+      },
+      {
+        "product_type": "Cuenta Corriente",
+        "transaction_type": "Payment",
+        "transactions": 110234,
+        "customers": 50631
+      },
+      {
+        "product_type": "Inversión",
+        "transaction_type": "Payment",
+        "transactions": 39121,
+        "customers": 4941
+      },
+      {
+        "product_type": "Inversión",
+        "transaction_type": "Adjustment",
+        "transactions": 19577,
+        "customers": 4853
+      },
+      {
+        "product_type": "Inversión",
+        "transaction_type": "Transfer",
+        "transactions": 6367,
+        "customers": 3532
+      },
+      {
+        "product_type": "Préstamo Hipotecario",
+        "transaction_type": "Payment",
+        "transactions": 78908,
+        "customers": 9797
+      },
+      {
+        "product_type": "Préstamo Hipotecario",
+        "transaction_type": "Adjustment",
+        "transactions": 39352,
+        "customers": 9605
+      },
+      {
+        "product_type": "Préstamo Hipotecario",
+        "transaction_type": "Transfer",
+        "transactions": 13125,
+        "customers": 7222
+      },
+      {
+        "product_type": "Préstamo Personal",
+        "transaction_type": "Payment",
+        "transactions": 132653,
+        "customers": 15983
+      },
+      {
+        "product_type": "Préstamo Personal",
+        "transaction_type": "Adjustment",
+        "transactions": 66330,
+        "customers": 15685
+      },
+      {
+        "product_type": "Préstamo Personal",
+        "transaction_type": "Transfer",
+        "transactions": 22181,
+        "customers": 11871
+      },
+      {
+        "product_type": "Seguro",
+        "transaction_type": "Payment",
+        "transactions": 13579,
+        "customers": 1736
+      },
+      {
+        "product_type": "Seguro",
+        "transaction_type": "Adjustment",
+        "transactions": 6859,
+        "customers": 1703
+      },
+      {
+        "product_type": "Seguro",
+        "transaction_type": "Transfer",
+        "transactions": 2268,
+        "customers": 1266
+      },
+      {
+        "product_type": "Tarjeta Crédito",
+        "transaction_type": "Purchase",
+        "transactions": 775834,
+        "customers": 64973
+      },
+      {
+        "product_type": "Tarjeta Crédito",
+        "transaction_type": "Withdrawal",
+        "transactions": 166613,
+        "customers": 57794
+      },
+      {
+        "product_type": "Tarjeta Crédito",
+        "transaction_type": "Payment",
+        "transactions": 165838,
+        "customers": 57917
+      },
+      {
+        "product_type": "Tarjeta Débito",
+        "transaction_type": "Purchase",
+        "transactions": 307572,
+        "customers": 30183
+      },
+      {
+        "product_type": "Tarjeta Débito",
+        "transaction_type": "Payment",
+        "transactions": 65796,
+        "customers": 26289
+      },
+      {
+        "product_type": "Tarjeta Débito",
+        "transaction_type": "Withdrawal",
+        "transactions": 65779,
+        "customers": 26236
+      }
+    ],
+    "transaction_channel": [
+      {
+        "channel": "ATM",
+        "transaction_type": "Purchase",
+        "transactions": 325993,
+        "customers": 78580,
+        "declined": 16579
+      },
+      {
+        "channel": "ATM",
+        "transaction_type": "Withdrawal",
+        "transactions": 289518,
+        "customers": 105342,
+        "declined": 14290
+      },
+      {
+        "channel": "ATM",
+        "transaction_type": "Transfer",
+        "transactions": 268811,
+        "customers": 94788,
+        "declined": 13390
+      },
+      {
+        "channel": "ATM",
+        "transaction_type": "Payment",
+        "transactions": 221647,
+        "customers": 92454,
+        "declined": 11016
+      },
+      {
+        "channel": "ATM",
+        "transaction_type": "Deposit",
+        "transactions": 182775,
+        "customers": 81101,
+        "declined": 9010
+      },
+      {
+        "channel": "ATM",
+        "transaction_type": "Adjustment",
+        "transactions": 39590,
+        "customers": 21624,
+        "declined": 2019
+      },
+      {
+        "channel": "App",
+        "transaction_type": "Purchase",
+        "transactions": 162618,
+        "customers": 66711,
+        "declined": 8148
+      },
+      {
+        "channel": "App",
+        "transaction_type": "Withdrawal",
+        "transactions": 144402,
+        "customers": 79322,
+        "declined": 7040
+      },
+      {
+        "channel": "App",
+        "transaction_type": "Transfer",
+        "transactions": 134801,
+        "customers": 72483,
+        "declined": 6756
+      },
+      {
+        "channel": "App",
+        "transaction_type": "Payment",
+        "transactions": 110413,
+        "customers": 65728,
+        "declined": 5507
+      },
+      {
+        "channel": "App",
+        "transaction_type": "Deposit",
+        "transactions": 91446,
+        "customers": 57259,
+        "declined": 4508
+      },
+      {
+        "channel": "App",
+        "transaction_type": "Adjustment",
+        "transactions": 19734,
+        "customers": 14329,
+        "declined": 978
+      },
+      {
+        "channel": "Branch",
+        "transaction_type": "Purchase",
+        "transactions": 32314,
+        "customers": 25794,
+        "declined": 1689
+      },
+      {
+        "channel": "Branch",
+        "transaction_type": "Withdrawal",
+        "transactions": 28837,
+        "customers": 25023,
+        "declined": 1442
+      },
+      {
+        "channel": "Branch",
+        "transaction_type": "Transfer",
+        "transactions": 26914,
+        "customers": 23183,
+        "declined": 1336
+      },
+      {
+        "channel": "Branch",
+        "transaction_type": "Payment",
+        "transactions": 22064,
+        "customers": 19461,
+        "declined": 1127
+      },
+      {
+        "channel": "Branch",
+        "transaction_type": "Deposit",
+        "transactions": 18388,
+        "customers": 16498,
+        "declined": 916
+      },
+      {
+        "channel": "Branch",
+        "transaction_type": "Adjustment",
+        "transactions": 3978,
+        "customers": 3695,
+        "declined": 199
+      },
+      {
+        "channel": "POS",
+        "transaction_type": "Purchase",
+        "transactions": 378515,
+        "customers": 79858,
+        "declined": 18971
+      },
+      {
+        "channel": "POS",
+        "transaction_type": "Withdrawal",
+        "transactions": 337693,
+        "customers": 109948,
+        "declined": 16817
+      },
+      {
+        "channel": "POS",
+        "transaction_type": "Transfer",
+        "transactions": 313434,
+        "customers": 98811,
+        "declined": 15797
+      },
+      {
+        "channel": "POS",
+        "transaction_type": "Payment",
+        "transactions": 258573,
+        "customers": 97973,
+        "declined": 12883
+      },
+      {
+        "channel": "POS",
+        "transaction_type": "Deposit",
+        "transactions": 213678,
+        "customers": 85980,
+        "declined": 10602
+      },
+      {
+        "channel": "POS",
+        "transaction_type": "Adjustment",
+        "transactions": 46268,
+        "customers": 23275,
+        "declined": 2360
+      },
+      {
+        "channel": "Transfer",
+        "transaction_type": "Purchase",
+        "transactions": 21697,
+        "customers": 18533,
+        "declined": 1090
+      },
+      {
+        "channel": "Transfer",
+        "transaction_type": "Withdrawal",
+        "transactions": 19466,
+        "customers": 17689,
+        "declined": 1004
+      },
+      {
+        "channel": "Transfer",
+        "transaction_type": "Transfer",
+        "transactions": 18026,
+        "customers": 16341,
+        "declined": 933
+      },
+      {
+        "channel": "Transfer",
+        "transaction_type": "Payment",
+        "transactions": 15052,
+        "customers": 13783,
+        "declined": 790
+      },
+      {
+        "channel": "Transfer",
+        "transaction_type": "Deposit",
+        "transactions": 12217,
+        "customers": 11354,
+        "declined": 608
+      },
+      {
+        "channel": "Transfer",
+        "transaction_type": "Adjustment",
+        "transactions": 2701,
+        "customers": 2570,
+        "declined": 141
+      },
+      {
+        "channel": "Web",
+        "transaction_type": "Purchase",
+        "transactions": 162269,
+        "customers": 66841,
+        "declined": 8088
+      },
+      {
+        "channel": "Web",
+        "transaction_type": "Withdrawal",
+        "transactions": 144757,
+        "customers": 79492,
+        "declined": 7318
+      },
+      {
+        "channel": "Web",
+        "transaction_type": "Transfer",
+        "transactions": 134452,
+        "customers": 72305,
+        "declined": 6767
+      },
+      {
+        "channel": "Web",
+        "transaction_type": "Payment",
+        "transactions": 111215,
+        "customers": 66007,
+        "declined": 5528
+      },
+      {
+        "channel": "Web",
+        "transaction_type": "Deposit",
+        "transactions": 90905,
+        "customers": 57320,
+        "declined": 4596
+      },
+      {
+        "channel": "Web",
+        "transaction_type": "Adjustment",
+        "transactions": 19847,
+        "customers": 14311,
+        "declined": 991
+      }
+    ],
+    "transaction_country": [
+      {
+        "country": "Argentina",
+        "transaction_type": "Purchase",
+        "transactions": 215807,
+        "customers": 16315,
+        "country_share_pct": 24.5233833899,
+        "declined": 10852
+      },
+      {
+        "country": "Argentina",
+        "transaction_type": "Withdrawal",
+        "transactions": 191990,
+        "customers": 25303,
+        "country_share_pct": 21.8169214948,
+        "declined": 9550
+      },
+      {
+        "country": "Argentina",
+        "transaction_type": "Transfer",
+        "transactions": 177924,
+        "customers": 22446,
+        "country_share_pct": 20.2185214857,
+        "declined": 8928
+      },
+      {
+        "country": "Argentina",
+        "transaction_type": "Payment",
+        "transactions": 146842,
+        "customers": 24949,
+        "country_share_pct": 16.6864960995,
+        "declined": 7272
+      },
+      {
+        "country": "Argentina",
+        "transaction_type": "Deposit",
+        "transactions": 121067,
+        "customers": 20839,
+        "country_share_pct": 13.7575354685,
+        "declined": 6115
+      },
+      {
+        "country": "Argentina",
+        "transaction_type": "Adjustment",
+        "transactions": 26375,
+        "customers": 5932,
+        "country_share_pct": 2.9971420617,
+        "declined": 1336
+      },
+      {
+        "country": "Colombia",
+        "transaction_type": "Purchase",
+        "transactions": 325787,
+        "customers": 24828,
+        "country_share_pct": 24.5215916036,
+        "declined": 16190
+      },
+      {
+        "country": "Colombia",
+        "transaction_type": "Withdrawal",
+        "transactions": 289974,
+        "customers": 38512,
+        "country_share_pct": 21.8259906125,
+        "declined": 14222
+      },
+      {
+        "country": "Colombia",
+        "transaction_type": "Transfer",
+        "transactions": 268989,
+        "customers": 34063,
+        "country_share_pct": 20.2464751628,
+        "declined": 13445
+      },
+      {
+        "country": "Colombia",
+        "transaction_type": "Payment",
+        "transactions": 221214,
+        "customers": 37950,
+        "country_share_pct": 16.6505089675,
+        "declined": 11195
+      },
+      {
+        "country": "Colombia",
+        "transaction_type": "Deposit",
+        "transactions": 183439,
+        "customers": 31575,
+        "country_share_pct": 13.8072306205,
+        "declined": 9165
+      },
+      {
+        "country": "Colombia",
+        "transaction_type": "Adjustment",
+        "transactions": 39169,
+        "customers": 8874,
+        "country_share_pct": 2.948203033,
+        "declined": 1887
+      },
+      {
+        "country": "México",
+        "transaction_type": "Purchase",
+        "transactions": 541812,
+        "customers": 40991,
+        "country_share_pct": 24.4452455321,
+        "declined": 27523
+      },
+      {
+        "country": "México",
+        "transaction_type": "Withdrawal",
+        "transactions": 482709,
+        "customers": 63716,
+        "country_share_pct": 21.7786612802,
+        "declined": 24139
+      },
+      {
+        "country": "México",
+        "transaction_type": "Transfer",
+        "transactions": 449525,
+        "customers": 56405,
+        "country_share_pct": 20.2814795498,
+        "declined": 22606
+      },
+      {
+        "country": "México",
+        "transaction_type": "Payment",
+        "transactions": 370908,
+        "customers": 62837,
+        "country_share_pct": 16.7344708678,
+        "declined": 18384
+      },
+      {
+        "country": "México",
+        "transaction_type": "Deposit",
+        "transactions": 304903,
+        "customers": 52305,
+        "country_share_pct": 13.756485088,
+        "declined": 14960
+      },
+      {
+        "country": "México",
+        "transaction_type": "Adjustment",
+        "transactions": 66574,
+        "customers": 14940,
+        "country_share_pct": 3.0036576821,
+        "declined": 3465
+      }
+    ],
+    "transaction_monthly": [
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 1734,
+        "customers": 1670,
+        "declined": 100
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 7755,
+        "customers": 7394,
+        "declined": 388
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 9421,
+        "customers": 8943,
+        "declined": 488
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 13877,
+        "customers": 12557,
+        "declined": 648
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 11277,
+        "customers": 10581,
+        "declined": 554
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 12196,
+        "customers": 11458,
+        "declined": 578
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3615,
+        "customers": 3362,
+        "declined": 182
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16715,
+        "customers": 15135,
+        "declined": 769
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20372,
+        "customers": 18130,
+        "declined": 1038
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29692,
+        "customers": 24030,
+        "declined": 1511
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24467,
+        "customers": 21396,
+        "declined": 1207
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26452,
+        "customers": 23236,
+        "declined": 1288
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3873,
+        "customers": 3638,
+        "declined": 217
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17676,
+        "customers": 15962,
+        "declined": 883
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21198,
+        "customers": 18814,
+        "declined": 1045
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31324,
+        "customers": 25141,
+        "declined": 1564
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25799,
+        "customers": 22369,
+        "declined": 1283
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27722,
+        "customers": 24211,
+        "declined": 1374
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3504,
+        "customers": 3314,
+        "declined": 187
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16292,
+        "customers": 14833,
+        "declined": 795
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20179,
+        "customers": 18036,
+        "declined": 995
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29392,
+        "customers": 23878,
+        "declined": 1527
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24173,
+        "customers": 21115,
+        "declined": 1231
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26019,
+        "customers": 22989,
+        "declined": 1240
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3787,
+        "customers": 3560,
+        "declined": 183
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17650,
+        "customers": 15902,
+        "declined": 854
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21295,
+        "customers": 18906,
+        "declined": 1098
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31325,
+        "customers": 25146,
+        "declined": 1609
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 26005,
+        "customers": 22494,
+        "declined": 1267
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27731,
+        "customers": 24273,
+        "declined": 1402
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3639,
+        "customers": 3409,
+        "declined": 180
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16703,
+        "customers": 15126,
+        "declined": 808
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20391,
+        "customers": 18162,
+        "declined": 996
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29786,
+        "customers": 24198,
+        "declined": 1474
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24696,
+        "customers": 21460,
+        "declined": 1251
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26769,
+        "customers": 23474,
+        "declined": 1345
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3747,
+        "customers": 3504,
+        "declined": 168
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17101,
+        "customers": 15472,
+        "declined": 849
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21086,
+        "customers": 18700,
+        "declined": 1063
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30902,
+        "customers": 24959,
+        "declined": 1526
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25533,
+        "customers": 22098,
+        "declined": 1325
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27600,
+        "customers": 24091,
+        "declined": 1359
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3608,
+        "customers": 3382,
+        "declined": 172
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16821,
+        "customers": 15329,
+        "declined": 831
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20389,
+        "customers": 18219,
+        "declined": 970
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29910,
+        "customers": 24246,
+        "declined": 1516
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25006,
+        "customers": 21799,
+        "declined": 1199
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26467,
+        "customers": 23290,
+        "declined": 1349
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3536,
+        "customers": 3301,
+        "declined": 172
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16325,
+        "customers": 14851,
+        "declined": 858
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 19562,
+        "customers": 17476,
+        "declined": 1060
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 28868,
+        "customers": 23574,
+        "declined": 1493
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 23646,
+        "customers": 20807,
+        "declined": 1208
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 25198,
+        "customers": 22335,
+        "declined": 1252
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3600,
+        "customers": 3369,
+        "declined": 181
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16684,
+        "customers": 15115,
+        "declined": 845
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20521,
+        "customers": 18336,
+        "declined": 1043
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29739,
+        "customers": 24173,
+        "declined": 1499
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24494,
+        "customers": 21428,
+        "declined": 1218
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26550,
+        "customers": 23284,
+        "declined": 1361
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3655,
+        "customers": 3409,
+        "declined": 182
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16542,
+        "customers": 15005,
+        "declined": 798
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20264,
+        "customers": 18091,
+        "declined": 1006
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29649,
+        "customers": 23968,
+        "declined": 1496
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24738,
+        "customers": 21616,
+        "declined": 1225
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26482,
+        "customers": 23231,
+        "declined": 1288
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3836,
+        "customers": 3582,
+        "declined": 170
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17407,
+        "customers": 15745,
+        "declined": 858
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21110,
+        "customers": 18824,
+        "declined": 994
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30879,
+        "customers": 24892,
+        "declined": 1606
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25452,
+        "customers": 22114,
+        "declined": 1272
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27687,
+        "customers": 24118,
+        "declined": 1377
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3660,
+        "customers": 3437,
+        "declined": 201
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16718,
+        "customers": 15204,
+        "declined": 843
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20202,
+        "customers": 18091,
+        "declined": 919
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29667,
+        "customers": 24070,
+        "declined": 1497
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24990,
+        "customers": 21838,
+        "declined": 1227
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26579,
+        "customers": 23339,
+        "declined": 1308
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3809,
+        "customers": 3574,
+        "declined": 179
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17704,
+        "customers": 15905,
+        "declined": 848
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21575,
+        "customers": 19088,
+        "declined": 1075
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31500,
+        "customers": 25322,
+        "declined": 1637
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 26169,
+        "customers": 22686,
+        "declined": 1291
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 28015,
+        "customers": 24291,
+        "declined": 1399
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3564,
+        "customers": 3322,
+        "declined": 171
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17071,
+        "customers": 15454,
+        "declined": 878
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20638,
+        "customers": 18306,
+        "declined": 1003
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29902,
+        "customers": 24313,
+        "declined": 1459
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24741,
+        "customers": 21555,
+        "declined": 1256
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26848,
+        "customers": 23579,
+        "declined": 1318
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3410,
+        "customers": 3214,
+        "declined": 178
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 15869,
+        "customers": 14488,
+        "declined": 784
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 19801,
+        "customers": 17711,
+        "declined": 1009
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 28908,
+        "customers": 23469,
+        "declined": 1358
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 23867,
+        "customers": 20828,
+        "declined": 1212
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 25670,
+        "customers": 22585,
+        "declined": 1289
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3868,
+        "customers": 3608,
+        "declined": 198
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17701,
+        "customers": 16018,
+        "declined": 964
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20917,
+        "customers": 18587,
+        "declined": 940
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31166,
+        "customers": 25016,
+        "declined": 1572
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 26121,
+        "customers": 22611,
+        "declined": 1306
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27720,
+        "customers": 24246,
+        "declined": 1370
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3642,
+        "customers": 3408,
+        "declined": 195
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16777,
+        "customers": 15303,
+        "declined": 884
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20311,
+        "customers": 18126,
+        "declined": 1040
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29398,
+        "customers": 23996,
+        "declined": 1445
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24965,
+        "customers": 21731,
+        "declined": 1264
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26388,
+        "customers": 23251,
+        "declined": 1313
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3686,
+        "customers": 3478,
+        "declined": 198
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17017,
+        "customers": 15389,
+        "declined": 823
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20231,
+        "customers": 18065,
+        "declined": 1017
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30250,
+        "customers": 24461,
+        "declined": 1502
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24816,
+        "customers": 21685,
+        "declined": 1295
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26761,
+        "customers": 23464,
+        "declined": 1376
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3700,
+        "customers": 3477,
+        "declined": 204
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16769,
+        "customers": 15222,
+        "declined": 855
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20317,
+        "customers": 18097,
+        "declined": 1057
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30117,
+        "customers": 24424,
+        "declined": 1540
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24807,
+        "customers": 21601,
+        "declined": 1275
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26470,
+        "customers": 23198,
+        "declined": 1379
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3388,
+        "customers": 3161,
+        "declined": 157
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 15172,
+        "customers": 13831,
+        "declined": 762
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 18452,
+        "customers": 16591,
+        "declined": 953
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 27138,
+        "customers": 22402,
+        "declined": 1363
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 22226,
+        "customers": 19689,
+        "declined": 1141
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 24089,
+        "customers": 21353,
+        "declined": 1193
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3659,
+        "customers": 3419,
+        "declined": 185
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16855,
+        "customers": 15209,
+        "declined": 861
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20780,
+        "customers": 18493,
+        "declined": 1060
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30547,
+        "customers": 24707,
+        "declined": 1507
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24918,
+        "customers": 21659,
+        "declined": 1264
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26957,
+        "customers": 23583,
+        "declined": 1304
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3599,
+        "customers": 3391,
+        "declined": 175
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16566,
+        "customers": 15036,
+        "declined": 806
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20127,
+        "customers": 18000,
+        "declined": 986
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29616,
+        "customers": 24128,
+        "declined": 1529
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24545,
+        "customers": 21425,
+        "declined": 1205
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26291,
+        "customers": 23051,
+        "declined": 1300
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3831,
+        "customers": 3584,
+        "declined": 211
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17661,
+        "customers": 15960,
+        "declined": 882
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21317,
+        "customers": 18928,
+        "declined": 1044
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30970,
+        "customers": 24905,
+        "declined": 1517
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25487,
+        "customers": 22212,
+        "declined": 1253
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27731,
+        "customers": 24201,
+        "declined": 1364
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3565,
+        "customers": 3332,
+        "declined": 181
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16362,
+        "customers": 14848,
+        "declined": 827
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 19855,
+        "customers": 17755,
+        "declined": 959
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29256,
+        "customers": 23772,
+        "declined": 1548
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 23866,
+        "customers": 20917,
+        "declined": 1195
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 25884,
+        "customers": 22860,
+        "declined": 1296
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3782,
+        "customers": 3536,
+        "declined": 202
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17703,
+        "customers": 15955,
+        "declined": 900
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21073,
+        "customers": 18650,
+        "declined": 1049
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31135,
+        "customers": 25080,
+        "declined": 1603
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25421,
+        "customers": 22136,
+        "declined": 1313
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27768,
+        "customers": 24317,
+        "declined": 1367
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3812,
+        "customers": 3574,
+        "declined": 178
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17440,
+        "customers": 15739,
+        "declined": 869
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21150,
+        "customers": 18785,
+        "declined": 1086
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30755,
+        "customers": 24774,
+        "declined": 1557
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25421,
+        "customers": 21991,
+        "declined": 1282
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27461,
+        "customers": 23972,
+        "declined": 1358
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3583,
+        "customers": 3354,
+        "declined": 194
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16254,
+        "customers": 14798,
+        "declined": 822
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 19674,
+        "customers": 17652,
+        "declined": 939
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29059,
+        "customers": 23805,
+        "declined": 1507
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24010,
+        "customers": 21020,
+        "declined": 1200
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 25983,
+        "customers": 22912,
+        "declined": 1274
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3766,
+        "customers": 3519,
+        "declined": 169
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17949,
+        "customers": 16180,
+        "declined": 875
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21442,
+        "customers": 19038,
+        "declined": 1071
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31567,
+        "customers": 25369,
+        "declined": 1605
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 26514,
+        "customers": 22876,
+        "declined": 1310
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 28030,
+        "customers": 24499,
+        "declined": 1416
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3697,
+        "customers": 3477,
+        "declined": 196
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16540,
+        "customers": 14982,
+        "declined": 827
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20018,
+        "customers": 17786,
+        "declined": 1002
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29758,
+        "customers": 24236,
+        "declined": 1483
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24434,
+        "customers": 21406,
+        "declined": 1241
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26328,
+        "customers": 23160,
+        "declined": 1352
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3631,
+        "customers": 3430,
+        "declined": 175
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16786,
+        "customers": 15228,
+        "declined": 807
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20468,
+        "customers": 18190,
+        "declined": 1038
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29804,
+        "customers": 24219,
+        "declined": 1472
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24928,
+        "customers": 21731,
+        "declined": 1288
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26765,
+        "customers": 23558,
+        "declined": 1282
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3697,
+        "customers": 3463,
+        "declined": 187
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 16766,
+        "customers": 15224,
+        "declined": 845
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20315,
+        "customers": 18134,
+        "declined": 1017
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 29898,
+        "customers": 24229,
+        "declined": 1495
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 24703,
+        "customers": 21534,
+        "declined": 1237
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 26583,
+        "customers": 23352,
+        "declined": 1341
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3428,
+        "customers": 3214,
+        "declined": 163
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 15905,
+        "customers": 14529,
+        "declined": 791
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 18986,
+        "customers": 17043,
+        "declined": 949
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 28137,
+        "customers": 23102,
+        "declined": 1431
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 23310,
+        "customers": 20506,
+        "declined": 1227
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 25332,
+        "customers": 22399,
+        "declined": 1295
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3660,
+        "customers": 3419,
+        "declined": 180
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17066,
+        "customers": 15456,
+        "declined": 833
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 20777,
+        "customers": 18427,
+        "declined": 1046
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 30116,
+        "customers": 24362,
+        "declined": 1462
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25132,
+        "customers": 21897,
+        "declined": 1199
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27164,
+        "customers": 23683,
+        "declined": 1309
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3706,
+        "customers": 3481,
+        "declined": 181
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17361,
+        "customers": 15689,
+        "declined": 808
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21191,
+        "customers": 18787,
+        "declined": 1094
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31035,
+        "customers": 24906,
+        "declined": 1531
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25679,
+        "customers": 22281,
+        "declined": 1262
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27520,
+        "customers": 24021,
+        "declined": 1386
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 3727,
+        "customers": 3495,
+        "declined": 205
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 17751,
+        "customers": 15997,
+        "declined": 833
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 21581,
+        "customers": 19148,
+        "declined": 1084
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 31173,
+        "customers": 25039,
+        "declined": 1609
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 25619,
+        "customers": 22249,
+        "declined": 1294
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 27708,
+        "customers": 24261,
+        "declined": 1300
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "transaction_type": "Adjustment",
+        "transactions": 2114,
+        "customers": 2047,
+        "declined": 131
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "transaction_type": "Deposit",
+        "transactions": 9975,
+        "customers": 9384,
+        "declined": 477
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "transaction_type": "Payment",
+        "transactions": 11978,
+        "customers": 11181,
+        "declined": 618
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "transaction_type": "Purchase",
+        "transactions": 17191,
+        "customers": 15171,
+        "declined": 867
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "transaction_type": "Transfer",
+        "transactions": 14463,
+        "customers": 13382,
+        "declined": 702
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "transaction_type": "Withdrawal",
+        "transactions": 15755,
+        "customers": 14485,
+        "declined": 809
+      }
+    ],
+    "transaction_recent": [
+      {
+        "transaction_type": "Purchase",
+        "transactions": 92324,
+        "customers": 52203,
+        "share_pct": 24.4265357201
+      },
+      {
+        "transaction_type": "Withdrawal",
+        "transactions": 82392,
+        "customers": 56691,
+        "share_pct": 21.7987861342
+      },
+      {
+        "transaction_type": "Transfer",
+        "transactions": 76430,
+        "customers": 51883,
+        "share_pct": 20.2213955753
+      },
+      {
+        "transaction_type": "Payment",
+        "transactions": 63549,
+        "customers": 45720,
+        "share_pct": 16.8134170798
+      },
+      {
+        "transaction_type": "Deposit",
+        "transactions": 52178,
+        "customers": 39287,
+        "share_pct": 13.8049454184
+      },
+      {
+        "transaction_type": "Adjustment",
+        "transactions": 11093,
+        "customers": 9141,
+        "share_pct": 2.9349200722
+      }
+    ],
+    "digital_action": [
+      {
+        "action_name": "view_product",
+        "events": 3407643,
+        "identified_customers": 149889,
+        "sessions": 1381335,
+        "anonymous_events": 817349,
+        "errors": 0,
+        "share_pct": 21.8145080908
+      },
+      {
+        "action_name": "logout",
+        "events": 2191640,
+        "identified_customers": 149916,
+        "sessions": 1418993,
+        "anonymous_events": 525484,
+        "errors": 0,
+        "share_pct": 14.0300930914
+      },
+      {
+        "action_name": "login",
+        "events": 2189929,
+        "identified_customers": 149897,
+        "sessions": 1417805,
+        "anonymous_events": 525559,
+        "errors": 0,
+        "share_pct": 14.0191398832
+      },
+      {
+        "action_name": "(sin acción)",
+        "events": 1561432,
+        "identified_customers": 149203,
+        "sessions": 1017911,
+        "anonymous_events": 374571,
+        "errors": 35647,
+        "share_pct": 9.9957275446
+      },
+      {
+        "action_name": "initiate_payment",
+        "events": 902225,
+        "identified_customers": 145389,
+        "sessions": 678703,
+        "anonymous_events": 216178,
+        "errors": 53657,
+        "share_pct": 5.7757208024
+      },
+      {
+        "action_name": "initiate_transfer",
+        "events": 901824,
+        "identified_customers": 145384,
+        "sessions": 678531,
+        "anonymous_events": 215999,
+        "errors": 53883,
+        "share_pct": 5.7731537442
+      },
+      {
+        "action_name": "view_transactions",
+        "events": 901039,
+        "identified_customers": 145380,
+        "sessions": 678342,
+        "anonymous_events": 216555,
+        "errors": 54073,
+        "share_pct": 5.7681284558
+      },
+      {
+        "action_name": "view_accounts",
+        "events": 892802,
+        "identified_customers": 145145,
+        "sessions": 673221,
+        "anonymous_events": 213850,
+        "errors": 40308,
+        "share_pct": 5.7153981366
+      },
+      {
+        "action_name": "view_products",
+        "events": 891777,
+        "identified_customers": 145351,
+        "sessions": 673387,
+        "anonymous_events": 213722,
+        "errors": 40193,
+        "share_pct": 5.7088364543
+      },
+      {
+        "action_name": "view_help",
+        "events": 890625,
+        "identified_customers": 145133,
+        "sessions": 672600,
+        "anonymous_events": 213090,
+        "errors": 40679,
+        "share_pct": 5.7014617636
+      },
+      {
+        "action_name": "view_home",
+        "events": 890058,
+        "identified_customers": 145305,
+        "sessions": 672072,
+        "anonymous_events": 213089,
+        "errors": 40283,
+        "share_pct": 5.697832033
+      }
+    ],
+    "digital_action_type": [
+      {
+        "action_name": "(sin acción)",
+        "event_type": "PageView",
+        "events": 597708
+      },
+      {
+        "action_name": "(sin acción)",
+        "event_type": "Click",
+        "events": 357964
+      },
+      {
+        "action_name": "(sin acción)",
+        "event_type": "Login",
+        "events": 243645
+      },
+      {
+        "action_name": "(sin acción)",
+        "event_type": "Logout",
+        "events": 243168
+      },
+      {
+        "action_name": "(sin acción)",
+        "event_type": "FormSubmit",
+        "events": 59569
+      },
+      {
+        "action_name": "(sin acción)",
+        "event_type": "Error",
+        "events": 35647
+      },
+      {
+        "action_name": "(sin acción)",
+        "event_type": "Purchase",
+        "events": 23731
+      },
+      {
+        "action_name": "initiate_payment",
+        "event_type": "PageView",
+        "events": 597645
+      },
+      {
+        "action_name": "initiate_payment",
+        "event_type": "FormSubmit",
+        "events": 178918
+      },
+      {
+        "action_name": "initiate_payment",
+        "event_type": "Purchase",
+        "events": 72005
+      },
+      {
+        "action_name": "initiate_payment",
+        "event_type": "Error",
+        "events": 53657
+      },
+      {
+        "action_name": "initiate_transfer",
+        "event_type": "PageView",
+        "events": 597058
+      },
+      {
+        "action_name": "initiate_transfer",
+        "event_type": "FormSubmit",
+        "events": 178964
+      },
+      {
+        "action_name": "initiate_transfer",
+        "event_type": "Purchase",
+        "events": 71919
+      },
+      {
+        "action_name": "initiate_transfer",
+        "event_type": "Error",
+        "events": 53883
+      },
+      {
+        "action_name": "login",
+        "event_type": "Login",
+        "events": 1095401
+      },
+      {
+        "action_name": "login",
+        "event_type": "Logout",
+        "events": 1094528
+      },
+      {
+        "action_name": "logout",
+        "event_type": "Logout",
+        "events": 1095916
+      },
+      {
+        "action_name": "logout",
+        "event_type": "Login",
+        "events": 1095724
+      },
+      {
+        "action_name": "view_accounts",
+        "event_type": "PageView",
+        "events": 449342
+      },
+      {
+        "action_name": "view_accounts",
+        "event_type": "Click",
+        "events": 403152
+      },
+      {
+        "action_name": "view_accounts",
+        "event_type": "Error",
+        "events": 40308
+      },
+      {
+        "action_name": "view_help",
+        "event_type": "PageView",
+        "events": 447611
+      },
+      {
+        "action_name": "view_help",
+        "event_type": "Click",
+        "events": 402335
+      },
+      {
+        "action_name": "view_help",
+        "event_type": "Error",
+        "events": 40679
+      },
+      {
+        "action_name": "view_home",
+        "event_type": "PageView",
+        "events": 447245
+      },
+      {
+        "action_name": "view_home",
+        "event_type": "Click",
+        "events": 402530
+      },
+      {
+        "action_name": "view_home",
+        "event_type": "Error",
+        "events": 40283
+      },
+      {
+        "action_name": "view_product",
+        "event_type": "PageView",
+        "events": 1792450
+      },
+      {
+        "action_name": "view_product",
+        "event_type": "Click",
+        "events": 1615193
+      },
+      {
+        "action_name": "view_products",
+        "event_type": "PageView",
+        "events": 447724
+      },
+      {
+        "action_name": "view_products",
+        "event_type": "Click",
+        "events": 403860
+      },
+      {
+        "action_name": "view_products",
+        "event_type": "Error",
+        "events": 40193
+      },
+      {
+        "action_name": "view_transactions",
+        "event_type": "PageView",
+        "events": 595781
+      },
+      {
+        "action_name": "view_transactions",
+        "event_type": "FormSubmit",
+        "events": 179457
+      },
+      {
+        "action_name": "view_transactions",
+        "event_type": "Purchase",
+        "events": 71728
+      },
+      {
+        "action_name": "view_transactions",
+        "event_type": "Error",
+        "events": 54073
+      }
+    ],
+    "digital_channel": [
+      {
+        "channel": "Android App",
+        "events": 5476164,
+        "identified_customers": 145247,
+        "anonymous_events": 1309237,
+        "errors": 125974
+      },
+      {
+        "channel": "iOS App",
+        "events": 3899497,
+        "identified_customers": 136908,
+        "anonymous_events": 933954,
+        "errors": 89294
+      },
+      {
+        "channel": "Desktop Web",
+        "events": 3128851,
+        "identified_customers": 128771,
+        "anonymous_events": 752875,
+        "errors": 71817
+      },
+      {
+        "channel": "Mobile Web",
+        "events": 3116482,
+        "identified_customers": 128569,
+        "anonymous_events": 749380,
+        "errors": 71638
+      }
+    ],
+    "digital_monthly": [
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 18774,
+        "identified_customers": 9264
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 10780,
+        "identified_customers": 6104
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 10888,
+        "identified_customers": 6155
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "login",
+        "events": 26242,
+        "identified_customers": 12601
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 26265,
+        "identified_customers": 12708
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 10831,
+        "identified_customers": 6120
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 10755,
+        "identified_customers": 6142
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 10708,
+        "identified_customers": 6107
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 40965,
+        "identified_customers": 12473
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 10839,
+        "identified_customers": 6169
+      },
+      {
+        "month_start": "2023-06-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 10807,
+        "identified_customers": 6077
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 51877,
+        "identified_customers": 24117
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 30087,
+        "identified_customers": 16399
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 29993,
+        "identified_customers": 16308
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "login",
+        "events": 72809,
+        "identified_customers": 32393
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 72729,
+        "identified_customers": 32495
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 29703,
+        "identified_customers": 16409
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 29375,
+        "identified_customers": 16187
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 29339,
+        "identified_customers": 16173
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 112125,
+        "identified_customers": 31956
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 29510,
+        "identified_customers": 16207
+      },
+      {
+        "month_start": "2023-07-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 29956,
+        "identified_customers": 16380
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 44366,
+        "identified_customers": 20638
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 25565,
+        "identified_customers": 14034
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 25273,
+        "identified_customers": 14035
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "login",
+        "events": 62104,
+        "identified_customers": 28089
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 62004,
+        "identified_customers": 27996
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 25377,
+        "identified_customers": 13978
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 25196,
+        "identified_customers": 13993
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 25367,
+        "identified_customers": 14033
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 96422,
+        "identified_customers": 27595
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 25192,
+        "identified_customers": 13966
+      },
+      {
+        "month_start": "2023-08-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 25491,
+        "identified_customers": 14082
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 44176,
+        "identified_customers": 20740
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 25592,
+        "identified_customers": 14081
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 25483,
+        "identified_customers": 14135
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "login",
+        "events": 62191,
+        "identified_customers": 28241
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 62271,
+        "identified_customers": 28148
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 25431,
+        "identified_customers": 14026
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 25294,
+        "identified_customers": 14048
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 25254,
+        "identified_customers": 14006
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 96500,
+        "identified_customers": 27929
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 25583,
+        "identified_customers": 14105
+      },
+      {
+        "month_start": "2023-09-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 25663,
+        "identified_customers": 14191
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 47870,
+        "identified_customers": 22535
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 27541,
+        "identified_customers": 15161
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 28002,
+        "identified_customers": 15369
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "login",
+        "events": 67840,
+        "identified_customers": 30704
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 67874,
+        "identified_customers": 30748
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 27664,
+        "identified_customers": 15336
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 27426,
+        "identified_customers": 15143
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 27299,
+        "identified_customers": 15253
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 105401,
+        "identified_customers": 30313
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 27572,
+        "identified_customers": 15316
+      },
+      {
+        "month_start": "2023-10-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 27919,
+        "identified_customers": 15439
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42081,
+        "identified_customers": 19907
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24248,
+        "identified_customers": 13553
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24164,
+        "identified_customers": 13385
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "login",
+        "events": 59092,
+        "identified_customers": 26999
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59342,
+        "identified_customers": 27103
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24212,
+        "identified_customers": 13389
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 23942,
+        "identified_customers": 13339
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24195,
+        "identified_customers": 13456
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 91895,
+        "identified_customers": 26566
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 23931,
+        "identified_customers": 13258
+      },
+      {
+        "month_start": "2023-11-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24041,
+        "identified_customers": 13374
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 43040,
+        "identified_customers": 20194
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24734,
+        "identified_customers": 13663
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24693,
+        "identified_customers": 13689
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "login",
+        "events": 60483,
+        "identified_customers": 27422
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 60602,
+        "identified_customers": 27691
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24587,
+        "identified_customers": 13675
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24676,
+        "identified_customers": 13681
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24617,
+        "identified_customers": 13651
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 93745,
+        "identified_customers": 27246
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24328,
+        "identified_customers": 13520
+      },
+      {
+        "month_start": "2023-12-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24508,
+        "identified_customers": 13619
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 49574,
+        "identified_customers": 23063
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 28947,
+        "identified_customers": 15876
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 28713,
+        "identified_customers": 15784
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "login",
+        "events": 69376,
+        "identified_customers": 31131
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 69911,
+        "identified_customers": 31446
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 28453,
+        "identified_customers": 15709
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 28386,
+        "identified_customers": 15616
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 28123,
+        "identified_customers": 15649
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 108082,
+        "identified_customers": 30883
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 28549,
+        "identified_customers": 15611
+      },
+      {
+        "month_start": "2024-01-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 28447,
+        "identified_customers": 15699
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 37130,
+        "identified_customers": 17615
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 21540,
+        "identified_customers": 11856
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 21739,
+        "identified_customers": 12010
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "login",
+        "events": 51886,
+        "identified_customers": 23940
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 51893,
+        "identified_customers": 23920
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 21176,
+        "identified_customers": 11660
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 20819,
+        "identified_customers": 11645
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 21128,
+        "identified_customers": 11807
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 81192,
+        "identified_customers": 23690
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 21466,
+        "identified_customers": 11997
+      },
+      {
+        "month_start": "2024-02-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 21238,
+        "identified_customers": 11758
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42723,
+        "identified_customers": 19857
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24123,
+        "identified_customers": 13284
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24196,
+        "identified_customers": 13421
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "login",
+        "events": 59199,
+        "identified_customers": 26981
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59115,
+        "identified_customers": 27011
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24155,
+        "identified_customers": 13312
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24145,
+        "identified_customers": 13333
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 23903,
+        "identified_customers": 13286
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 92116,
+        "identified_customers": 26708
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24154,
+        "identified_customers": 13428
+      },
+      {
+        "month_start": "2024-03-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24320,
+        "identified_customers": 13375
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 39569,
+        "identified_customers": 18527
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 22862,
+        "identified_customers": 12567
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 22638,
+        "identified_customers": 12493
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "login",
+        "events": 55124,
+        "identified_customers": 25273
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 54907,
+        "identified_customers": 25300
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 22409,
+        "identified_customers": 12539
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 22245,
+        "identified_customers": 12489
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 22309,
+        "identified_customers": 12461
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 85175,
+        "identified_customers": 24866
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 22650,
+        "identified_customers": 12597
+      },
+      {
+        "month_start": "2024-04-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 22677,
+        "identified_customers": 12554
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 46293,
+        "identified_customers": 21598
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 26596,
+        "identified_customers": 14589
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 26703,
+        "identified_customers": 14617
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "login",
+        "events": 64685,
+        "identified_customers": 29144
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 65175,
+        "identified_customers": 29427
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 26317,
+        "identified_customers": 14470
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 26598,
+        "identified_customers": 14726
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 26307,
+        "identified_customers": 14518
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 101294,
+        "identified_customers": 28963
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 26645,
+        "identified_customers": 14628
+      },
+      {
+        "month_start": "2024-05-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 26605,
+        "identified_customers": 14601
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42276,
+        "identified_customers": 19906
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24333,
+        "identified_customers": 13444
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24499,
+        "identified_customers": 13476
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "login",
+        "events": 59679,
+        "identified_customers": 27158
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59292,
+        "identified_customers": 26956
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 23843,
+        "identified_customers": 13258
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24214,
+        "identified_customers": 13411
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24047,
+        "identified_customers": 13374
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 91616,
+        "identified_customers": 26724
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 23682,
+        "identified_customers": 13303
+      },
+      {
+        "month_start": "2024-06-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24150,
+        "identified_customers": 13473
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 44343,
+        "identified_customers": 20835
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 25564,
+        "identified_customers": 14082
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 25702,
+        "identified_customers": 14159
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "login",
+        "events": 62161,
+        "identified_customers": 28330
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 62302,
+        "identified_customers": 28458
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 25352,
+        "identified_customers": 13928
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 25282,
+        "identified_customers": 14031
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 25306,
+        "identified_customers": 14096
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 97021,
+        "identified_customers": 27990
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 25313,
+        "identified_customers": 14076
+      },
+      {
+        "month_start": "2024-07-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 25743,
+        "identified_customers": 14291
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 41870,
+        "identified_customers": 19804
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24132,
+        "identified_customers": 13408
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24333,
+        "identified_customers": 13437
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "login",
+        "events": 59145,
+        "identified_customers": 27039
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59220,
+        "identified_customers": 27008
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24112,
+        "identified_customers": 13426
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 23815,
+        "identified_customers": 13270
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24161,
+        "identified_customers": 13361
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 92273,
+        "identified_customers": 26696
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 23944,
+        "identified_customers": 13332
+      },
+      {
+        "month_start": "2024-08-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24324,
+        "identified_customers": 13536
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42376,
+        "identified_customers": 19930
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24396,
+        "identified_customers": 13500
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24422,
+        "identified_customers": 13354
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "login",
+        "events": 59731,
+        "identified_customers": 27014
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59685,
+        "identified_customers": 27075
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24289,
+        "identified_customers": 13421
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24300,
+        "identified_customers": 13470
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24241,
+        "identified_customers": 13318
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 93459,
+        "identified_customers": 26677
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24492,
+        "identified_customers": 13473
+      },
+      {
+        "month_start": "2024-09-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24486,
+        "identified_customers": 13451
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 40964,
+        "identified_customers": 19302
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 23374,
+        "identified_customers": 13023
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 23690,
+        "identified_customers": 13160
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "login",
+        "events": 57592,
+        "identified_customers": 26239
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 57306,
+        "identified_customers": 26256
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 23318,
+        "identified_customers": 12921
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 23291,
+        "identified_customers": 13015
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 23269,
+        "identified_customers": 12983
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 88782,
+        "identified_customers": 25863
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 23211,
+        "identified_customers": 12865
+      },
+      {
+        "month_start": "2024-10-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 23537,
+        "identified_customers": 13035
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 38533,
+        "identified_customers": 18206
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 22307,
+        "identified_customers": 12274
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 22570,
+        "identified_customers": 12485
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "login",
+        "events": 54286,
+        "identified_customers": 24972
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 54536,
+        "identified_customers": 24906
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 22031,
+        "identified_customers": 12364
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 21844,
+        "identified_customers": 12144
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 22248,
+        "identified_customers": 12383
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 84871,
+        "identified_customers": 24685
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 22315,
+        "identified_customers": 12404
+      },
+      {
+        "month_start": "2024-11-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 22528,
+        "identified_customers": 12487
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 40261,
+        "identified_customers": 19023
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 23068,
+        "identified_customers": 12859
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 22979,
+        "identified_customers": 12777
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "login",
+        "events": 56130,
+        "identified_customers": 25839
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 56564,
+        "identified_customers": 25932
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 23069,
+        "identified_customers": 12789
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 23066,
+        "identified_customers": 12814
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 23162,
+        "identified_customers": 12854
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 87534,
+        "identified_customers": 25424
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 22747,
+        "identified_customers": 12616
+      },
+      {
+        "month_start": "2024-12-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 23132,
+        "identified_customers": 12884
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 44368,
+        "identified_customers": 20944
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 25734,
+        "identified_customers": 14323
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 25452,
+        "identified_customers": 14022
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "login",
+        "events": 62284,
+        "identified_customers": 28327
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 62238,
+        "identified_customers": 28367
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 25222,
+        "identified_customers": 13936
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 25207,
+        "identified_customers": 14155
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 25362,
+        "identified_customers": 14151
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 96636,
+        "identified_customers": 27976
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 25351,
+        "identified_customers": 13997
+      },
+      {
+        "month_start": "2025-01-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 25702,
+        "identified_customers": 14239
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 39015,
+        "identified_customers": 18357
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 22670,
+        "identified_customers": 12567
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 22517,
+        "identified_customers": 12571
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "login",
+        "events": 54809,
+        "identified_customers": 25185
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 55183,
+        "identified_customers": 25259
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 22624,
+        "identified_customers": 12502
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 22622,
+        "identified_customers": 12584
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 22211,
+        "identified_customers": 12429
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 85796,
+        "identified_customers": 24947
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 22297,
+        "identified_customers": 12408
+      },
+      {
+        "month_start": "2025-02-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 22516,
+        "identified_customers": 12468
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 43037,
+        "identified_customers": 20344
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 25010,
+        "identified_customers": 13816
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24702,
+        "identified_customers": 13725
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "login",
+        "events": 60223,
+        "identified_customers": 27552
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 60511,
+        "identified_customers": 27402
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24604,
+        "identified_customers": 13646
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24382,
+        "identified_customers": 13548
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24552,
+        "identified_customers": 13667
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 94231,
+        "identified_customers": 27396
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24528,
+        "identified_customers": 13688
+      },
+      {
+        "month_start": "2025-03-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24810,
+        "identified_customers": 13739
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 38906,
+        "identified_customers": 18468
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 22360,
+        "identified_customers": 12459
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 22261,
+        "identified_customers": 12491
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "login",
+        "events": 54453,
+        "identified_customers": 25000
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 54393,
+        "identified_customers": 25007
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 22145,
+        "identified_customers": 12340
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 22046,
+        "identified_customers": 12272
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 22164,
+        "identified_customers": 12361
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 84390,
+        "identified_customers": 24601
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 22206,
+        "identified_customers": 12281
+      },
+      {
+        "month_start": "2025-04-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 22381,
+        "identified_customers": 12383
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 47633,
+        "identified_customers": 22205
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 27602,
+        "identified_customers": 15160
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 27720,
+        "identified_customers": 15219
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "login",
+        "events": 66964,
+        "identified_customers": 30187
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 67226,
+        "identified_customers": 30231
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 27456,
+        "identified_customers": 15227
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 27289,
+        "identified_customers": 15139
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 27069,
+        "identified_customers": 14876
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 104356,
+        "identified_customers": 29874
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 26943,
+        "identified_customers": 14917
+      },
+      {
+        "month_start": "2025-05-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 27986,
+        "identified_customers": 15271
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 41677,
+        "identified_customers": 19628
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 23970,
+        "identified_customers": 13260
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24096,
+        "identified_customers": 13295
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "login",
+        "events": 58294,
+        "identified_customers": 26603
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 58075,
+        "identified_customers": 26702
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 23863,
+        "identified_customers": 13182
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 23601,
+        "identified_customers": 13207
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 23588,
+        "identified_customers": 13033
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 91110,
+        "identified_customers": 26330
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 23597,
+        "identified_customers": 13193
+      },
+      {
+        "month_start": "2025-06-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 23911,
+        "identified_customers": 13272
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 48200,
+        "identified_customers": 22596
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 28327,
+        "identified_customers": 15500
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 28060,
+        "identified_customers": 15431
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "login",
+        "events": 68300,
+        "identified_customers": 30769
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 67831,
+        "identified_customers": 30652
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 27839,
+        "identified_customers": 15299
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 27868,
+        "identified_customers": 15277
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 27811,
+        "identified_customers": 15272
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 106428,
+        "identified_customers": 30282
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 27917,
+        "identified_customers": 15373
+      },
+      {
+        "month_start": "2025-07-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 27858,
+        "identified_customers": 15292
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 45175,
+        "identified_customers": 21178
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 25948,
+        "identified_customers": 14460
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 25897,
+        "identified_customers": 14392
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "login",
+        "events": 62967,
+        "identified_customers": 28661
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 63166,
+        "identified_customers": 28654
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 26104,
+        "identified_customers": 14389
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 25862,
+        "identified_customers": 14203
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 25774,
+        "identified_customers": 14233
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 98286,
+        "identified_customers": 28354
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 25699,
+        "identified_customers": 14226
+      },
+      {
+        "month_start": "2025-08-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 26176,
+        "identified_customers": 14475
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 44644,
+        "identified_customers": 20915
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 26034,
+        "identified_customers": 14339
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 25835,
+        "identified_customers": 14116
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "login",
+        "events": 62157,
+        "identified_customers": 28279
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 62227,
+        "identified_customers": 28110
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 25562,
+        "identified_customers": 14166
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 25496,
+        "identified_customers": 14033
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 25428,
+        "identified_customers": 14080
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 97534,
+        "identified_customers": 27876
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 25418,
+        "identified_customers": 13839
+      },
+      {
+        "month_start": "2025-09-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 25678,
+        "identified_customers": 14064
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 40036,
+        "identified_customers": 18961
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 22926,
+        "identified_customers": 12800
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 23098,
+        "identified_customers": 12869
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "login",
+        "events": 55649,
+        "identified_customers": 25690
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 56019,
+        "identified_customers": 25679
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 22814,
+        "identified_customers": 12690
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 22831,
+        "identified_customers": 12666
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 22515,
+        "identified_customers": 12690
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 86632,
+        "identified_customers": 25394
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 22693,
+        "identified_customers": 12588
+      },
+      {
+        "month_start": "2025-10-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 22900,
+        "identified_customers": 12791
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42134,
+        "identified_customers": 19913
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24195,
+        "identified_customers": 13461
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24188,
+        "identified_customers": 13580
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "login",
+        "events": 58915,
+        "identified_customers": 26862
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 58632,
+        "identified_customers": 26838
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 23668,
+        "identified_customers": 13141
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 23899,
+        "identified_customers": 13324
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 23884,
+        "identified_customers": 13362
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 91749,
+        "identified_customers": 26568
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24017,
+        "identified_customers": 13325
+      },
+      {
+        "month_start": "2025-11-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24368,
+        "identified_customers": 13468
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42511,
+        "identified_customers": 20013
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24925,
+        "identified_customers": 13662
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24693,
+        "identified_customers": 13640
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "login",
+        "events": 59333,
+        "identified_customers": 27018
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59452,
+        "identified_customers": 27044
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24243,
+        "identified_customers": 13393
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24348,
+        "identified_customers": 13449
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24227,
+        "identified_customers": 13428
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 91968,
+        "identified_customers": 26628
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24274,
+        "identified_customers": 13420
+      },
+      {
+        "month_start": "2025-12-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24515,
+        "identified_customers": 13477
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 51443,
+        "identified_customers": 23897
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 29922,
+        "identified_customers": 16440
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 29701,
+        "identified_customers": 16110
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "login",
+        "events": 72160,
+        "identified_customers": 32107
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 72647,
+        "identified_customers": 32286
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 29435,
+        "identified_customers": 16198
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 29510,
+        "identified_customers": 16118
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 29366,
+        "identified_customers": 16029
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 112960,
+        "identified_customers": 31928
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 29293,
+        "identified_customers": 16037
+      },
+      {
+        "month_start": "2026-01-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 29777,
+        "identified_customers": 16344
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 41538,
+        "identified_customers": 19509
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 23874,
+        "identified_customers": 13200
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24024,
+        "identified_customers": 13291
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "login",
+        "events": 57662,
+        "identified_customers": 26373
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 57842,
+        "identified_customers": 26409
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 23397,
+        "identified_customers": 13056
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 23263,
+        "identified_customers": 12983
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 23477,
+        "identified_customers": 13099
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 89946,
+        "identified_customers": 26198
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 23516,
+        "identified_customers": 13082
+      },
+      {
+        "month_start": "2026-02-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 23860,
+        "identified_customers": 13164
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42881,
+        "identified_customers": 20213
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24927,
+        "identified_customers": 13885
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24492,
+        "identified_customers": 13683
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "login",
+        "events": 60188,
+        "identified_customers": 27513
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 60203,
+        "identified_customers": 27462
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24319,
+        "identified_customers": 13633
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24456,
+        "identified_customers": 13662
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24517,
+        "identified_customers": 13662
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 93996,
+        "identified_customers": 27150
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24671,
+        "identified_customers": 13704
+      },
+      {
+        "month_start": "2026-03-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24853,
+        "identified_customers": 13785
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42232,
+        "identified_customers": 19920
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24839,
+        "identified_customers": 13710
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24900,
+        "identified_customers": 13636
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "login",
+        "events": 60114,
+        "identified_customers": 27291
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59769,
+        "identified_customers": 27239
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24282,
+        "identified_customers": 13417
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24342,
+        "identified_customers": 13535
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24392,
+        "identified_customers": 13499
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 93195,
+        "identified_customers": 26897
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24510,
+        "identified_customers": 13614
+      },
+      {
+        "month_start": "2026-04-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24660,
+        "identified_customers": 13597
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 42466,
+        "identified_customers": 20100
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 24448,
+        "identified_customers": 13601
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 24655,
+        "identified_customers": 13707
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "login",
+        "events": 60243,
+        "identified_customers": 27358
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 59810,
+        "identified_customers": 27355
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 24460,
+        "identified_customers": 13692
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 24352,
+        "identified_customers": 13595
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 24310,
+        "identified_customers": 13483
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 92571,
+        "identified_customers": 26969
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 24358,
+        "identified_customers": 13575
+      },
+      {
+        "month_start": "2026-05-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 24590,
+        "identified_customers": 13554
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "(sin acción)",
+        "events": 25440,
+        "identified_customers": 12184
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "initiate_payment",
+        "events": 14725,
+        "identified_customers": 8191
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "initiate_transfer",
+        "events": 14853,
+        "identified_customers": 8279
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "login",
+        "events": 35459,
+        "identified_customers": 16780
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "logout",
+        "events": 35423,
+        "identified_customers": 16848
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "view_accounts",
+        "events": 14436,
+        "identified_customers": 8184
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "view_help",
+        "events": 14582,
+        "identified_customers": 8099
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "view_home",
+        "events": 14428,
+        "identified_customers": 8171
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "view_product",
+        "events": 55391,
+        "identified_customers": 16614
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "view_products",
+        "events": 14366,
+        "identified_customers": 8101
+      },
+      {
+        "month_start": "2026-06-01T00:00:00.000",
+        "action_name": "view_transactions",
+        "events": 14926,
+        "identified_customers": 8350
+      }
+    ],
+    "digital_pages": [
+      {
+        "page_title": "Cerrar Sesión",
+        "events": 2312841,
+        "identified_customers": 149929
+      },
+      {
+        "page_title": "Iniciar Sesión",
+        "events": 2312796,
+        "identified_customers": 149916
+      },
+      {
+        "page_title": "Préstamos",
+        "events": 1199615,
+        "identified_customers": 147845
+      },
+      {
+        "page_title": "Cuenta de Ahorro",
+        "events": 1198585,
+        "identified_customers": 147899
+      },
+      {
+        "page_title": "Tarjeta de Crédito",
+        "events": 1198485,
+        "identified_customers": 147876
+      },
+      {
+        "page_title": "Pagar Servicios",
+        "events": 952401,
+        "identified_customers": 145997
+      },
+      {
+        "page_title": "Transferir",
+        "events": 951874,
+        "identified_customers": 145947
+      },
+      {
+        "page_title": "Mis Movimientos",
+        "events": 950599,
+        "identified_customers": 145946
+      },
+      {
+        "page_title": "Mis Cuentas",
+        "events": 942316,
+        "identified_customers": 145781
+      },
+      {
+        "page_title": "Productos",
+        "events": 941200,
+        "identified_customers": 145947
+      },
+      {
+        "page_title": "Inicio",
+        "events": 940741,
+        "identified_customers": 145906
+      },
+      {
+        "page_title": "Ayuda",
+        "events": 939717,
+        "identified_customers": 145843
+      },
+      {
+        "page_title": "(sin página)",
+        "events": 779824,
+        "identified_customers": 143826
+      }
+    ],
+    "contact_needs": [
+      {
+        "reason": "Transaccional",
+        "interactions": 240056,
+        "customers": 119646,
+        "unresolved": 20385,
+        "resolution_known": 240056,
+        "unresolved_pct": 8.4917685873,
+        "followups": 53137
+      },
+      {
+        "reason": "Producto",
+        "interactions": 150863,
+        "customers": 95245,
+        "unresolved": 15650,
+        "resolution_known": 150863,
+        "unresolved_pct": 10.3736502655,
+        "followups": 35923
+      },
+      {
+        "reason": "Queja",
+        "interactions": 117021,
+        "customers": 81336,
+        "unresolved": 66000,
+        "resolution_known": 117021,
+        "unresolved_pct": 56.4001333094,
+        "followups": 73686
+      },
+      {
+        "reason": "Técnico",
+        "interactions": 102899,
+        "customers": 74536,
+        "unresolved": 30940,
+        "resolution_known": 102899,
+        "unresolved_pct": 30.06831942,
+        "followups": 41763
+      },
+      {
+        "reason": "Comercial",
+        "interactions": 54879,
+        "customers": 45979,
+        "unresolved": 19093,
+        "resolution_known": 54879,
+        "unresolved_pct": 34.7910858434,
+        "followups": 24446
+      },
+      {
+        "reason": "Retención",
+        "interactions": 20578,
+        "customers": 19274,
+        "unresolved": 8198,
+        "resolution_known": 20578,
+        "unresolved_pct": 39.8386626494,
+        "followups": 10099
+      }
+    ],
+    "contact_channels": [
+      {
+        "channel": "Phone",
+        "interactions": 583250,
+        "customers": 146912
+      },
+      {
+        "channel": "Email",
+        "interactions": 27543,
+        "customers": 25181
+      },
+      {
+        "channel": "App",
+        "interactions": 26364,
+        "customers": 24197
+      },
+      {
+        "channel": "WhatsApp",
+        "interactions": 22888,
+        "customers": 21227
+      },
+      {
+        "channel": "Web Chat",
+        "interactions": 22856,
+        "customers": 21238
+      },
+      {
+        "channel": "Web",
+        "interactions": 3395,
+        "customers": 3363
+      }
+    ],
+    "complaint_needs": [
+      {
+        "subcategory": "Cargo no reconocido",
+        "cases": 12297,
+        "customers": 11818,
+        "sla_flagged": 2507,
+        "sla_known": 12297
+      },
+      {
+        "subcategory": "Cobro indebido",
+        "cases": 12194,
+        "customers": 11722,
+        "sla_flagged": 2431,
+        "sla_known": 12194
+      },
+      {
+        "subcategory": "Problema con app",
+        "cases": 12128,
+        "customers": 11648,
+        "sla_flagged": 2429,
+        "sla_known": 12128
+      },
+      {
+        "subcategory": "Atención en sucursal",
+        "cases": 11892,
+        "customers": 11434,
+        "sla_flagged": 2421,
+        "sla_known": 11892
+      },
+      {
+        "subcategory": "Calidad de servicio",
+        "cases": 11886,
+        "customers": 11477,
+        "sla_flagged": 2412,
+        "sla_known": 11886
+      },
+      {
+        "subcategory": "(sin subcategoría)",
+        "cases": 6698,
+        "customers": 6551,
+        "sla_flagged": 1295,
+        "sla_known": 6698
+      }
+    ],
+    "campaign_products": [
+      {
+        "promoted_product": "Tarjeta Crédito",
+        "campaigns": 52
+      },
+      {
+        "promoted_product": "Cuenta Ahorro",
+        "campaigns": 40
+      },
+      {
+        "promoted_product": "Préstamo Personal",
+        "campaigns": 28
+      },
+      {
+        "promoted_product": "(sin producto)",
+        "campaigns": 22
+      },
+      {
+        "promoted_product": "Inversión",
+        "campaigns": 20
+      },
+      {
+        "promoted_product": "Cuenta Corriente",
+        "campaigns": 17
+      },
+      {
+        "promoted_product": "Préstamo Hipotecario",
+        "campaigns": 11
+      },
+      {
+        "promoted_product": "Seguro",
+        "campaigns": 10
+      }
+    ],
+    "quality": [
+      {
+        "customers": 150000,
+        "products": 400000,
+        "product_owners": 139578,
+        "transactions": 4425008,
+        "digital_events": 15620994,
+        "interactions": 686296,
+        "complaints": 67095,
+        "anonymous_events": 3745446,
+        "missing_actions": 1561432,
+        "transaction_owner_mismatches": 0,
+        "complaint_owner_mismatches": 44570,
+        "complaint_product_links": 44570,
+        "event_product_comparable": 1094242,
+        "event_product_mismatches": 1094226,
+        "tx_first": "2023-06-17T06:01:30.000",
+        "tx_last": "2026-06-18T05:59:41.000",
+        "event_first": "2023-06-17T06:02:03.000",
+        "event_last": "2026-06-18T06:04:05.000"
+      }
+    ],
+    "status_domains": [
+      {
+        "source_table": "products",
+        "status_label": "Closed",
+        "records": 32039
+      },
+      {
+        "source_table": "products",
+        "status_label": "Active",
+        "records": 339965
+      },
+      {
+        "source_table": "products",
+        "status_label": "Blocked",
+        "records": 19935
+      },
+      {
+        "source_table": "products",
+        "status_label": "Suspended",
+        "records": 8061
+      },
+      {
+        "source_table": "transactions",
+        "status_label": "Reversed",
+        "records": 44750
+      },
+      {
+        "source_table": "transactions",
+        "status_label": "Declined",
+        "records": 221234
+      },
+      {
+        "source_table": "transactions",
+        "status_label": "Pending",
+        "records": 88343
+      },
+      {
+        "source_table": "transactions",
+        "status_label": "Approved",
+        "records": 4070681
+      }
+    ]
+  }
+}

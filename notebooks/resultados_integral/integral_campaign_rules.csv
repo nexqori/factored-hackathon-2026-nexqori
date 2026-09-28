@@ -1,0 +1,6 @@
+rule,affected,eligible
+clicked_without_delivery_flag,0,97793
+conversion_without_delivery_flag,0,9799
+open_date_before_send,0,487309
+click_date_before_send,0,97793
+conversion_date_before_send,0,9799

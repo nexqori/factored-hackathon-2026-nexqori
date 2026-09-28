@@ -1,0 +1,7 @@
+status,cases,with_resolution_date,with_closing_date,sla_breached
+In Process,26823,0,0,5498
+Open,20125,0,0,3947
+Resolved,13512,12880,0,2663
+Escalated,3321,0,0,693
+Closed,2609,2469,2481,543
+Rejected,705,0,0,151

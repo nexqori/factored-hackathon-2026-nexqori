@@ -1,0 +1,5 @@
+relation,matched_rows,comparable,mismatches
+transactions.product.customer,4425008,4425008,0
+complaints.product.customer,44570,44570,44570
+events.product.customer,1440338,1094242,1094226
+survey.interaction.customer,212759,212759,0

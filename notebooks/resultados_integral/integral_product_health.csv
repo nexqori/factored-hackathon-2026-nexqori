@@ -1,0 +1,9 @@
+product_type,products,blocked_suspended,dpd_known,with_arrears,over_30_days,over_30_pct_known
+Cuenta Ahorro,120203,8339,0,0,0,
+Tarjeta Crédito,100102,6959,95033,14202,9502,9.998632054128565
+Cuenta Corriente,99979,6964,0,0,0,
+Tarjeta Débito,39938,2945,0,0,0,
+Préstamo Personal,19960,1398,18993,2840,1882,9.908913810351182
+Préstamo Hipotecario,11910,841,11324,1723,1150,10.1554221123278
+Inversión,5859,403,0,0,0,
+Seguro,2049,147,0,0,0,

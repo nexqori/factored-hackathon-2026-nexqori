@@ -1,0 +1,10 @@
+action,event_category,events,error_events,error_pct
+view_transactions,Transaction,901039,54073,6.001183078645874
+initiate_transfer,Transaction,901824,53883,5.974890887800724
+initiate_payment,Transaction,902225,53657,5.947186123195434
+view_help,Navigation,890625,40679,4.567466666666667
+view_accounts,Navigation,892802,40308,4.514774832493655
+view_home,Navigation,890058,40283,4.525884829977373
+view_products,Navigation,891777,40193,4.507068471153663
+Sin acción,Navigation,396062,17872,4.512424822376294
+Sin acción,Transaction,299886,17775,5.92725235589524

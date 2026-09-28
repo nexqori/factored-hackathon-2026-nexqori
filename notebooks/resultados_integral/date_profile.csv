@@ -1,0 +1,33 @@
+table,column,non_null,minimum,maximum
+branches,branch_opening_date,350,1990-01-03 00:00:00,2023-05-11 00:00:00
+customers,date_of_birth,150000,1942-07-07 00:00:00,2005-06-21 00:00:00
+customers,registration_date,150000,2018-06-18 01:21:11,2026-06-17 23:53:29
+customers,last_updated,150000,2018-06-18 15:09:31,2027-06-15 19:35:27
+products,opening_date,400000,2018-06-18 00:00:00,2026-06-17 00:00:00
+products,expiration_date,133161,2021-06-17 00:00:00,2031-06-16 00:00:00
+products,last_transaction_date,305723,2018-06-21 17:07:15,2026-06-17 23:17:43
+products,last_updated,400000,2018-06-20 05:21:54,2027-06-15 02:26:58
+service_agents,hire_date,1200,2013-06-20 00:00:00,2026-03-17 00:00:00
+marketing_campaigns,start_date,200,2023-07-01 00:00:00,2026-06-14 00:00:00
+marketing_campaigns,end_date,200,2023-08-11 00:00:00,2026-08-20 00:00:00
+daily_exchange_rates,date,13164,2023-06-17,2026-06-17
+call_center_interactions,interaction_date,686296,2023-06-17 08:03:26,2026-06-18 07:58:13
+call_center_interactions,process_date,686296,2023-06-17,2026-06-17
+call_transcripts,process_date,171321,2023-06-17,2026-06-17
+complaints,creation_date,67095,2023-06-17 08:07:05,2026-06-18 07:56:52
+complaints,process_date,67095,2023-06-17,2026-06-17
+complaints,assignment_date,43967,2023-06-17 22:26:12,2026-06-19 03:56:52
+complaints,first_response_date,40853,2023-06-18 03:37:40,2026-06-20 22:42:19
+complaints,resolution_date,15349,2023-06-20 07:10:42,2026-07-18 06:07:57
+complaints,closing_date,2481,2023-06-26 11:38:44,2026-07-18 22:15:16
+satisfaction_surveys,survey_date,212759,2023-06-17 09:29:20,2026-06-19 06:54:58
+satisfaction_surveys,process_date,212759,2023-06-17,2026-06-17
+transactions,transaction_date,4425008,2023-06-17 06:01:30,2026-06-18 05:59:41
+transactions,process_date,4425008,2023-06-17,2026-06-17
+digital_events,event_date,15620994,2023-06-17 06:02:03,2026-06-18 06:04:05
+digital_events,process_date,15620994,2023-06-17,2026-06-17
+campaign_sends,send_date,1746801,2023-07-01 06:00:42,2026-06-18 05:59:53
+campaign_sends,process_date,1746801,2023-07-01,2026-06-17
+campaign_sends,open_date,487309,2023-07-01 07:44:22,2026-06-25 03:30:02
+campaign_sends,click_date,97793,2023-07-01 21:57:26,2026-06-24 23:51:59
+campaign_sends,conversion_date,9799,2023-07-03 12:56:27,2026-06-26 08:26:49

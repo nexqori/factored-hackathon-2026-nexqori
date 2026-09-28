@@ -1,0 +1,38 @@
+action_name,event_type,events
+(sin acción),PageView,597708
+(sin acción),Click,357964
+(sin acción),Login,243645
+(sin acción),Logout,243168
+(sin acción),FormSubmit,59569
+(sin acción),Error,35647
+(sin acción),Purchase,23731
+initiate_payment,PageView,597645
+initiate_payment,FormSubmit,178918
+initiate_payment,Purchase,72005
+initiate_payment,Error,53657
+initiate_transfer,PageView,597058
+initiate_transfer,FormSubmit,178964
+initiate_transfer,Purchase,71919
+initiate_transfer,Error,53883
+login,Login,1095401
+login,Logout,1094528
+logout,Logout,1095916
+logout,Login,1095724
+view_accounts,PageView,449342
+view_accounts,Click,403152
+view_accounts,Error,40308
+view_help,PageView,447611
+view_help,Click,402335
+view_help,Error,40679
+view_home,PageView,447245
+view_home,Click,402530
+view_home,Error,40283
+view_product,PageView,1792450
+view_product,Click,1615193
+view_products,PageView,447724
+view_products,Click,403860
+view_products,Error,40193
+view_transactions,PageView,595781
+view_transactions,FormSubmit,179457
+view_transactions,Purchase,71728
+view_transactions,Error,54073

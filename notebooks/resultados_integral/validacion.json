@@ -1,0 +1,397 @@
+[
+  {
+    "check": "13 tablas examinadas",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "7671 archivos examinados",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas branches",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas customers",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas products",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas service_agents",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas marketing_campaigns",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas daily_exchange_rates",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas call_center_interactions",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas call_transcripts",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas complaints",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas satisfaction_surveys",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas transactions",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas digital_events",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación filas campaign_sends",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación calls_by_reason",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación calls_monthly",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación complaints_by_category",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación detalle_subcategories",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación transactions_status",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación digital_channels",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación detalle_transcript_topics",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación integral_survey_scores",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación integral_campaigns_channel",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación integral_product_health",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación integral_customer_country",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Conciliación integral_branch_country",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "SLA por subcategoría",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Sin multiplicación JOIN de casos",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Sin multiplicación JOIN de transcripciones",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "24 relaciones con denominadores reconciliados",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU/NumPy primer bloque",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo branches.atm_count",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo branches.teller_window_count",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo branches.latitude",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo branches.longitude",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo customers.credit_score",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo customers.estimated_monthly_income",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo products.current_balance",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo products.credit_limit",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo products.interest_rate",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo products.days_past_due",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo service_agents.avg_csat",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo service_agents.total_monthly_interactions",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo marketing_campaigns.budget",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo marketing_campaigns.expected_conversion_rate",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo daily_exchange_rates.exchange_rate",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo daily_exchange_rates.buy_rate",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo daily_exchange_rates.sell_rate",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo call_center_interactions.duration_seconds",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo call_center_interactions.wait_time_seconds",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo call_center_interactions.sentiment_score",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo call_transcripts.accent_confidence",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo call_transcripts.duration_seconds",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo complaints.claimed_amount",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo complaints.resolution_days",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo complaints.compensation_granted",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo complaints.resolution_satisfaction",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo satisfaction_surveys.main_score",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo satisfaction_surveys.question_1_response",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo satisfaction_surveys.question_2_response",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo satisfaction_surveys.question_3_response",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo satisfaction_surveys.response_time_hours",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo satisfaction_surveys.campaign_response_rate",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo transactions.amount",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo transactions.amount_usd",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo transactions.fraud_score",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo transactions.latitude",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo transactions.longitude",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo digital_events.event_value",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo digital_events.duration_seconds",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo campaign_sends.click_count",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo campaign_sends.conversion_value",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "GPU vs CPU completo campaign_sends.send_cost",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "CSV independiente branches",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "CSV independiente service_agents",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "CSV independiente marketing_campaigns",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Producto de caso vs cliente: CSV completo independiente",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "check": "Sucursal de registro: CSV completo independiente",
+    "passed": true,
+    "detail": ""
+  }
+]

@@ -1,0 +1,8 @@
+rule,affected,eligible
+birth_after_registration,0,150000
+product_expiration_before_opening,0,133161
+campaign_end_before_start,0,200
+negative_exchange_rate,0,13164
+exchange_buy_gt_sell,0,13164
+fraud_score_outside_0_100,0,3539851
+survey_before_interaction,0,212759

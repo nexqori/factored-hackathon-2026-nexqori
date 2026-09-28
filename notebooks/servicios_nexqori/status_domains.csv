@@ -1,0 +1,9 @@
+source_table,status_label,records
+products,Closed,32039
+products,Active,339965
+products,Blocked,19935
+products,Suspended,8061
+transactions,Reversed,44750
+transactions,Declined,221234
+transactions,Pending,88343
+transactions,Approved,4070681

@@ -1,0 +1,31 @@
+send_channel,send_status,failure_reason,sends
+Email,Failed,SMTP error,17785
+SMS,Failed,SMTP error,12180
+Email,Bounced,Invalid email address,11878
+WhatsApp,Failed,SMTP error,9914
+SMS,Bounced,Invalid email address,8179
+Push,Failed,SMTP error,8172
+WhatsApp,Bounced,Invalid email address,6532
+Email,Blocked,User blocked sender,5836
+Push,Bounced,Invalid email address,5561
+SMS,Blocked,User blocked sender,4225
+WhatsApp,Blocked,User blocked sender,3341
+Push,Blocked,User blocked sender,2783
+Voice,Failed,SMTP error,1655
+Voice,Bounced,Invalid email address,1059
+Email,Failed,Sin motivo,957
+Email,Bounced,Sin motivo,613
+SMS,Failed,Sin motivo,599
+WhatsApp,Failed,Sin motivo,520
+Voice,Blocked,User blocked sender,497
+Push,Failed,Sin motivo,441
+SMS,Bounced,Sin motivo,424
+WhatsApp,Bounced,Sin motivo,336
+Email,Blocked,Sin motivo,316
+Push,Bounced,Sin motivo,261
+SMS,Blocked,Sin motivo,212
+WhatsApp,Blocked,Sin motivo,172
+Push,Blocked,Sin motivo,134
+Voice,Failed,Sin motivo,83
+Voice,Bounced,Sin motivo,57
+Voice,Blocked,Sin motivo,35

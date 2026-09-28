@@ -1,0 +1,4 @@
+-r requirements-eda.txt
+# Entorno NVIDIA CUDA usado para el análisis integral.
+cupy-cuda12x[ctk]==14.2.0
+pyarrow==25.0.1
