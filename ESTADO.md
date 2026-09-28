@@ -240,7 +240,7 @@
 - Nombres 2026-09-28 13:55:07 -05:00, America/Lima: Bryan no considera convincentes las propuestas anteriores y pide más variedad. [x] Añadida segunda ronda N9–N20 en IDENTIDAD-PARA-VOTAR.md: compuestos, conversacionales y conceptuales; primera recomendación retirada. Finalistas propuestos Entiva, Dilo, Cauce y Accora, sin selección ni verificación de disponibilidad. Siguiente paso: Bryan/equipo identifica candidatos para votar; paletas conservadas.
 
 ## Frente: Nexqori — identidad, skill compartible y aplicativo base
-- Fecha: 2026-09-28 17:10:34 -0500, America/Lima.
+- Fecha: 2026-09-28 17:12:58 -0500, America/Lima.
 - Objetivo vigente: base Nexqori con P11 Terracota suave, skill compartible, Docker local, React + FastAPI + PostgreSQL, login/seguridad/tablas, servicios basados en datos, ES/EN/PT y agente de navegación. GitHub privado en la organización nexqori indicada por Bryan.
 - Proyecto y Git principal: E:/factoredai; rama main; un único ESTADO.md. Conservados los antecedentes y el prototipo Express en .local/prototipo-express (excluido de Git).
 - [x] Implementar React, FastAPI, siete tablas, Alembic, fixtures coherentes y PostgreSQL; tres contenedores saludables en http://localhost:5180.
@@ -256,7 +256,7 @@
 - [x] Subir primer commit 6b3f466 y verificar [CI exitosa](https://github.com/nexqori/nexqori/actions/runs/36489779829).
 - [x] Corrección explícita de Bryan: retirar etiquetas de demo/simulación de la interfaz y usar lenguaje natural ES/EN/PT; actualizar también la skill. Historial original y mensajes del usuario preservados.
 - [x] Validar el ajuste de tono: 56 combinaciones de pantalla/idioma/ancho y cinco revisiones axe sin infracciones; 33 pruebas API, incluida conservación del texto original y mensajes del usuario.
-- [ ] Subir el ajuste de tono y comprobar su CI final.
-- Último avance: primera base publicada en GitHub privado; ajuste de tono implementado y validado localmente, listo para subir. Docker disponible en localhost:5180. Alcance técnico e integraciones pendientes en docs/arquitectura.md y docs/agente.md.
-- Siguiente paso: subir el ajuste final, verificar CI y entregar enlaces y acceso local. Un modelo de IA y servicios bancarios reales quedan como integraciones posteriores a definir, sin credenciales de proveedor disponibles.
+- [x] Ajuste de tono publicado en d11380e; [CI final exitosa](https://github.com/nexqori/nexqori/actions/runs/36490807744). Historial visible comprobado contra la API y original conservado en PostgreSQL. Skill portable actualizada y validada.
+- Último avance: base y ajuste de tono publicados en GitHub privado; Docker local operativo en http://localhost:5180. 8 pruebas frontend + 33 API, build y CI correctos; 56 combinaciones de interfaz y cinco revisiones axe sin infracciones observadas. Fuentes, análisis, skill y guía de acceso incluidos.
+- Siguiente paso: Bryan revisa la aplicación local; credenciales propias en .env y guía en README.md. Sin pendientes de esta entrega. La conexión futura de un modelo, un banco o atención humana requiere definir proveedor y alcance; sus contratos y límites están documentados, sin activar servicios externos.
 - Limitación conocida: TestClient emite aviso de deprecación httpx; las 33 pruebas pasan. No equivale a una plataforma bancaria certificada o lista para producción.
