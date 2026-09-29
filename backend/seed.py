@@ -11,9 +11,9 @@ def seed(session, passwords):
     if any(not isinstance(p, str) or len(p) < 14 for p in passwords):
         raise RuntimeError("Run npm run setup: initial passwords require at least 14 characters.")
     users = [
-        User(id="andrea",email="andrea@nexqori.local",name="Andrea Rivera",password_hash=hasher.hash(passwords[0]),role="customer",locale="es"),
-        User(id="nora",email="admin@nexqori.local",name="Nora",password_hash=hasher.hash(passwords[1]),role="admin",locale="es"),
-        User(id="mateo",email="mateo@nexqori.local",name="Mateo Silva",password_hash=hasher.hash(passwords[2]),role="customer",locale="pt")
+        User(id="andrea",identity_number="00000001",email="andrea@nexqori.com",name="Andrea Rivera",password_hash=hasher.hash(passwords[0]),role="customer",locale="es"),
+        User(id="nora",identity_number="00000002",email="admin@nexqori.com",name="Nora",password_hash=hasher.hash(passwords[1]),role="admin",locale="es"),
+        User(id="mateo",identity_number="00000003",email="mateo@nexqori.com",name="Mateo Silva",password_hash=hasher.hash(passwords[2]),role="customer",locale="pt")
     ]
     session.add_all(users); session.flush()
     session.add_all([

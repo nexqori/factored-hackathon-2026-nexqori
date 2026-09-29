@@ -14,6 +14,7 @@ const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
 const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], securityHeaders: false };
 const snapshot = async name => { const path = output + '/' + name + '.png'; await page.screenshot({ path, fullPage: true }); results.screenshots.push(path); };
+async function chooseLanguage(locale) { await page.locator('.language-trigger').click(); await page.locator('[data-locale="'+locale+'"]').click(); }
 async function noOverflow() { assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Horizontal overflow: ' + page.url()); }
 async function axe(name) {
   const result = await new AxeBuilder({ page }).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
@@ -27,7 +28,7 @@ try {
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).waitFor();
   await snapshot('login-desktop');
   await axe('login');
-  await page.getByLabel('Correo electrónico').fill('andrea@nexqori.local');
+  await page.getByLabel('Correo electrónico').fill('andrea@nexqori.com');
   await page.getByLabel('Contraseña', { exact: true }).fill(credentials.CUSTOMER_PASSWORD);
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).click();
   await page.getByRole('heading', { name: 'Qué bueno tenerte aquí.' }).waitFor();
@@ -39,7 +40,7 @@ try {
     pt: {language:'Idioma',home:'Que bom ter você aqui.',movements:'Movimentações',products:'Meus produtos',services:'Serviços',requests:'Minhas solicitações',help:'Sempre há um próximo passo.'}
   };
   for (const locale of ['en','pt','es']) {
-    await page.locator('.language-picker select').selectOption(locale);
+    await chooseLanguage(locale);
     await page.waitForFunction(language => document.documentElement.lang === language, locale);
     for (const route of ['home','movements','products','services','requests','help']) {
       await page.goto(origin + (route === 'home' ? '/' : '/' + route));
@@ -54,7 +55,7 @@ try {
     pt: [['Abrir empréstimos','/services/loans'],['Abrir seguros','/services/insurance']]
   };
   for (const [locale, cases] of Object.entries(commands)) {
-    await page.locator('.language-picker select').selectOption(locale);
+    await chooseLanguage(locale);
     await page.waitForFunction(language => document.documentElement.lang === language, locale);
     for (const [message, route] of cases) {
       await page.locator('.chat-composer input').fill(message);
@@ -68,12 +69,12 @@ try {
     }
     for (const service of ['transfers','payments','loans','investments','insurance','cash']) {
       await page.goto(origin+'/services/'+service);
-      await page.locator('.service-detail').waitFor();
+      await page.locator('[data-catalog-ready="true"]').waitFor();
       await noOverflow();
       results.pages.push({locale,route:'/services/'+service,width:1512});
     }
   }
-  await page.locator('.language-picker select').selectOption('es');
+  await chooseLanguage('es');
   await page.waitForFunction(() => document.documentElement.lang === 'es');
   await page.goto(origin + '/movements');
   await page.getByPlaceholder('Buscar comercio o referencia').fill('Stream');
@@ -114,7 +115,7 @@ try {
   await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
   await page.getByRole('button',{name:'Entrar a mi espacio'}).waitFor();
   assert.equal((await context.request.get(origin+'/api/bootstrap')).status(),401);
-  await page.getByLabel('Correo electrónico').fill('admin@nexqori.local');
+  await page.getByLabel('Correo electrónico').fill('admin@nexqori.com');
   await page.getByLabel('Contraseña',{exact:true}).fill(credentials.ADMIN_PASSWORD);
   await page.getByRole('button',{name:'Entrar a mi espacio'}).click();
   await page.getByRole('heading',{name:'Solicitudes y trazabilidad'}).waitFor();

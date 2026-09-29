@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, BigInteger, DateTime, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint
+from sqlalchemy import String, Text, Integer, BigInteger, DateTime, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 def now():
@@ -12,12 +12,14 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True)
+    identity_number: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
     name: Mapped[str] = mapped_column(String(100))
     password_hash: Mapped[str] = mapped_column(Text)
     role: Mapped[str] = mapped_column(String(16))
     locale: Mapped[str] = mapped_column(String(2), default="es")
+    text_size: Mapped[str] = mapped_column(String(8), default="medium")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    __table_args__ = (CheckConstraint("role IN ('customer','admin')"), CheckConstraint("locale IN ('es','en','pt')"))
+    __table_args__ = (CheckConstraint("role IN ('customer','admin')"), CheckConstraint("locale IN ('es','en','pt')"), CheckConstraint("text_size IN ('small','medium','large')"))
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -57,6 +59,9 @@ class RequestCase(Base):
     transaction_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     request_key: Mapped[str] = mapped_column(String(64))
     service: Mapped[str] = mapped_column(String(32), default="general")
+    catalog_service_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_product_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    service_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     reason: Mapped[str] = mapped_column(String(16))
     details: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), default="received")
@@ -64,6 +69,7 @@ class RequestCase(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (
         ForeignKeyConstraint(["transaction_id","user_id"], ["transactions.id","transactions.user_id"]),
+        ForeignKeyConstraint(["source_product_id","user_id"], ["products.id","products.user_id"], name="fk_requests_source_owner"),
         UniqueConstraint("user_id","transaction_id"), UniqueConstraint("user_id","request_key"),
         CheckConstraint("status IN ('received','in_review','handed_off')"),
         CheckConstraint("reason IN ('unknown','amount','payment','other')"),
@@ -79,12 +85,23 @@ class AuditEvent(Base):
     actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
+class Conversation(Base):
+    __tablename__ = "conversations"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    locale: Mapped[str] = mapped_column(String(2))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (UniqueConstraint("id", "user_id"), CheckConstraint("locale IN ('es','en','pt')"))
+
 class Message(Base):
     __tablename__ = "messages"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), index=True)
     role: Mapped[str] = mapped_column(String(16))
     content: Mapped[str] = mapped_column(Text)
     locale: Mapped[str] = mapped_column(String(2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    __table_args__ = (CheckConstraint("role IN ('user','assistant')"), CheckConstraint("locale IN ('es','en','pt')"))
+    __table_args__ = (ForeignKeyConstraint(["conversation_id", "user_id"], ["conversations.id", "conversations.user_id"]), CheckConstraint("role IN ('user','assistant')"), CheckConstraint("locale IN ('es','en','pt')"))

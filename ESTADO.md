@@ -260,3 +260,21 @@
 - Último avance: base y ajuste de tono publicados en GitHub privado; Docker local operativo en http://localhost:5180. 8 pruebas frontend + 33 API, build y CI correctos; 56 combinaciones de interfaz y cinco revisiones axe sin infracciones observadas. Fuentes, análisis, skill y guía de acceso incluidos.
 - Siguiente paso: Bryan revisa la aplicación local; credenciales propias en .env y guía en README.md. Sin pendientes de esta entrega. La conexión futura de un modelo, un banco o atención humana requiere definir proveedor y alcance; sus contratos y límites están documentados, sin activar servicios externos.
 - Limitación conocida: TestClient emite aviso de deprecación httpx; las 33 pruebas pasan. No equivale a una plataforma bancaria certificada o lista para producción.
+
+## Frente: Nexqori — acceso, conversaciones y servicios bancarios
+- Fecha: 2026-09-28 23:57:34 -05:00, America/Lima.
+- Pedido vigente: correo sin .local o documento de identidad; selector de idioma cuidado; historial por conversación; tamaño de letra en Configuración; mini bot sonriente. Ampliar servicios con búsqueda por necesidad (por ejemplo, pagar celular) y opciones sustentadas en el dataset. Conservar ES/EN/PT y tono natural.
+- Corrección de alcance: Bryan difiere toda la voz a otra implementación; conservar únicamente la base bancaria, sin Whisper ni otro motor de voz.
+- Proyecto: E:/factoredai, rama codex/catalogo-servicios-base desde main; único estado en la raíz principal. Bryan pide PR y un Markdown para que el equipo inicie.
+- [x] Recuperar estado, contratos de acceso, mensajes y preferencias, y leer la skill de marca.
+- [x] Implementar acceso por correo/documento, preferencias y conversaciones. Migración PostgreSQL preservó los 48 mensajes anteriores; 42 pruebas API y 8 frontend pasan.
+- [x] Rediseñar idiomas, configuración y asistente con conversaciones y mini bot.
+- [x] Retirar llamada y motores; Docker reconstruido y comprobado sin paquetes de voz ni endpoints. Documentación y skill alineadas; ZIP portable actualizado y validado.
+- [x] Verificar seis consultas censales agregadas y 20 correspondencias de servicios. Empresa Telefónica, Internet Plus, Cable TV y Servicios Públicos existen como comercios Purchase; no acreditan convenios ni pagos ejecutables. [Evidencia](notebooks/servicios_nexqori/catalog_evidence.json).
+- [x] Implementar catálogo buscable ES/EN/PT, filtros, rutas específicas, formularios con revisión/confirmación y detalle persistido. API valida cuenta propia, importes enteros, titularidad, campos e idempotencia. El asistente puede abrir telefonía por su nombre cotidiano.
+- [x] Desplegar en Docker local. Migración c83d71a6e520 preservó seis solicitudes, 90 mensajes, cuatro productos y siete movimientos previos, comparados contra respaldo; FK de cuenta/titular comprobada en PostgreSQL.
+- [x] Validar compilación, 10 pruebas frontend, suite API y recorridos de navegador: 56 combinaciones generales y seis comandos del agente; catálogo con 17 combinaciones y nueve revisiones axe; acceso/documento, conversaciones, preferencias y cinco revisiones axe. Sin infracciones automatizadas ni errores JavaScript observados. Evidencia local en .local/verification/.
+- [x] Preparar [INICIO-EQUIPO.md](INICIO-EQUIPO.md) con arranque, credenciales locales, recorridos, mapa del código, comprobaciones y límites; [guía de catálogo](docs/catalogo-servicios.md) y [acceso/conversaciones](docs/acceso-y-conversaciones.md).
+- [ ] Publicar rama, abrir PR privado y comprobar CI. No fusionar automáticamente.
+- Último avance: aplicación desplegada en http://localhost:5180, catálogo y recorridos validados. El registro de solicitudes no debita saldos ni acredita pagos a empresas. La voz permanece fuera del alcance.
+- Siguiente paso: abrir el PR de esta entrega, comprobar CI y entregar el enlace junto a la guía para el equipo.

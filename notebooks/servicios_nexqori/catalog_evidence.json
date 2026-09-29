@@ -1,0 +1,179 @@
+{
+  "generatedAt": "2026-09-29T04:39:33.029423+00:00",
+  "source": "dataset/_eda_integral/integral.duckdb",
+  "scope": "Full historical tables; all transaction states; no timezone declared by source.",
+  "interpretation": "Merchant names support discovery labels, not collection agreements. Mapping phone/mobile and public utility synonyms is a product decision, not a dataset breakdown.",
+  "catalogServices": 20,
+  "checks": "Every source value exists; transaction counts reconcile; payment merchant names absent; four named merchants observed only in Purchase.",
+  "queries": {
+    "service_merchants": {
+      "sql": "SELECT merchant_name, transaction_type, count(*) records,\n    count(*) FILTER(WHERE merchant_category='Services') category_services,\n    min(transaction_date) first_seen, max(transaction_date) last_seen\n    FROM transactions WHERE merchant_name IN ('Empresa Telefónica','Internet Plus','Cable TV','Servicios Públicos')\n    GROUP BY 1,2 ORDER BY 1,2",
+      "sha256": "b31bfd9974ed7c0427eff97c8fa6516086532c82ef564da46b72e7b547632f56",
+      "rows": [
+        {
+          "merchant_name": "Cable TV",
+          "transaction_type": "Purchase",
+          "records": 51430,
+          "category_services": 48779,
+          "first_seen": "2023-06-17 06:42:37",
+          "last_seen": "2026-06-18 05:40:10"
+        },
+        {
+          "merchant_name": "Empresa Telefónica",
+          "transaction_type": "Purchase",
+          "records": 51464,
+          "category_services": 48898,
+          "first_seen": "2023-06-17 06:24:54",
+          "last_seen": "2026-06-18 05:01:16"
+        },
+        {
+          "merchant_name": "Internet Plus",
+          "transaction_type": "Purchase",
+          "records": 51002,
+          "category_services": 48431,
+          "first_seen": "2023-06-17 06:10:10",
+          "last_seen": "2026-06-18 05:44:40"
+        },
+        {
+          "merchant_name": "Servicios Públicos",
+          "transaction_type": "Purchase",
+          "records": 51250,
+          "category_services": 48684,
+          "first_seen": "2023-06-17 06:10:11",
+          "last_seen": "2026-06-18 05:51:56"
+        }
+      ]
+    },
+    "payment_coverage": {
+      "sql": "SELECT count(*) records, count(merchant_name) merchant_names,\n    count(*) FILTER(WHERE transaction_category='Services') service_category\n    FROM transactions WHERE transaction_type='Payment'",
+      "sha256": "aa8efb8f7ab671f814a10f076d3a42b54bc638d9ba914966ed1632dff3c1d018",
+      "rows": [
+        {
+          "records": 738964,
+          "merchant_names": 0,
+          "service_category": 140213
+        }
+      ]
+    },
+    "transaction_types": {
+      "sql": "SELECT transaction_type, count(*) records FROM transactions GROUP BY 1 ORDER BY 1",
+      "sha256": "0179f479253f4ee24246169a4c22e7fe337acd43db1da66692690db564f5ba06",
+      "rows": [
+        {
+          "transaction_type": "Adjustment",
+          "records": 132118
+        },
+        {
+          "transaction_type": "Deposit",
+          "records": 609409
+        },
+        {
+          "transaction_type": "Payment",
+          "records": 738964
+        },
+        {
+          "transaction_type": "Purchase",
+          "records": 1083406
+        },
+        {
+          "transaction_type": "Transfer",
+          "records": 896438
+        },
+        {
+          "transaction_type": "Withdrawal",
+          "records": 964673
+        }
+      ]
+    },
+    "transaction_states": {
+      "sql": "SELECT transaction_status, count(*) records FROM transactions GROUP BY 1 ORDER BY 1",
+      "sha256": "69fbad2ae72f7fa3c255c90424263058199e459dce5a600fc4819c1ede9978c7",
+      "rows": [
+        {
+          "transaction_status": "Approved",
+          "records": 4070681
+        },
+        {
+          "transaction_status": "Declined",
+          "records": 221234
+        },
+        {
+          "transaction_status": "Pending",
+          "records": 88343
+        },
+        {
+          "transaction_status": "Reversed",
+          "records": 44750
+        }
+      ]
+    },
+    "product_types": {
+      "sql": "SELECT product_type, count(*) records FROM products GROUP BY 1 ORDER BY 1",
+      "sha256": "396aecd415a13f8fdd5d0927fe09997fdefaaf735d6c35468fa84c8422dc43bd",
+      "rows": [
+        {
+          "product_type": "Cuenta Ahorro",
+          "records": 120203
+        },
+        {
+          "product_type": "Cuenta Corriente",
+          "records": 99979
+        },
+        {
+          "product_type": "Inversión",
+          "records": 5859
+        },
+        {
+          "product_type": "Préstamo Hipotecario",
+          "records": 11910
+        },
+        {
+          "product_type": "Préstamo Personal",
+          "records": 19960
+        },
+        {
+          "product_type": "Seguro",
+          "records": 2049
+        },
+        {
+          "product_type": "Tarjeta Crédito",
+          "records": 100102
+        },
+        {
+          "product_type": "Tarjeta Débito",
+          "records": 39938
+        }
+      ]
+    },
+    "complaint_subcategories": {
+      "sql": "SELECT subcategory, count(*) records FROM complaints GROUP BY 1 ORDER BY 1",
+      "sha256": "98448a6335860a02d1c470a3aefefcdad38686e46191c4d412375bbbe8ae1216",
+      "rows": [
+        {
+          "subcategory": "Atención en sucursal",
+          "records": 11892
+        },
+        {
+          "subcategory": "Calidad de servicio",
+          "records": 11886
+        },
+        {
+          "subcategory": "Cargo no reconocido",
+          "records": 12297
+        },
+        {
+          "subcategory": "Cobro indebido",
+          "records": 12194
+        },
+        {
+          "subcategory": "Problema con app",
+          "records": 12128
+        },
+        {
+          "subcategory": null,
+          "records": 6698
+        }
+      ]
+    }
+  }
+}
