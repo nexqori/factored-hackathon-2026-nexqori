@@ -262,7 +262,7 @@
 - Limitación conocida: TestClient emite aviso de deprecación httpx; las 33 pruebas pasan. No equivale a una plataforma bancaria certificada o lista para producción.
 
 ## Frente: Nexqori — acceso, conversaciones y servicios bancarios
-- Fecha: 2026-09-28 23:57:34 -05:00, America/Lima.
+- Fecha: 2026-09-29 00:03:11 -05:00, America/Lima.
 - Pedido vigente: correo sin .local o documento de identidad; selector de idioma cuidado; historial por conversación; tamaño de letra en Configuración; mini bot sonriente. Ampliar servicios con búsqueda por necesidad (por ejemplo, pagar celular) y opciones sustentadas en el dataset. Conservar ES/EN/PT y tono natural.
 - Corrección de alcance: Bryan difiere toda la voz a otra implementación; conservar únicamente la base bancaria, sin Whisper ni otro motor de voz.
 - Proyecto: E:/factoredai, rama codex/catalogo-servicios-base desde main; único estado en la raíz principal. Bryan pide PR y un Markdown para que el equipo inicie.
@@ -273,8 +273,8 @@
 - [x] Verificar seis consultas censales agregadas y 20 correspondencias de servicios. Empresa Telefónica, Internet Plus, Cable TV y Servicios Públicos existen como comercios Purchase; no acreditan convenios ni pagos ejecutables. [Evidencia](notebooks/servicios_nexqori/catalog_evidence.json).
 - [x] Implementar catálogo buscable ES/EN/PT, filtros, rutas específicas, formularios con revisión/confirmación y detalle persistido. API valida cuenta propia, importes enteros, titularidad, campos e idempotencia. El asistente puede abrir telefonía por su nombre cotidiano.
 - [x] Desplegar en Docker local. Migración c83d71a6e520 preservó seis solicitudes, 90 mensajes, cuatro productos y siete movimientos previos, comparados contra respaldo; FK de cuenta/titular comprobada en PostgreSQL.
-- [x] Validar compilación, 10 pruebas frontend, suite API y recorridos de navegador: 56 combinaciones generales y seis comandos del agente; catálogo con 17 combinaciones y nueve revisiones axe; acceso/documento, conversaciones, preferencias y cinco revisiones axe. Sin infracciones automatizadas ni errores JavaScript observados. Evidencia local en .local/verification/.
+- [x] Validar compilación, 10 pruebas frontend, 73 API en Docker y recorridos de navegador: 56 combinaciones generales y seis comandos del agente; catálogo con 17 combinaciones y nueve revisiones axe; acceso/documento, conversaciones, preferencias y cinco revisiones axe. Sin infracciones automatizadas ni errores JavaScript observados. Evidencia local en .local/verification/.
 - [x] Preparar [INICIO-EQUIPO.md](INICIO-EQUIPO.md) con arranque, credenciales locales, recorridos, mapa del código, comprobaciones y límites; [guía de catálogo](docs/catalogo-servicios.md) y [acceso/conversaciones](docs/acceso-y-conversaciones.md).
-- [ ] Publicar rama, abrir PR privado y comprobar CI. No fusionar automáticamente.
-- Último avance: aplicación desplegada en http://localhost:5180, catálogo y recorridos validados. El registro de solicitudes no debita saldos ni acredita pagos a empresas. La voz permanece fuera del alcance.
-- Siguiente paso: abrir el PR de esta entrega, comprobar CI y entregar el enlace junto a la guía para el equipo.
+- [x] Publicar a6339ac en la rama y abrir [PR #1](https://github.com/nexqori/nexqori/pull/1), adjunto al chat. [CI de la implementación exitosa](https://github.com/nexqori/nexqori/actions/runs/36524265123); PR abierto y sin fusionar.
+- Último avance: entrega implementada, desplegada localmente y validada; PR y guía de inicio disponibles para el equipo. El registro de solicitudes no debita saldos ni acredita pagos a empresas. La voz permanece fuera del alcance.
+- Siguiente paso: el equipo inicia con INICIO-EQUIPO.md y revisa el PR antes de integrarlo. Sin pendientes de implementación de este encargo; no se selecciona automáticamente un nuevo flujo.
