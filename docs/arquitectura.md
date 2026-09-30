@@ -20,6 +20,7 @@ Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Com
 | users | Correo y documento únicos, Argon2, rol cliente/admin, idioma es/en/pt y tamaño de texto. |
 | sessions | Hash de token opaco, token CSRF, caducidad fija de 8 horas. |
 | products | Titular, tipo, últimos cuatro dígitos, saldo en unidades menores, moneda MXN. |
+| card_profiles | Tarjeta/titular por FK compuesta, referencia del proveedor y vigencia. Sin PAN ni CVV almacenado. |
 | transactions | Titular y producto coherentes por FK compuesta; importe entero y estado. |
 | requests | Titular, servicio de catálogo, movimiento opcional, cuenta de origen con FK compuesta, datos específicos JSON, detalle, idempotencia y estado. |
 | audit_events | Actor, fecha y acción: login, logout, solicitud, revisión, derivación, navegación propuesta. |
@@ -62,3 +63,5 @@ Las pruebas API usan SQLite temporal para aislar casos y validar reglas; la ejec
 Para producción se necesitan decisiones y servicios específicos: identidad/MFA y recuperación, TLS, gestión de secretos, límites distribuidos, copias/restauración, trazas y alertas, auditoría protegida, integraciones y políticas operativas. El modelo de IA y sus credenciales se conectarán mediante el [contrato de agente](agente.md), sin cambiar la autorización de las APIs.
 
 El catálogo versionado en `backend/service_catalog.json` es compartido por API y validación de navegación del cliente. Cambiarlo requiere validación y reconstrucción; no es un CMS. La búsqueda tolera acentos, nombres y sinónimos ES/EN/PT. La documentación de [catálogo](catalogo-servicios.md) conserva la procedencia y los límites. La voz no forma parte de esta implementación.
+
+Tarjetas: [contratos, procedencia y límites del proveedor local](tarjetas-y-dataset.md). Procedimientos futuros: [tabla y contratos de atención](contratos-atencion.md).

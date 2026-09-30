@@ -14,6 +14,9 @@ class Login(StrictModel):
 class LocaleInput(StrictModel):
     locale: Locale
 
+class CardRevealInput(StrictModel):
+    password: str = Field(min_length=1, max_length=256)
+
 class PreferencesInput(StrictModel):
     textSize: Literal["small", "medium", "large"]
 

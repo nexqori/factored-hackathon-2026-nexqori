@@ -19,6 +19,7 @@ export function safeNavigation(command: unknown): string | null {
 }
 export function currentDestination(pathname: string, search: string): Destination {
   if (pathname.startsWith('/services/catalog/')) { const category = serviceCategory(pathname.slice('/services/catalog/'.length)); return category && Object.hasOwn(destinations, category) ? category as Destination : 'services'; }
+  if (pathname === '/cards') return 'cards';
   const kind = new URLSearchParams(search).get('kind');
   if (pathname === '/products' && (kind === 'accounts' || kind === 'cards')) return kind;
   return (Object.entries(destinations).find(([, path]) => path === pathname)?.[0] as Destination) || 'home';

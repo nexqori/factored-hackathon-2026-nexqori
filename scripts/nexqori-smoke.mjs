@@ -64,7 +64,7 @@ try {
       await page.locator('.chat-composer input').waitFor({state:'visible'});
       await noOverflow();
       results.agentNavigation.push({locale,message,route});
-      if (route.includes('kind=cards')) assert.equal(await page.locator('.product-card').count(),1);
+      if (route.includes('kind=cards')) { await page.locator('.bank-card').waitFor(); assert.equal(await page.locator('.bank-card').count(),1); }
       if (route.includes('kind=accounts')) assert.equal(await page.locator('.product-card').count(),2);
     }
     for (const service of ['transfers','payments','loans','investments','insurance','cash']) {

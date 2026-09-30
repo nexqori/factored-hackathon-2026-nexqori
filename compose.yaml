@@ -27,6 +27,7 @@ services:
       SECOND_CUSTOMER_PASSWORD: ${SECOND_CUSTOMER_PASSWORD:?Run npm run setup}
       APP_ORIGINS: http://localhost:5180,http://127.0.0.1:5180
       COOKIE_SECURE: "false"
+      CARD_PROVIDER: local_fixture
     depends_on:
       db:
         condition: service_healthy

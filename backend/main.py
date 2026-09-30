@@ -10,7 +10,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, delete, func, or_, and_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
-from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, now
+from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, now
+from .schemas import CardRevealInput
+from .cards import reveal_local_card
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
@@ -71,6 +73,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     app=FastAPI(title="Nexqori API",version="0.1.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
     app.state.sessions=make_sessions(engine)
     limiter=LoginLimiter(login_limit)
+    card_limiter=LoginLimiter(5)
     app.add_middleware(BodyLimit)
     @app.middleware("http")
     async def boundaries(request: Request, call_next):
@@ -128,6 +131,25 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def set_locale(payload: LocaleInput,user=Depends(csrf),db=Depends(db_session)):
         user.locale=payload.locale; db.commit()
         return {"user":user_view(user)}
+    @app.get("/api/cards")
+    def cards(user=Depends(customer_read), db=Depends(db_session)):
+        rows=db.execute(select(Product, CardProfile).outerjoin(CardProfile, and_(CardProfile.product_id==Product.id, CardProfile.user_id==Product.user_id)).where(Product.user_id==user.id, Product.type=="card")).all()
+        return {"cards": [{"id": p.id, "last4": p.last4, "holder": user.name,
+            "expiryMonth": c.expiry_month if c else None, "expiryYear": c.expiry_year if c else None,
+            "canReveal": bool(c and os.getenv("CARD_PROVIDER")=="local_fixture" and c.provider_ref=="local-card-01")} for p,c in rows]}
+
+    @app.post("/api/cards/{product_id}/reveal")
+    def reveal_card(product_id: str, payload: CardRevealInput, request: Request, user=Depends(customer), db=Depends(db_session)):
+        card_limiter.consume(request.client.host if request.client else "local", user.id)
+        profile=db.scalar(select(CardProfile).join(Product, and_(Product.id==CardProfile.product_id, Product.user_id==CardProfile.user_id)).where(CardProfile.product_id==product_id, CardProfile.user_id==user.id, Product.type=="card"))
+        if not profile: raise HTTPException(404, "not_found")
+        if not verify(payload.password, user.password_hash): raise HTTPException(403, "card_password")
+        if os.getenv("CARD_PROVIDER")!="local_fixture": raise HTTPException(503, "card_unavailable")
+        result=reveal_local_card(profile)
+        add_audit(db, user.id, "card_details_viewed", user.id)
+        db.commit()
+        return result
+
     @app.get("/api/bootstrap")
     def bootstrap(user=Depends(current_user),db=Depends(db_session)):
         products=db.scalars(select(Product).where(Product.user_id==user.id).order_by(Product.id)).all()

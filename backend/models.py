@@ -39,6 +39,19 @@ class Product(Base):
     currency: Mapped[str] = mapped_column(String(3), default="MXN")
     __table_args__ = (UniqueConstraint("id","user_id"), CheckConstraint("type IN ('account','savings','card')"), CheckConstraint("currency = 'MXN'"))
 
+class CardProfile(Base):
+    __tablename__ = "card_profiles"
+    product_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    provider_ref: Mapped[str] = mapped_column(String(64), unique=True)
+    expiry_month: Mapped[int] = mapped_column(Integer)
+    expiry_year: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (
+        ForeignKeyConstraint(["product_id", "user_id"], ["products.id", "products.user_id"]),
+        CheckConstraint("expiry_month BETWEEN 1 AND 12"),
+        CheckConstraint("expiry_year BETWEEN 2000 AND 2200"),
+    )
+
 class Transaction(Base):
     __tablename__ = "transactions"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

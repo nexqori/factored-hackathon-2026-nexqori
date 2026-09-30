@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 from sqlalchemy import select
 from .db import make_engine, make_sessions
-from .models import User, Product, Transaction, RequestCase, AuditEvent
+from .models import User, Product, Transaction, RequestCase, AuditEvent, CardProfile
 from .security import hasher
 
 def seed(session, passwords):
@@ -22,6 +22,7 @@ def seed(session, passwords):
         Product(id="card-01",user_id="andrea",type="card",last4="8942",balance_minor=None),
         Product(id="account-02",user_id="mateo",type="account",last4="1103",balance_minor=520000)
     ]); session.flush()
+    session.add(CardProfile(product_id="card-01", user_id="andrea", provider_ref="local-card-01", expiry_month=12, expiry_year=2029))
     rows = [
         ("TX-1001","andrea","card-01","Mercado Central","shopping",-28650,"2026-09-28T16:30:00+00:00","completed"),
         ("TX-1002","andrea","card-01","Stream Plus","subscription",-18900,"2026-09-27T23:40:00+00:00","completed"),

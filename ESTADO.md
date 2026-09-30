@@ -298,3 +298,18 @@
 - [x] Publicar c9a70b7 y abrir [PR #2](https://github.com/nexqori/nexqori/pull/2), adjunto al chat, con base codex/catalogo-servicios-base para conservar el PR #1 separado. Claves, originales, conversaciones personalizadas y salidas locales excluidos y comprobados antes de subir. CI del banco y del LAB vinculada al PR.
 - Último avance: implementado, servido localmente y validado; Jev operativo bajo Play. La vista esperada se distingue de las salidas reales. Las conversaciones personalizadas no entran automáticamente al benchmark ni a Git. Sin conexión LLM, doble validación completa ni benchmark comparativo de proveedores todavía.
 - Siguiente paso: Bryan valida la pantalla y elige proveedor/modelo LLM para la segunda lectura; revisar etiquetas y reservar casos nuevos antes de comparar prompts y proveedores. El equipo puede iniciar con la guía del LAB y revisar PR #2 después de PR #1; ambos siguen sin fusionar.
+
+## Frente: Nexqori — rama bryan, Luna y contratos de atención
+- Fecha: 2026-09-29 23:04 -05:00, America/Lima.
+- Pedido vigente: publicar avances en bryan; preparar Luna xhigh para clasificación; tabla de procedimientos/contratos contrastada con bancos; añadir vista de tarjetas y explicar correspondencia PostgreSQL/dataset.
+- [x] Crear rama bryan desde dd053f1, preservando PR #1, PR #2 y archivos locales.
+- [x] Verificar gpt-6-luna y xhigh en documentación oficial; reservar configuración en providers.env.example, sin consumirla ni cambiar claves privadas.
+- [ ] Conectar adaptador Luna y validar decisiones independientes Jev/LLM. Bloqueo: revisión automática rechazó el parche que enviaría conversaciones/prompts/categorías a api.openai.com; solicitada autorización explícita mediante pregunta pendiente. No se aplicó ni se ejecutó el envío. Jev conserva su funcionamiento previo.
+- [x] Documentar [procedimientos y contratos](docs/contratos-atencion.md). Verificados contratos de esquema en Kickoff pp.12–13 y requisitos pp.3/5; procedimientos propios contrastados con BBVA/Santander. No se implementan acciones automáticas ni reglas de devolución.
+- [x] Añadir Tarjetas ES/EN/PT, consulta enmascarada, contraseña para revelar, ocultación en 60 s/pérdida de foco/cambio de pantalla, validación servidor de titular/rol/CSRF y límite de frecuencia. Auditoría sin valores sensibles. Proveedor local explícito: número no operativo y código temporal, sin emisor ni pagos.
+- [x] Verificar product_number y expiration_date en esquema fuente, ausencia de CVV; [documentar mapeo](docs/tarjetas-y-dataset.md). PostgreSQL usa fixtures coherentes nuevos, no importación del dataset. Añadida card_profiles sin PAN/CVV persistido.
+- [x] Migración d92e6047f831 desplegada en Docker; respaldo privado en .local/verification/nexqori-before-cards.sql. Hashes anteriores/posteriores iguales para 4 productos, 7 movimientos, 8 solicitudes y 110 mensajes antes de pruebas UI; éstas añaden sus registros identificados de verificación.
+- [x] Validar 75 pruebas API, 10 frontend y build; tarjetas ES/EN/PT × 2 anchos y 6 revisiones axe, ocultación y navegación. Regresión general 56 combinaciones/6 comandos/5 axe; conversaciones 5 axe; servicios 17 combinaciones/9 axe. Fallo de contraste corregido y verificado; ejecutar UI en serie para evitar interferencia del perfil compartido. Sin errores JavaScript observados.
+- [x] Actualizar INICIO-EQUIPO.md y arquitectura; tarjetas disponibles en http://localhost:5180/cards. LAB permanece en http://localhost:5190.
+- [ ] Publicar rama y PR con este avance.
+- Siguiente paso: publicar entrega comprobada; continuar Luna cuando Bryan autorice el envío explícito del caso al proveedor. No se ha evaluado Luna ni doble validación real.
