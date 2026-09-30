@@ -13,6 +13,7 @@ __pycache__/
 *.zip
 /node_modules/
 /dist/
+/experiments/intent-lab/dist/
 /.venv-app/
 /.local/
 /.pytest_cache/

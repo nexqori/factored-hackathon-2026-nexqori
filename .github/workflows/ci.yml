@@ -27,3 +27,25 @@ jobs:
       - run: npm run build
       - run: python -m pip install -r backend/requirements.lock
       - run: python -m pytest backend/tests -q
+  intent-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: experiments/intent-lab/requirements.lock
+      - run: npm ci
+      - run: node node_modules/typescript/bin/tsc -p experiments/intent-lab/tsconfig.json --noEmit
+      - run: node node_modules/vite/bin/vite.js build --config experiments/intent-lab/vite.config.ts
+      - run: python -m pip install -r experiments/intent-lab/requirements.lock
+      - run: python -m pytest experiments/intent-lab/tests -q
+        env:
+          PYTHONPATH: experiments/intent-lab
