@@ -280,7 +280,7 @@
 - Siguiente paso: el equipo inicia con INICIO-EQUIPO.md y revisa el PR antes de integrarlo. Sin pendientes de implementación de este encargo; no se selecciona automáticamente un nuevo flujo.
 
 ## Frente: Nexqori — laboratorio de clasificación de intenciones
-- Fecha: 2026-09-29 22:15:14 -05:00, America/Lima.
+- Fecha: 2026-09-29 22:17:36 -05:00, America/Lima.
 - Pedido vigente: flujo separado para evaluar intenciones con Jev + LLM; NLP sólo como baseline. Primero se revisó la pantalla sin claves; después Bryan configuró Jev y pidió Ejecutar caso. La conexión real de Jev ya está autorizada. LLM sigue pendiente de proveedor/modelo; no elegir ganador anticipadamente.
 - Proyecto: E:/factoredai, rama codex/laboratorio-intenciones desde codex/catalogo-servicios-base. La app bancaria de localhost:5180 y el PR #1 se conservan; único ESTADO.md en esta raíz.
 - [x] Confirmar que Jev corresponde a https://console.typesafe.ai/ y consultar la documentación oficial de decisiones tipadas.
@@ -295,6 +295,6 @@
 - [x] Conservar base bancaria: 10 pruebas frontend y 73 API pasan, build correcto. Subagente autorizado reactivó los contenedores existentes sin reconstruir ni tocar datos: db/api/web saludables y http://localhost:5180 disponible.
 - [x] Subagente autorizado investigó pesos locales: Jev oficial API; OpenJev independiente 27B no cabe en GPU de 4 GB. Laya 322M y Qwen3-1.7B son candidatos pendientes de medir, sin descargar. No se incorporan automáticamente.
 - [x] Documentar arranque, claves, procedencia, evaluación y límites en [guía del LAB](experiments/intent-lab/README.md); añadir CI del laboratorio sin claves ni llamadas reales.
-- [ ] Publicar el laboratorio en PR separado, dependiente del PR #1.
+- [x] Publicar c9a70b7 y abrir [PR #2](https://github.com/nexqori/nexqori/pull/2), adjunto al chat, con base codex/catalogo-servicios-base para conservar el PR #1 separado. Claves, originales, conversaciones personalizadas y salidas locales excluidos y comprobados antes de subir. CI del banco y del LAB vinculada al PR.
 - Último avance: implementado, servido localmente y validado; Jev operativo bajo Play. La vista esperada se distingue de las salidas reales. Las conversaciones personalizadas no entran automáticamente al benchmark ni a Git. Sin conexión LLM, doble validación completa ni benchmark comparativo de proveedores todavía.
-- Siguiente paso: Bryan valida la pantalla y elige proveedor/modelo LLM para la segunda lectura; revisar etiquetas y reservar casos nuevos antes de comparar prompts y proveedores. Preparar PR de esta base evaluable.
+- Siguiente paso: Bryan valida la pantalla y elige proveedor/modelo LLM para la segunda lectura; revisar etiquetas y reservar casos nuevos antes de comparar prompts y proveedores. El equipo puede iniciar con la guía del LAB y revisar PR #2 después de PR #1; ambos siguen sin fusionar.
