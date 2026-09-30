@@ -11,7 +11,10 @@ from sqlalchemy import select, delete, func, or_, and_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
 from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, now
-from .schemas import CardRevealInput
+from .schemas import CardRevealInput, RegisterInput, ExperienceInput
+from .models import CustomerProfile
+from .customer_profile import adult_birth_date, experience_view
+from .workflows import workflow_view
 from .cards import reveal_local_card
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
@@ -20,7 +23,7 @@ from .assistant import answer
 from .presentation import present_message
 
 def user_view(user):
-    return {"id":user.id,"email":user.email,"name":user.name,"role":user.role,"locale":user.locale,"textSize":user.text_size}
+    return {"id":user.id,"email":user.email,"name":user.name,"role":user.role,"locale":user.locale,"textSize":user.text_size,"experience":experience_view(user.profile)}
 
 def conversation_view(c):
     return {"id":c.id,"title":c.title,"locale":c.locale,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
@@ -32,10 +35,10 @@ def request_view(r, name=None):
     return {"id":r.id,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name}
 
 def audit_view(e, name):
-    return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
+    return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"conversationId":e.conversation_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
 
-def add_audit(db, user_id, action, actor, request_id=None):
-    db.add(AuditEvent(id=str(uuid4()),user_id=user_id,request_id=request_id,action=action,actor_id=actor))
+def add_audit(db, user_id, action, actor, request_id=None, conversation_id=None):
+    db.add(AuditEvent(id=str(uuid4()),user_id=user_id,request_id=request_id,conversation_id=conversation_id,action=action,actor_id=actor))
 
 class BodyLimit:
     def __init__(self, app, maximum=16384):
@@ -74,6 +77,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     app.state.sessions=make_sessions(engine)
     limiter=LoginLimiter(login_limit)
     card_limiter=LoginLimiter(5)
+    registration_limiter=LoginLimiter(10)
     app.add_middleware(BodyLimit)
     @app.middleware("http")
     async def boundaries(request: Request, call_next):
@@ -98,6 +102,59 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def health(db=Depends(db_session)):
         db.execute(text("SELECT 1"))
         return {"status":"ok","app":"nexqori","mode":"local"}
+    def start_session(user, request, db, event="login", status_code=200):
+        token=secrets.token_hex(32); csrf_token=secrets.token_hex(32)
+        db.execute(delete(Session).where(Session.expires_at<=int(time.time())))
+        old=request.cookies.get(COOKIE)
+        if old: db.execute(delete(Session).where(Session.token_hash==digest(old)))
+        db.add(Session(token_hash=digest(token),user_id=user.id,csrf_token=csrf_token,expires_at=int(time.time())+SESSION_SECONDS))
+        add_audit(db,user.id,event,user.id); db.commit()
+        response=JSONResponse({"user":user_view(user),"csrfToken":csrf_token},status_code=status_code)
+        response.set_cookie(COOKIE,token,max_age=SESSION_SECONDS,httponly=True,secure=secure,samesite="lax",path="/api")
+        return response
+
+    @app.post("/api/auth/register", status_code=201)
+    def register(payload: RegisterInput, request: Request, db=Depends(db_session)):
+        registration_limiter.consume(request.client.host if request.client else "local", payload.email.strip().lower())
+        name=" ".join(payload.name.split())
+        email=payload.email.strip().lower()
+        identity=payload.identityNumber.upper().replace(" ", "").replace("-", "")
+        if len(name)<2 or not re.fullmatch(r"[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+",email) or not re.fullmatch(r"[A-Z0-9]{5,32}",identity):
+            raise HTTPException(422,"registration_fields")
+        birth=adult_birth_date(payload.birthDate)
+        password_hash=hasher.hash(payload.password)
+        if db.scalar(select(User.id).where(or_(User.email==email, User.identity_number==identity))):
+            raise HTTPException(409,"registration_unavailable")
+        user=User(id=str(uuid4()), email=email, identity_number=identity, name=name, password_hash=password_hash,
+                  role="customer", locale=payload.locale, text_size=payload.textSize)
+        user.profile=CustomerProfile(birth_date=birth, banking_experience=payload.bankingExperience,
+                                     digital_experience=payload.digitalExperience, assistance=payload.assistance)
+        db.add(user)
+        try:
+            db.flush()
+            return start_session(user, request, db, "registered", 201)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(409,"registration_unavailable")
+
+    @app.get("/api/profile/experience")
+    def get_experience(user=Depends(customer_read)):
+        return {"birthDate":user.profile.birth_date.isoformat() if user.profile else "", "experience":experience_view(user.profile)}
+
+    @app.patch("/api/profile/experience")
+    def set_experience(payload: ExperienceInput, user=Depends(customer), db=Depends(db_session)):
+        birth=adult_birth_date(payload.birthDate)
+        if not user.profile:
+            user.profile=CustomerProfile(birth_date=birth,banking_experience=payload.bankingExperience,digital_experience=payload.digitalExperience,assistance=payload.assistance)
+        else:
+            user.profile.birth_date=birth
+            user.profile.banking_experience=payload.bankingExperience
+            user.profile.digital_experience=payload.digitalExperience
+            user.profile.assistance=payload.assistance
+            user.profile.updated_at=now()
+        add_audit(db,user.id,"experience_updated",user.id); db.commit()
+        return {"user":user_view(user)}
+
     @app.post("/api/auth/login")
     def login(payload: Login, request: Request, db=Depends(db_session)):
         identifier=payload.identifier.strip()
@@ -109,15 +166,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             raise HTTPException(401,"invalid_login")
         limiter.success(account_key)
         if hasher.check_needs_rehash(user.password_hash): user.password_hash=hasher.hash(payload.password)
-        token=secrets.token_hex(32); csrf_token=secrets.token_hex(32)
-        db.execute(delete(Session).where(Session.expires_at<=int(time.time())))
-        old=request.cookies.get(COOKIE)
-        if old: db.execute(delete(Session).where(Session.token_hash==digest(old)))
-        db.add(Session(token_hash=digest(token),user_id=user.id,csrf_token=csrf_token,expires_at=int(time.time())+SESSION_SECONDS))
-        add_audit(db,user.id,"login",user.id); db.commit()
-        response=JSONResponse({"user":user_view(user),"csrfToken":csrf_token})
-        response.set_cookie(COOKIE,token,max_age=SESSION_SECONDS,httponly=True,secure=secure,samesite="lax",path="/api")
-        return response
+        return start_session(user, request, db)
     @app.get("/api/session")
     def get_session(auth=Depends(current_session)):
         return {"user":user_view(auth[1]),"csrfToken":auth[0].csrf_token}
@@ -217,7 +266,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             if payload.accountId or payload.amountMinor is not None or reference or beneficiary: raise HTTPException(422,"validation")
             if len(notes)<10: raise HTTPException(422,"details")
             if item["kind"]=="inquiry" and payload.transactionId: raise HTTPException(422,"validation")
-        if item["id"] in ("unrecognized-charge","incorrect-charge","payment-status") and not payload.transactionId:
+        workflow=workflow_view(service_id,payload.locale)
+        if workflow and "transactionId" in workflow["requiredFields"] and not payload.transactionId:
             raise HTTPException(422,"validation")
         if payload.transactionId:
             tx=db.scalar(select(Transaction).where(Transaction.id==payload.transactionId,Transaction.user_id==user.id))
@@ -229,7 +279,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             existing=db.scalar(select(RequestCase).where(RequestCase.user_id==user.id,RequestCase.request_key==payload.requestKey))
             if existing:
                 if (existing.catalog_service_id!=service_id or existing.source_product_id!=payload.accountId or
-                    existing.transaction_id!=payload.transactionId or existing.service_data!=service_data):
+                    existing.transaction_id!=payload.transactionId or {k:v for k,v in (existing.service_data or {}).items() if k!="workflow"}!=service_data):
                     raise HTTPException(409,"conflict")
                 return {"id":existing.id,"duplicate":True}
             if payload.transactionId:
@@ -240,7 +290,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         if prior: return prior
         case=RequestCase(id="NQ-"+uuid4().hex[:10].upper(),user_id=user.id,transaction_id=payload.transactionId,
                          request_key=payload.requestKey,service=item["category"],catalog_service_id=service_id,
-                         source_product_id=payload.accountId,service_data=service_data,reason=item["reason"],
+                         source_product_id=payload.accountId,service_data={**service_data,**({"workflow":{"id":workflow["id"],"version":workflow["version"]}} if workflow else {})},reason=item["reason"],
                          details=notes or item["copy"][payload.locale]["title"])
         db.add(case)
         try:
@@ -284,7 +334,9 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         return {"ok":True}
     @app.post("/api/assistant")
     def chat(payload: ChatInput,user=Depends(customer),db=Depends(db_session)):
-        message=payload.message.strip()
+        instruction=payload.message.strip()
+        if len(instruction)+len(payload.pastedText)>8000: raise HTTPException(422,"invalid_message")
+        message=instruction+("\n\n[Texto pegado / Pasted text / Texto colado]\n"+payload.pastedText if payload.pastedText.strip() else "")
         if not message: raise HTTPException(422,"invalid_message")
         if payload.conversationId:
             conversation=db.scalar(select(Conversation).where(Conversation.id==payload.conversationId,Conversation.user_id==user.id).with_for_update())
@@ -292,14 +344,17 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         else:
             conversation=Conversation(id=str(uuid4()),user_id=user.id,title=message[:100],locale=payload.locale)
             db.add(conversation); db.flush()
+            add_audit(db,user.id,"conversation_started",user.id,conversation_id=conversation.id)
         balance=db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id==user.id,Product.type.in_(["account","savings"]),Product.currency=="MXN"))
-        result=answer(message,payload.locale,balance,payload.currentPage)
-        if result["navigation"]: add_audit(db,user.id,"navigate_"+result["navigation"]["destination"],user.id)
+        result=answer(instruction or payload.pastedText,payload.locale,balance,payload.currentPage)
+        if result["navigation"]: add_audit(db,user.id,"navigate_"+result["navigation"]["destination"],user.id,conversation_id=conversation.id)
         user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale)
         db.add(user_message)
         db.flush()
         reply=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="assistant",content=result["text"],locale=payload.locale)
         db.add(reply)
+        add_audit(db,user.id,"message_sent",user.id,conversation_id=conversation.id)
+        add_audit(db,user.id,"assistant_replied",user.id,conversation_id=conversation.id)
         conversation.updated_at=now()
         db.commit()
         return {**result,"conversation":conversation_view(conversation),"messages":[message_view(user_message),message_view(reply)]}
@@ -309,6 +364,29 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         cases=db.execute(select(RequestCase,User.name).join(User,User.id==RequestCase.user_id).order_by(RequestCase.created_at.desc())).all()
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
         return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name) for r,name in cases],"audit":[audit_view(e,name) for e,name in events]}
+
+    @app.get("/api/admin/audit")
+    def audit_history(userId: str | None=None, action: str | None=Query(None,max_length=32), offset: int=Query(0,ge=0,le=100000), _user=Depends(admin),db=Depends(db_session)):
+        query=select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id)
+        if userId: query=query.where(or_(AuditEvent.user_id==userId,AuditEvent.actor_id==userId))
+        if action: query=query.where(AuditEvent.action==action)
+        rows=db.execute(query.order_by(AuditEvent.created_at.desc(),AuditEvent.id.desc()).offset(offset).limit(51)).all()
+        actions=db.scalars(select(AuditEvent.action).distinct().order_by(AuditEvent.action)).all()
+        return {"events":[audit_view(e,name) for e,name in rows[:50]],"nextOffset":offset+50 if len(rows)>50 else None,"actions":actions}
+
+    @app.get("/api/admin/conversations/{conversation_id}")
+    def audit_conversation(conversation_id: str, before: str | None=None,user=Depends(admin),db=Depends(db_session)):
+        conversation=db.get(Conversation,conversation_id)
+        if not conversation: raise HTTPException(404,"not_found")
+        query=select(Message).where(Message.conversation_id==conversation_id)
+        if before:
+            anchor=db.scalar(select(Message).where(Message.id==before,Message.conversation_id==conversation_id))
+            if not anchor: raise HTTPException(404,"not_found")
+            query=query.where(or_(Message.created_at<anchor.created_at,and_(Message.created_at==anchor.created_at,Message.id<anchor.id)))
+        rows=db.scalars(query.order_by(Message.created_at.desc(),Message.id.desc()).limit(51)).all()
+        page=rows[:50]
+        add_audit(db,conversation.user_id,"conversation_viewed",user.id,conversation_id=conversation.id);db.commit()
+        return {"conversation":conversation_view(conversation),"customerName":db.get(User,conversation.user_id).name,"messages":[message_view(m) for m in reversed(page)],"before":page[-1].id if len(rows)>50 else None}
     @app.post("/api/admin/requests/{request_id}/review")
     def review(request_id: str,payload: ConfirmInput,user=Depends(admin_write),db=Depends(db_session)):
         case=db.scalar(select(RequestCase).where(RequestCase.id==request_id).with_for_update())

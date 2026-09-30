@@ -2,6 +2,8 @@
 
 La base ya interpreta pedidos de navegación en español, inglés y portugués. Usa reglas locales deterministas: **no hay un LLM conectado**. Los mensajes y el idioma se guardan por conversación y titular. El frontend envía sólo el identificador permitido de la pantalla actual como contexto; el historial se muestra, pero todavía no se usa para razonamiento conversacional libre.
 
+Este límite corresponde al chat del banco. El LAB separado implementa Jev → contrato → Luna y comparación independiente; no comparte conversaciones ni sesiones bancarias. El chat bancario admite texto pegado como tarjeta previa al envío y una presentación de llamada sin captura de audio. La consulta de conversaciones por administración deja un evento de auditoría. Véase [guía de registro y conversación](registro-auditoria-y-conversacion.md).
+
 Ejemplos: “Llévame a transferencias”, “Show my cards”, “Abrir empréstimos”, “¿Cuál es mi saldo?”. Un pedido de revisión abre el formulario de solicitud. Una petición desconocida pide precisión; la navegación no crea solicitudes ni mueve dinero.
 
 ## Herramienta

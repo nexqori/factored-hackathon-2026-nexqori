@@ -58,10 +58,10 @@ try {
     await chooseLanguage(locale);
     await page.waitForFunction(language => document.documentElement.lang === language, locale);
     for (const [message, route] of cases) {
-      await page.locator('.chat-composer input').fill(message);
-      await page.locator('.chat-composer button').click();
+      await page.locator('.paste-composer textarea').fill(message);
+      await page.locator('.paste-entry button').click();
       await page.waitForURL(origin+route);
-      await page.locator('.chat-composer input').waitFor({state:'visible'});
+      await page.locator('.paste-composer textarea').waitFor({state:'visible'});
       await noOverflow();
       results.agentNavigation.push({locale,message,route});
       if (route.includes('kind=cards')) { await page.locator('.bank-card').waitFor(); assert.equal(await page.locator('.bank-card').count(),1); }

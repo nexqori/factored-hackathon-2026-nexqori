@@ -89,7 +89,7 @@ No borres el volumen PostgreSQL para actualizar la aplicación. Las migraciones 
 
 ## Alcance de esta entrega
 
-Hay autenticación local, permisos, persistencia PostgreSQL, nueve tablas de aplicación, catálogo de 20 servicios, solicitudes con confirmación/idempotencia/auditoría, administración, conversaciones y preferencias. Los cuatro nombres de empresas provienen de agregados del dataset; eso no acredita convenios de recaudación.
+Hay autenticación local, permisos, persistencia PostgreSQL, diez tablas de aplicación, catálogo de 20 servicios, solicitudes con confirmación/idempotencia/auditoría, administración, conversaciones y preferencias. Los cuatro nombres de empresas provienen de agregados del dataset; eso no acredita convenios de recaudación.
 
 No hay débito/liquidación, libro mayor, proveedor de pagos, LLM u operador humano conectado. La **voz corresponde a otra implementación** y esta base no instala motores de audio. MFA, recuperación de cuentas e integración bancaria requieren un alcance posterior explícito. Los límites se explican en documentación; las pantallas conservan el tono natural acordado.
 
@@ -99,4 +99,6 @@ Lecturas: [arquitectura y API](docs/arquitectura.md), [catálogo y evidencia](do
 
 `git switch bryan` y `docker compose up --build -d` aplican también la migración de metadatos de tarjetas sin reemplazar registros. Abre [Tarjetas](http://localhost:5180/cards). La consulta completa pide la contraseña y se oculta automáticamente. Ejecuta `npm run test:cards`; las pruebas de navegador deben correr en serie porque comparten perfiles locales.
 
-Consulta [tarjetas y mapeo del dataset](docs/tarjetas-y-dataset.md), [procedimientos y contratos](docs/contratos-atencion.md) y [LAB independiente](experiments/intent-lab/README.md). El proveedor de tarjetas es local y no autoriza compras; PostgreSQL no contiene una importación del dataset. Luna xhigh está elegido, con conexión pendiente de autorización; las acciones del banco permanecen separadas del LAB.
+Consulta [tarjetas y mapeo del dataset](docs/tarjetas-y-dataset.md), [procedimientos y contratos](docs/contratos-atencion.md) y [LAB independiente](experiments/intent-lab/README.md). El proveedor de tarjetas es local y no autoriza compras; PostgreSQL no contiene una importación del dataset. Luna high está conectado y probado con los cinco casos del LAB; las acciones del banco permanecen separadas. Consulta [registro, auditoría, texto pegado y conversación por contratos](docs/registro-auditoria-y-conversacion.md).
+
+El login incluye Crear mi perfil. Configuración permite cambiar experiencia y acompañamiento. Administración muestra la auditoría filtrable y acceso registrado a conversaciones. Iniciar llamada abre sólo la presentación visual, sin micrófono ni backend de voz.

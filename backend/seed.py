@@ -19,7 +19,7 @@ def seed(session, passwords):
     session.add_all([
         Product(id="account-01",user_id="andrea",type="account",last4="4821",balance_minor=1845000),
         Product(id="savings-01",user_id="andrea",type="savings",last4="7206",balance_minor=640000),
-        Product(id="card-01",user_id="andrea",type="card",last4="8942",balance_minor=None),
+        Product(id="card-01",user_id="andrea",type="card",last4="5556",balance_minor=None),
         Product(id="account-02",user_id="mateo",type="account",last4="1103",balance_minor=520000)
     ]); session.flush()
     session.add(CardProfile(product_id="card-01", user_id="andrea", provider_ref="local-card-01", expiry_month=12, expiry_year=2029))

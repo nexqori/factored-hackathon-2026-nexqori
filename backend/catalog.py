@@ -4,6 +4,7 @@ import re
 import unicodedata
 from difflib import SequenceMatcher
 from pathlib import Path
+from .workflows import workflow_view
 
 CATALOG = json.loads(Path(__file__).with_name("service_catalog.json").read_text(encoding="utf-8"))
 SERVICES = {item["id"]: item for item in CATALOG["items"]}
@@ -39,4 +40,4 @@ def search_services(query="", category=None, locale="es"):
 
 def service_view(item, locale):
     return {**{key: item[key] for key in ("id", "category", "kind", "icon", "provider", "referenceKind", "target", "reason")},
-            "title": item["copy"][locale]["title"], "summary": item["copy"][locale]["summary"]}
+            "title": item["copy"][locale]["title"], "summary": item["copy"][locale]["summary"], "workflow": workflow_view(item["id"], locale)}

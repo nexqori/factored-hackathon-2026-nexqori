@@ -2,7 +2,7 @@
 
 ## Qué contiene PostgreSQL
 
-La base de la app **se creó de cero mediante Alembic**, con fixtures coherentes en `backend/seed.py`. No se importaron las 13 tablas ni los registros individuales del organizador. Antes de esta ampliación se verificaron ocho tablas de aplicación (`users`, `sessions`, `products`, `transactions`, `requests`, `audit_events`, `conversations`, `messages`) y `alembic_version`. Se añade `card_profiles`, preservando las anteriores.
+La base de la app **se creó de cero mediante Alembic**, con fixtures coherentes en `backend/seed.py`. No se importaron las 13 tablas ni los registros individuales del organizador. Antes de esta ampliación se verificaron ocho tablas de aplicación (`users`, `sessions`, `products`, `transactions`, `requests`, `audit_events`, `conversations`, `messages`) y `alembic_version`. Se añadieron `card_profiles` y `customer_profiles`, preservando las anteriores: diez tablas de aplicación más `alembic_version`.
 
 El dataset permanece local, con su análisis separado. El catálogo toma categorías y evidencia agregada; eso no implica correspondencia fila a fila entre Andrea y un cliente fuente.
 
@@ -33,7 +33,7 @@ Fuente verificable: `notebooks/resultados_integral/column_profile.csv` incluye `
 
 ## Límite del proveedor local
 
-Compose habilita explícitamente `CARD_PROVIDER=local_fixture`. El número `0000000000008942` y los códigos aleatorios son **valores de prueba no utilizables para pagar**. El tiempo de 60 segundos es una regla de ocultación local, no un contrato de una red de tarjetas. No hay validación de compra, criptograma, HSM, rotación compartida de emisor ni garantía de unicidad entre códigos aleatorios de tres dígitos. Ningún PAN del dataset se utiliza.
+Compose habilita explícitamente `CARD_PROVIDER=local_fixture`. El número `4000 0566 5566 5556`, documentado públicamente como tarjeta de débito de prueba por [Stripe](https://docs.stripe.com/testing), y los códigos aleatorios son **valores de prueba no utilizables para pagar**. El tiempo de 60 segundos es una regla de ocultación local, no un contrato de una red de tarjetas. No hay validación de compra, criptograma, HSM, rotación compartida de emisor ni garantía de unicidad entre códigos aleatorios de tres dígitos. Ningún PAN del dataset se utiliza.
 
 Esto permite evaluar la experiencia solicitada. La integración real debe sustituir el adaptador por un emisor que controle emisión, vigencia y validación del CVV, autenticación reforzada y revocación. No bastaría convertir este generador local en un endpoint público. La interfaz mantiene el tono natural acordado; los límites se documentan aquí.
 
@@ -42,3 +42,5 @@ Referencia funcional: [BBVA, tarjeta digital](https://www.bbva.mx/educacion-fina
 ## Si luego se decide importar el dataset
 
 Crear una zona separada de staging, registrar IDs de origen y versión/lote, validar titularidad y moneda, aislar filas inconsistentes y transformar estados con reglas explícitas. El importador y la carga de las 13 tablas **no están implementados ni son necesarios para la vista actual**. No borrar fixtures o reemplazar usuarios para aparentar un match inexistente.
+
+La migración `e104b56a902c` cambia la terminación de la tarjeta fixture conocida de 8942 a 5556 para coincidir con el número de prueba público. No modifica otras tarjetas ni utiliza números del dataset. No se ha conectado Stripe ni otro procesador.

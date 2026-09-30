@@ -14,5 +14,5 @@ def reveal_local_card(profile):
     current = datetime.now(timezone.utc)
     if (profile.expiry_year, profile.expiry_month) < (current.year, current.month):
         raise HTTPException(409, "card_expired")
-    return {"number": "0000000000008942", "cvv": f"{secrets.randbelow(1000):03d}",
+    return {"number": "4000056655665556", "cvv": f"{secrets.randbelow(1000):03d}",
             "expiresAt": int(time.time()) + 60}

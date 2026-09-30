@@ -313,3 +313,21 @@
 - [x] Actualizar INICIO-EQUIPO.md y arquitectura; tarjetas disponibles en http://localhost:5180/cards. LAB permanece en http://localhost:5190.
 - [x] Publicar 5e38769 en [bryan](https://github.com/nexqori/nexqori/tree/bryan) y abrir [PR #3](https://github.com/nexqori/nexqori/pull/3), base codex/laboratorio-intenciones, adjunto al chat. Repositorio verificado privado; PR anteriores conservados y sin fusionar.
 - Cierre 2026-09-29 23:06 -05:00, America/Lima: entrega implementada, desplegada en Docker local, validada y publicada; CI del PR en ejecución. Siguiente paso: revisar PR #3 y continuar Luna cuando Bryan autorice el envío explícito del caso al proveedor. No se ha evaluado Luna ni doble validación real.
+
+## Frente: Nexqori — registro y experiencia del cliente
+- Fecha: 2026-09-30 14:50 -05:00, America/Lima. Rama bryan; PR #3 abierto.
+- Pedido vigente: número completo ficticio más natural, emojis junto a Correo/Documento, registro y segmentación por mayoría de edad, grupos 50/60+ y experiencia bancaria/digital.
+- [x] Registro adulto con datos mínimos, rol cliente fijo, contraseña Argon2, sesión/CSRF y preferencias persistidas; validación 18–120 años. No emite productos ni saldo.
+- [x] Ayuda configurable por experiencia/elección, grupos 18–49/50–59/60+ informativos; Configuración permite editar el perfil. La edad no limita funciones ni impone ayuda.
+- [x] Tarjeta con número público de prueba completo (terminación 5556) y acceso Correo/Documento con emojis. Cobertura ES/EN/PT y [guía de registro/auditoría/conversación](docs/registro-auditoria-y-conversacion.md).
+- [x] Validar y desplegar localmente. Pendiente sólo publicar esta ampliación en la rama/PR.
+- Ampliación autorizada 2026-09-30, America/Lima: mantener Jev/contratos/respuestas en el LAB; clave OpenAI proporcionada para probar conversaciones con gpt-6-luna high. Reemplaza xhigh y resuelve el bloqueo de autorización anterior. Clave guardada sólo en configuración local excluida.
+- [x] Luna high conectado en LAB: comparación independiente y Jev → contrato → respuesta, instrucciones por caso/idioma, contexto declarado y ejecuciones privadas JSON con modelo, consumo, latencia y referencia de conversación. Seis procedimientos específicos; restantes categorías muestran orientación, sin operaciones.
+- [x] Prueba real: cinco diálogos diseñados según categorías, 5/5 etiquetas correctas con Jev y 5/5 con gpt-6-luna high. Una respuesta por contrato validada. No es benchmark representativo ni prueba de superioridad; originales del dataset no enviados.
+- [x] Auditoría administrativa filtrable con actor/titular/folio/conversación; consultar mensajes deja su propio evento. Clientes no acceden a rutas administrativas. Texto largo pegado con vista previa/eliminación en bot y LAB; envío explícito y límites sin truncar.
+- [x] Nuevo pedido de voz: botón Iniciar llamada y presentación visual ES/EN/PT, sin micrófono, motor ni backend de llamada; prueba observó cero solicitudes de audio.
+- [x] Docker local saludable; migraciones e104b56a902c y f217a8e309bc aplicadas. Hashes previos/posteriores al registro iguales para usuarios, movimientos, solicitudes y mensajes antes de verificar por UI; respaldo privado conservado.
+- [x] Verificación: 94 pruebas API, 35 LAB y 10 frontend; compilaciones correctas. Nuevos recorridos registro/auditoría/voz con 13 comprobaciones axe sin infracciones tras corregir contraste; LAB general 14 recorridos/11 axe y diálogo 2 axe sin errores. Regresión del banco completada en serie: 56 combinaciones generales, 6 comandos, servicios 17 combinaciones/9 axe, conversaciones 5 axe, tarjetas 6 axe; sin errores JavaScript ni infracciones observadas.
+- Último avance: implementado y disponible localmente; resultados y documentación preparados para PR #3. Claves, conversaciones y registros de ejecución siguen excluidos de Git.
+- Fecha de verificación final: 2026-09-30 15:40 -05:00, America/Lima.
+- Siguiente paso: publicar rama/PR y verificar CI; sin importar datos fuente ni conectar modelos al chat bancario.

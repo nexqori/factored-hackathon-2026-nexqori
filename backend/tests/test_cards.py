@@ -21,7 +21,7 @@ def test_card_details_require_owner_role_csrf_and_password(setup, monkeypatch):
     assert result.status_code == 200
     assert result.headers['cache-control'] == 'no-store'
     value = result.json()
-    assert value['number'] == '0000000000008942' and len(value['cvv']) == 3
+    assert value['number'] == '4000056655665556' and len(value['cvv']) == 3
     from time import time
     assert 58 <= value['expiresAt'] - time() <= 60
     with make_sessions(engine)() as db:

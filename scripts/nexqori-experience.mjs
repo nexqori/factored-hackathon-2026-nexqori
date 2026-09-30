@@ -14,7 +14,7 @@ const result = { accessibility: [], checks: [] };
 const shot = name => page.screenshot({ path: output + '/' + name + '.png', fullPage: true });
 async function axe(name) { const r = await new AxeBuilder({ page }).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze(); result.accessibility.push({ name, violations: r.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) })) }); }
 async function choose(locale) { await page.locator('.language-trigger').click(); await page.locator('[data-locale="' + locale + '"]').click(); await page.waitForFunction(locale => document.documentElement.lang === locale, locale); }
-async function send(text) { await page.locator('.chat-composer input').fill(text); await page.locator('.chat-composer button').click(); await page.locator('.chat-bubble.user').getByText(text, { exact: true }).waitFor(); await page.waitForFunction(() => !document.querySelector('.chat-composer input').disabled); }
+async function send(text) { await page.locator('.paste-composer textarea').fill(text); await page.locator('.paste-entry button').click(); await page.locator('.chat-bubble.user').getByText(text, { exact: true }).waitFor(); await page.waitForFunction(() => !document.querySelector('.paste-composer textarea').disabled); }
 try {
   await page.goto(origin);
   await page.locator('.language-trigger').click();

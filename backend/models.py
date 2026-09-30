@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, BigInteger, DateTime, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint, JSON
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import String, Text, Integer, BigInteger, Date, DateTime, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint, JSON
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from datetime import date
 
 def now():
     return datetime.now(timezone.utc)
@@ -19,7 +20,23 @@ class User(Base):
     locale: Mapped[str] = mapped_column(String(2), default="es")
     text_size: Mapped[str] = mapped_column(String(8), default="medium")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    profile: Mapped["CustomerProfile | None"] = relationship(lazy="selectin", uselist=False)
     __table_args__ = (CheckConstraint("role IN ('customer','admin')"), CheckConstraint("locale IN ('es','en','pt')"), CheckConstraint("text_size IN ('small','medium','large')"))
+
+class CustomerProfile(Base):
+    __tablename__ = "customer_profiles"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    birth_date: Mapped[date] = mapped_column(Date)
+    banking_experience: Mapped[str] = mapped_column(String(16))
+    digital_experience: Mapped[str] = mapped_column(String(16))
+    assistance: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        CheckConstraint("banking_experience IN ('new','occasional','frequent')"),
+        CheckConstraint("digital_experience IN ('new','learning','confident')"),
+        CheckConstraint("assistance IN ('auto','guided','standard')"),
+    )
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -94,6 +111,7 @@ class AuditEvent(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     request_id: Mapped[str | None] = mapped_column(ForeignKey("requests.id"), nullable=True)
+    conversation_id: Mapped[str | None] = mapped_column(ForeignKey("conversations.id"), nullable=True, index=True)
     action: Mapped[str] = mapped_column(String(32))
     actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -1,13 +1,14 @@
 import type { Locale } from './i18n';
 export type TextSize = 'small' | 'medium' | 'large';
-export type User = { id: string; email: string; name: string; role: 'customer' | 'admin'; locale: Locale; textSize: TextSize };
+export type Experience = { ageBand: '18_49' | '50_59' | '60_plus'; bankingExperience: 'new' | 'occasional' | 'frequent'; digitalExperience: 'new' | 'learning' | 'confident'; assistance: 'auto' | 'guided' | 'standard'; effectiveAssistance: 'guided' | 'standard' };
+export type User = { id: string; email: string; name: string; role: 'customer' | 'admin'; locale: Locale; textSize: TextSize; experience: Experience | null };
 export type Product = { id: string; type: 'account' | 'savings' | 'card'; last4: string; balanceMinor: number | null; currency: string };
 export type Transaction = { id: string; productId: string; merchant: string; category: string; amountMinor: number; currency: string; date: string; status: 'completed' | 'pending' | 'declined' };
 export type Service = 'general' | 'accounts' | 'cards' | 'transfers' | 'payments' | 'loans' | 'investments' | 'insurance' | 'cash' | 'support';
-export type ServiceItem = { id: string; category: Service; kind: 'bill' | 'transfer' | 'inquiry' | 'claim' | 'navigate'; icon: string; provider: string | null; referenceKind: 'phone' | 'customer' | 'receipt' | 'account' | null; target: string | null; reason: string; title: string; summary: string };
+export type ServiceItem = { workflow?: { id: string; version: string; steps: string[]; requiredFields: string[]; executesFinancialOperation: boolean } | null; id: string; category: Service; kind: 'bill' | 'transfer' | 'inquiry' | 'claim' | 'navigate'; icon: string; provider: string | null; referenceKind: 'phone' | 'customer' | 'receipt' | 'account' | null; target: string | null; reason: string; title: string; summary: string };
 export type ServiceData = { provider: string | null; reference: string; beneficiary: string; amountMinor: number | null; currency: string | null; accountLast4: string | null; notes: string };
 export type RequestCase = { id: string; userId: string; transactionId: string | null; service: Service; catalogServiceId?: string | null; sourceProductId?: string | null; serviceData?: ServiceData | null; reason: 'unknown' | 'amount' | 'payment' | 'other'; details: string; status: 'received' | 'in_review' | 'handed_off'; createdAt: string; updatedAt: string; customerName?: string };
-export type AuditEvent = { id: string; userId: string; requestId: string | null; action: string; actorId: string; actorName: string; at: string };
+export type AuditEvent = { conversationId: string | null; id: string; userId: string; requestId: string | null; action: string; actorId: string; actorName: string; at: string };
 export type Message = { id: string; role: 'assistant' | 'user'; text: string; locale: Locale; at: string };
 export type Conversation = { id: string; title: string | null; locale: Locale; createdAt: string; updatedAt: string };
 export type ConversationPage = { conversation: Conversation; messages: Message[]; before: string | null };

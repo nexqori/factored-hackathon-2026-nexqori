@@ -26,7 +26,7 @@ try {
     }
   }
   await choose('es'); await page.setViewportSize({width:1512,height:1050});
-  await reveal(); assert.equal((await page.locator('.card-number').innerText()).replaceAll(' ',''),'0000000000008942');
+  await reveal(); assert.equal((await page.locator('.card-number').innerText()).replaceAll(' ',''),'4000056655665556');
   await page.evaluate(() => window.dispatchEvent(new Event('blur'))); assert.equal(await page.getByTestId('card-cvv').innerText(),'•••');
   result.checks.push('owned card, three languages, two widths, password reveal and blur concealment');
   await page.clock.install(); await reveal(); await page.clock.runFor(61000);

@@ -81,7 +81,7 @@ try {
     await page.goto(origin + '/services/catalog/' + service); await page.locator('.service-operation form').waitFor(); await noOverflow();
     result.pages.push({ locale: 'es', width: 1512, route: service });
   }
-  await page.goto(origin); await page.locator('.chat-composer input').fill('quiero pagar celular'); await page.locator('.chat-composer button').click();
+  await page.goto(origin); await page.locator('.paste-composer textarea').fill('quiero pagar celular'); await page.locator('.paste-entry button').click();
   await page.waitForURL(origin + '/services/catalog/phone-bill');
   await page.getByRole('heading', { name: 'Pagar celular o teléfono', exact: true }).waitFor();
   result.checks.push('specific service navigation from assistant; ES/EN/PT and responsive forms');

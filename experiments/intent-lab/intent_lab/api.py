@@ -5,7 +5,8 @@ import threading
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query
+from uuid import UUID
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -18,6 +19,7 @@ from .decision import LABELS
 from .storage import read_conversations, save_conversation
 from . import storage
 from .providers import classify, provider_status
+from .dialogue import respond, overrides, save_instructions, contract_for
 
 app = FastAPI(title="Nexqori · Intent Lab", docs_url="/lab-api/docs", redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
@@ -31,7 +33,7 @@ async def local_only(request: Request, call_next):
     if request.method in ("POST", "PUT"):
         if request.headers.get("origin") not in (None, "http://localhost:5190", "http://127.0.0.1:5190", "http://localhost:5191", "http://127.0.0.1:5191"):
             return JSONResponse({"error": "origin_not_allowed"}, status_code=403)
-        # Limit bodies, including chunked requests; no raw text is logged or persisted.
+        # Provider inputs are saved only in private local run records.
         if len(await request.body()) > 24000:
             return JSONResponse({"error": "input_too_long"}, status_code=413)
     response = await call_next(request)
@@ -70,6 +72,56 @@ class Conversation(BaseModel):
         if self.expected is not None and self.expected not in LABELS:
             raise ValueError("Unknown expected intent")
         return self
+
+class Dialogue(Preview):
+    context: str = Field(default="", max_length=2000)
+    thread_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def ends_with_user(self):
+        if self.messages[-1].role!="user" or any(not m.content.strip() for m in self.messages): raise ValueError("Customer input required")
+        return self
+
+class WorkflowInstructions(BaseModel):
+    model_config=ConfigDict(extra="forbid")
+    language: Literal["es","en","pt"]
+    instructions: str=Field(max_length=2000)
+
+@app.get('/lab-api/workflows')
+def workflows(language: Literal['es','en','pt']='es'):
+    return {'contracts':[contract_for(intent,language) for intent in sorted(LABELS)]}
+
+@app.put('/lab-api/workflows/{intent}')
+def set_instructions(intent: str, body: WorkflowInstructions):
+    if intent not in LABELS: raise HTTPException(404,'not_found')
+    with lock:
+        save_instructions(intent,body.language,body.instructions)
+    return contract_for(intent,body.language)
+
+@app.post('/lab-api/dialogue')
+def dialogue(body: Dialogue):
+    if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
+    try:
+        return respond([m.model_dump() for m in body.messages],body.language,body.instructions,body.context,str(body.thread_id) if body.thread_id else None)
+    finally:
+        provider_lock.release()
+
+@app.get('/lab-api/runs')
+def run_history(offset: int=Query(0,ge=0,le=100000)):
+    paths=sorted((storage.DATA_DIR/'runs').glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)
+    rows=[]
+    for path in paths[offset:offset+30]:
+        try:
+            record=json.loads(path.read_text(encoding='utf-8'));result=record['result']
+            rows.append({k:result.get(k) for k in ('id','created_at','thread_id')}|{'kind':record.get('kind','classification'),'actor':record.get('actor','local_operator'),'intent':result.get('jev',{}).get('intent'),'jev_status':result.get('jev',{}).get('status'),'llm_status':result.get('llm',{}).get('status')})
+        except (ValueError,KeyError): continue
+    return {'runs':rows,'nextOffset':offset+30 if len(paths)>offset+30 else None}
+
+@app.get('/lab-api/runs/{run_id}')
+def run_detail(run_id: UUID):
+    path=storage.DATA_DIR/'runs'/f'{run_id}.json'
+    if not path.exists(): raise HTTPException(404,'not_found')
+    return json.loads(path.read_text(encoding='utf-8'))
 
 
 @app.get("/lab-api/conversations")
@@ -145,7 +197,7 @@ def results():
 
 @app.get("/lab-api/health")
 def health():
-    return {"status": "ok", "external_calls": "jev_on_explicit_run", "banking_actions": False}
+    return {"status": "ok", "external_calls": "jev_and_openai_on_explicit_run", "banking_actions": False}
 
 
 if (ROOT / "dist").exists():

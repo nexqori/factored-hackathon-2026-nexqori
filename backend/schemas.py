@@ -17,6 +17,21 @@ class LocaleInput(StrictModel):
 class CardRevealInput(StrictModel):
     password: str = Field(min_length=1, max_length=256)
 
+class ExperienceInput(StrictModel):
+    birthDate: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    bankingExperience: Literal["new", "occasional", "frequent"]
+    digitalExperience: Literal["new", "learning", "confident"]
+    assistance: Literal["auto", "guided", "standard"]
+
+class RegisterInput(ExperienceInput):
+    name: str = Field(min_length=2, max_length=100)
+    email: str = Field(min_length=5, max_length=254)
+    identityNumber: str = Field(min_length=5, max_length=32)
+    password: str = Field(min_length=12, max_length=128)
+    locale: Locale
+    textSize: Literal["small", "medium", "large"]
+    confirmed: Literal[True]
+
 class PreferencesInput(StrictModel):
     textSize: Literal["small", "medium", "large"]
 
@@ -34,7 +49,8 @@ class RequestInput(ConfirmInput):
 class ChatInput(StrictModel):
     conversationId: str | None = Field(default=None, min_length=1, max_length=64)
     currentPage: Destination = "home"
-    message: str = Field(min_length=1, max_length=1000)
+    message: str = Field(min_length=0, max_length=8000)
+    pastedText: str = Field(default="", max_length=8000)
     locale: Locale
 
 class ServiceRequestInput(ConfirmInput):

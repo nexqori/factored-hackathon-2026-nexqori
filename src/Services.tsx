@@ -82,7 +82,7 @@ function ServiceForm({ item, data, saved }: { item: ServiceItem; data: Dashboard
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const accounts = data.products.filter(p => p.type !== 'card' && p.currency === 'MXN');
   const monetary = item.kind === 'bill' || item.kind === 'transfer';
-  const needsTransaction = ['unrecognized-charge', 'incorrect-charge', 'payment-status'].includes(item.id);
+  const needsTransaction = item.workflow?.requiredFields.includes('transactionId') ?? ['unrecognized-charge', 'incorrect-charge', 'payment-status'].includes(item.id);
   const [accountId, setAccountId] = useState(accounts[0]?.id || ''); const [reference, setReference] = useState(''); const [beneficiary, setBeneficiary] = useState(''); const [amount, setAmount] = useState(''); const [notes, setNotes] = useState(''); const [transactionId, setTransactionId] = useState('');
   const [review, setReview] = useState(false); const [confirmed, setConfirmed] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [requestKey, setRequestKey] = useState(() => crypto.randomUUID()); const [receipt, setReceipt] = useState<string | null>(null);
   const amountMinor = parseAmount(amount); const account = accounts.find(p => p.id === accountId);
@@ -105,7 +105,7 @@ function ServiceForm({ item, data, saved }: { item: ServiceItem; data: Dashboard
   return <div className="service-workspace">
     <Link className="text-link service-back" to={'/services/' + item.category}><ArrowLeft size={17} />{t('allServices')}</Link>
     <div className="service-page-header"><ServiceIcon item={item} /><div><p className="eyebrow">{item.provider || t(item.category === 'support' ? 'catalogSupport' : item.category)}</p><h1>{item.title}</h1><p>{item.summary}</p></div></div>
-    <ol className="service-steps" aria-label={t('catalogSteps')}>{['catalogStepDetails', 'catalogStepReview', 'catalogStepFollow'].map((key, index) => <li key={key} aria-current={(receipt ? 2 : review ? 1 : 0) === index ? 'step' : undefined}><span>{index + 1}</span>{t(key)}</li>)}</ol>
+    <>{item.workflow && <details className="workflow-procedure" open><summary>{t('workflowSteps')}</summary><ol>{item.workflow.steps.map((step,index)=><li key={index}>{step}</li>)}</ol><p>{t('workflowOutcome')}</p></details>}</><ol className="service-steps" aria-label={t('catalogSteps')}>{['catalogStepDetails', 'catalogStepReview', 'catalogStepFollow'].map((key, index) => <li key={key} aria-current={(receipt ? 2 : review ? 1 : 0) === index ? 'step' : undefined}><span>{index + 1}</span>{t(key)}</li>)}</ol>
     <section className="panel service-operation">
       {receipt ? <div className="service-success"><span className="round-icon"><Check size={30} /></span><h2>{t('catalogReceived')}</h2><p>{t('catalogReceivedHint')}</p><strong className="case-reference">{receipt}</strong><Badge status="received" /><Link className="button primary" to="/requests">{t('requests')}<ArrowRight size={18} /></Link></div> : !review ? <form className="form-stack" onSubmit={prepare}>
         <h2>{t('catalogDetailsTitle')}</h2>
