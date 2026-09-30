@@ -24,7 +24,7 @@ Destinos: home, products, movements, requests, services, help, accounts, cards, 
 
 Añadir un adaptador en servidor que reciba mensaje, locale y contexto autorizado, y devuelva texto o una propuesta de herramienta. Registrar el esquema de `NAVIGATION_TOOL`, validar su salida con `NavigateInput` y resolver permisos desde la sesión. Mantener timeouts, error localizable y fallback guiado. Las claves del proveedor permanecen fuera de React y Git.
 
-El contexto del modelo sólo debe incluir datos autorizados del usuario. Un documento o mensaje puede aportar información, pero no cambiar permisos, identidad o instrucciones de aplicación. El modelo no confirma acciones por el cliente: pagos, bloqueos o contrataciones requerirían servicios propios, política explícita, confirmación fuera del chat, idempotencia y comprobación posterior. No están implementados en esta base.
+El contexto del modelo sólo debe incluir datos autorizados del usuario. Un documento o mensaje puede aportar información, pero no cambiar permisos, identidad o instrucciones de aplicación. El modelo no confirma acciones por el cliente. Bloqueo y devolución tienen [servicios propios](acciones-problemas.md), confirmación fuera del chat, titularidad, idempotencia y auditoría; la devolución requiere decisión administrativa. Sus efectos son locales. Pagos externos y contrataciones no están implementados.
 
 
 ## Tono de la interfaz

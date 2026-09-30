@@ -19,7 +19,7 @@ from .decision import LABELS
 from .storage import read_conversations, save_conversation
 from . import storage
 from .providers import classify, provider_status
-from .dialogue import respond, overrides, save_instructions, contract_for
+from .dialogue import respond, overrides, save_instructions, contract_for, problem_intents
 
 app = FastAPI(title="Nexqori · Intent Lab", docs_url="/lab-api/docs", redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
@@ -89,11 +89,11 @@ class WorkflowInstructions(BaseModel):
 
 @app.get('/lab-api/workflows')
 def workflows(language: Literal['es','en','pt']='es'):
-    return {'contracts':[contract_for(intent,language) for intent in sorted(LABELS)]}
+    return {'contracts':[contract_for(intent,language) for intent in sorted(problem_intents())]}
 
 @app.put('/lab-api/workflows/{intent}')
 def set_instructions(intent: str, body: WorkflowInstructions):
-    if intent not in LABELS: raise HTTPException(404,'not_found')
+    if intent not in problem_intents(): raise HTTPException(404,'not_found')
     with lock:
         save_instructions(intent,body.language,body.instructions)
     return contract_for(intent,body.language)

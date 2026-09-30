@@ -89,9 +89,9 @@ No borres el volumen PostgreSQL para actualizar la aplicación. Las migraciones 
 
 ## Alcance de esta entrega
 
-Hay autenticación local, permisos, persistencia PostgreSQL, diez tablas de aplicación, catálogo de 20 servicios, solicitudes con confirmación/idempotencia/auditoría, administración, conversaciones y preferencias. Los cuatro nombres de empresas provienen de agregados del dataset; eso no acredita convenios de recaudación.
+Hay autenticación local, permisos, persistencia PostgreSQL, catálogo de 20 servicios, solicitudes con confirmación/idempotencia/auditoría, administración, conversaciones, perfiles, preferencias, bloqueo de tarjetas y devoluciones con revisión. Los cuatro nombres de empresas provienen de agregados del dataset; eso no acredita convenios de recaudación.
 
-No hay débito/liquidación, libro mayor, proveedor de pagos, LLM u operador humano conectado. La **voz corresponde a otra implementación** y esta base no instala motores de audio. MFA, recuperación de cuentas e integración bancaria requieren un alcance posterior explícito. Los límites se explican en documentación; las pantallas conservan el tono natural acordado.
+Las devoluciones aprobadas por un administrador abonan el saldo local. No hay liquidación externa, libro mayor de doble partida, proveedor de pagos ni LLM en el chat bancario. Jev/Luna funcionan por separado en el LAB. La **voz corresponde a otra implementación** y esta base no instala motores de audio. MFA, recuperación de cuentas e integración bancaria requieren un alcance posterior explícito. Los límites se explican en documentación; las pantallas conservan el tono natural acordado.
 
 Lecturas: [arquitectura y API](docs/arquitectura.md), [catálogo y evidencia](docs/catalogo-servicios.md), [acceso y conversaciones](docs/acceso-y-conversaciones.md), [contrato del agente](docs/agente.md), [README](README.md). OpenAPI: [contrato local](http://localhost:5180/api/openapi.json).
 
@@ -102,3 +102,9 @@ Lecturas: [arquitectura y API](docs/arquitectura.md), [catálogo y evidencia](do
 Consulta [tarjetas y mapeo del dataset](docs/tarjetas-y-dataset.md), [procedimientos y contratos](docs/contratos-atencion.md) y [LAB independiente](experiments/intent-lab/README.md). El proveedor de tarjetas es local y no autoriza compras; PostgreSQL no contiene una importación del dataset. Luna high está conectado y probado con los cinco casos del LAB; las acciones del banco permanecen separadas. Consulta [registro, auditoría, texto pegado y conversación por contratos](docs/registro-auditoria-y-conversacion.md).
 
 El login incluye Crear mi perfil. Configuración permite cambiar experiencia y acompañamiento. Administración muestra la auditoría filtrable y acceso registrado a conversaciones. Iniciar llamada abre sólo la presentación visual, sin micrófono ni backend de voz.
+
+## Bloqueos y devoluciones
+
+En [Tarjetas](http://localhost:5180/cards), el titular puede bloquear su tarjeta con contraseña y confirmación. En **Mis solicitudes**, un reclamo de cargo completado permite pedir devolución; el administrador abre el mismo folio, revisa la evidencia y aprueba o rechaza. Sólo la aprobación abona la cuenta del titular y crea un movimiento. No se puede elegir importe o cuenta ajena.
+
+El LAB activa contratos sólo para problemas; consultas y servicios siguen recorridos separados. Sus enlaces abren el banco autenticado y nunca ejecutan operaciones por sí mismos. [Guía de acciones, reglas, endpoints y pruebas](docs/acciones-problemas.md). Actualiza Docker sin borrar volúmenes; la migración `a318d902bc44` conserva los registros existentes.

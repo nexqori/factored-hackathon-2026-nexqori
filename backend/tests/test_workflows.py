@@ -27,5 +27,5 @@ def test_contract_is_server_selected_persisted_and_retry_safe(setup):
     receipt=created.json()['id']; repeated=client.post('/api/services/unrecognized-charge/requests',json=payload)
     assert repeated.json()=={'id':receipt,'duplicate':True}
     case=next(c for c in client.get('/api/bootstrap').json()['requests'] if c['id']==receipt)
-    assert case['serviceData']['workflow']=={'id':'unrecognized-charge','version':'1'}
+    assert case['serviceData']['workflow']=={'id':'unrecognized-charge','version':'2'}
     assert case['status']=='received'

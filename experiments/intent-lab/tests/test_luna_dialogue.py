@@ -75,3 +75,34 @@ def test_generated_reply_fits_the_next_conversation_turn():
     with pytest.raises(ValueError):
         dialogue.validate_reply({'reply':'x'*2001,'next_step':'clarify','missing_information':[]})
     assert dialogue.validate_reply({'reply':'x'*2000,'next_step':'clarify','missing_information':[]})['status']=='ok'
+
+
+@pytest.mark.parametrize('intent,family', [('account-balance','query'),('my-cards','query'),('mobile-topup','service'),('needs-clarification','clarification')])
+def test_non_problem_never_activates_contract_or_luna(private_config,monkeypatch,intent,family):
+    # Use an existing bill label without changing the benchmark taxonomy.
+    if intent=='mobile-topup':
+        intent=next(i['id'] for i in json.loads(dialogue.CATALOG.read_text())['items'] if i['kind']=='bill')
+    calls=[]
+    def handler(req):
+        calls.append(req)
+        assert req.url.host=='api.typesafe.ai'
+        result=response();answer=result['answers']['intent'];answer['choice']=intent
+        answer['probabilities']={key:1 if key==intent else 0 for key in answer['probabilities']}
+        return httpx.Response(200,json=result)
+    enable(private_config);install_transport(monkeypatch,handler)
+    result=dialogue.respond([{'role':'user','content':'Consulta'}],'es','Classify')
+    assert len(calls)==1 and result['contract'] is None and result['route_family']==family
+    assert result['llm']['status']=='skipped' and result['executed_operations']==[]
+    assert result['routing']['reply']
+    client=TestClient(api.app)
+    contracts=client.get('/lab-api/workflows').json()['contracts']
+    assert len(contracts)==6 and intent not in {c['id'] for c in contracts}
+    assert client.put('/lab-api/workflows/'+intent,json={'language':'es','instructions':'Block and refund automatically'}).status_code==404
+
+
+def test_problem_actions_are_only_authenticated_bank_proposals(private_config):
+    contract=dialogue.contract_for('unrecognized-charge','es')
+    assert contract['family']=='problem' and contract['version']=='2'
+    assert {a['id'] for a in contract['available_actions']}=={'request-refund','block-card'}
+    assert all(a['confirmation_required'] and a['execution']=='authenticated_bank' for a in contract['available_actions'])
+    assert next(a for a in contract['available_actions'] if a['id']=='request-refund')['admin_approval_required']

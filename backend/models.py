@@ -63,8 +63,15 @@ class CardProfile(Base):
     provider_ref: Mapped[str] = mapped_column(String(64), unique=True)
     expiry_month: Mapped[int] = mapped_column(Integer)
     expiry_year: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), default="active", server_default="active")
+    blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    block_request_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    settlement_product_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     __table_args__ = (
         ForeignKeyConstraint(["product_id", "user_id"], ["products.id", "products.user_id"]),
+        ForeignKeyConstraint(["settlement_product_id", "user_id"], ["products.id", "products.user_id"], name="fk_card_settlement_owner"),
+        UniqueConstraint("user_id", "block_request_key", name="uq_card_block_key"),
+        CheckConstraint("status IN ('active','blocked')", name="ck_card_status"),
         CheckConstraint("expiry_month BETWEEN 1 AND 12"),
         CheckConstraint("expiry_year BETWEEN 2000 AND 2200"),
     )
@@ -98,6 +105,7 @@ class RequestCase(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (
+        UniqueConstraint("id", "user_id", name="uq_request_owner"),
         ForeignKeyConstraint(["transaction_id","user_id"], ["transactions.id","transactions.user_id"]),
         ForeignKeyConstraint(["source_product_id","user_id"], ["products.id","products.user_id"], name="fk_requests_source_owner"),
         UniqueConstraint("user_id","transaction_id"), UniqueConstraint("user_id","request_key"),
@@ -106,12 +114,43 @@ class RequestCase(Base):
         CheckConstraint("length(details) BETWEEN 10 AND 1000")
     )
 
+class Refund(Base):
+    __tablename__ = "refunds"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    request_id: Mapped[str] = mapped_column(String(64), unique=True)
+    transaction_id: Mapped[str] = mapped_column(String(64), unique=True)
+    destination_product_id: Mapped[str] = mapped_column(String(64))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3))
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    request_key: Mapped[str] = mapped_column(String(64))
+    decision_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    credit_transaction_id: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    __table_args__ = (
+        ForeignKeyConstraint(["request_id", "user_id"], ["requests.id", "requests.user_id"]),
+        ForeignKeyConstraint(["transaction_id", "user_id"], ["transactions.id", "transactions.user_id"]),
+        ForeignKeyConstraint(["credit_transaction_id", "user_id"], ["transactions.id", "transactions.user_id"]),
+        ForeignKeyConstraint(["destination_product_id", "user_id"], ["products.id", "products.user_id"]),
+        UniqueConstraint("user_id", "request_key"),
+        UniqueConstraint("decided_by", "decision_key"),
+        CheckConstraint("amount_minor > 0 AND currency = 'MXN'"),
+        CheckConstraint("status IN ('pending','approved','rejected')"),
+        CheckConstraint("(status = 'pending' AND decided_by IS NULL AND decided_at IS NULL AND decision_key IS NULL AND decision_note IS NULL AND credit_transaction_id IS NULL) OR (status IN ('approved','rejected') AND decided_by IS NOT NULL AND decided_at IS NOT NULL AND decision_key IS NOT NULL AND decision_note IS NOT NULL)"),
+        CheckConstraint("(status = 'approved' AND credit_transaction_id IS NOT NULL) OR (status <> 'approved' AND credit_transaction_id IS NULL)"),
+    )
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     request_id: Mapped[str | None] = mapped_column(ForeignKey("requests.id"), nullable=True)
     conversation_id: Mapped[str | None] = mapped_column(ForeignKey("conversations.id"), nullable=True, index=True)
+    product_id: Mapped[str | None] = mapped_column(ForeignKey("products.id"), nullable=True)
     action: Mapped[str] = mapped_column(String(32))
     actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

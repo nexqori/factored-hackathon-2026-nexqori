@@ -8,6 +8,8 @@ La base tiene autenticación y persistencia reales en el servidor local. Los dat
 
 El [LAB independiente](experiments/intent-lab/README.md), en localhost:5190, sí conecta Jev y GPT-6 Luna high para comparar clasificación y probar respuestas guiadas por contrato. La base del banco incorpora registro adulto, preferencias de experiencia, auditoría administrativa, texto pegado y presentación visual de llamada. Consulta la [guía de estos recorridos](docs/registro-auditoria-y-conversacion.md).
 
+Los contratos se activan sólo para problemas; consultas y servicios tienen recorridos separados. El banco permite bloquear una tarjeta propia y solicitar devolución de un cargo completado; un administrador debe revisar y aprobar el abono. [Acciones, permisos y pruebas](docs/acciones-problemas.md). Son efectos persistentes en PostgreSQL local, sin emisor ni liquidación externa.
+
 ## Arranque local
 
 Necesitas Docker Desktop iniciado (contenedores Linux) y Node.js 24 con npm. Desde la raíz:

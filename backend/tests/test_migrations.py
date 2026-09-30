@@ -19,6 +19,7 @@ def test_upgrade_preserves_old_messages_passwords_and_custom_accounts(tmp_path, 
         assert len(inspect(db).get_check_constraints('users')) == 3
         assert len(inspect(db).get_check_constraints('messages')) == 2
         assert len(inspect(db).get_check_constraints('requests')) == 3
+        assert len(inspect(db).get_check_constraints('card_profiles')) == 3
         assert db.execute(text("SELECT details,catalog_service_id,source_product_id,service_data FROM requests WHERE id='old-case'")).one()==('Original case details',None,None,None)
         rows=db.execute(text('SELECT m.id,m.user_id,m.content,c.user_id FROM messages m JOIN conversations c ON c.id=m.conversation_id')).all()
         assert len(rows)==2 and all(row[1]==row[3] and row[2]=='Original unchanged message' for row in rows)

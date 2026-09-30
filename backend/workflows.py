@@ -10,4 +10,4 @@ def workflow_view(service_id, locale):
     if not workflow:
         return None
     return {"id": service_id, "version": CATALOG["version"], "steps": workflow["steps"][locale],
-            "requiredFields": workflow["requiredFields"], "executesFinancialOperation": False}
+            "requiredFields": workflow["requiredFields"], "family": "problem", "availableActions": workflow.get("availableActions", []), "executesFinancialOperation": False}

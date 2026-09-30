@@ -1,5 +1,7 @@
 # Nexqori · Laboratorio de intención
 
+Contratos de problemas v2: sólo las seis categorías de problemas cargan procedimiento e instrucciones para Luna. Consultas y solicitudes de servicios se enrutan aparte; una consulta no activa el contrato de reclamos. El benchmark conserva las 23 etiquetas. Para cargos elegibles, el LAB muestra accesos a bloqueo y revisión de devolución dentro del banco autenticado; no ejecuta herramientas bancarias. Ver [acciones y controles](../../docs/acciones-problemas.md).
+
 Abre **http://localhost:5190/**. El banco principal sigue en **http://localhost:5180/**. Este laboratorio no comparte sesiones, operaciones ni base de datos con el banco.
 
 ## Qué se puede hacer

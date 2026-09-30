@@ -16,6 +16,7 @@ from .models import CustomerProfile
 from .customer_profile import adult_birth_date, experience_view
 from .workflows import workflow_view
 from .cards import reveal_local_card
+from .operations import operations_router
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
@@ -35,7 +36,7 @@ def request_view(r, name=None):
     return {"id":r.id,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name}
 
 def audit_view(e, name):
-    return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"conversationId":e.conversation_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
+    return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"conversationId":e.conversation_id,"productId":e.product_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
 
 def add_audit(db, user_id, action, actor, request_id=None, conversation_id=None):
     db.add(AuditEvent(id=str(uuid4()),user_id=user_id,request_id=request_id,conversation_id=conversation_id,action=action,actor_id=actor))
@@ -185,14 +186,16 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         rows=db.execute(select(Product, CardProfile).outerjoin(CardProfile, and_(CardProfile.product_id==Product.id, CardProfile.user_id==Product.user_id)).where(Product.user_id==user.id, Product.type=="card")).all()
         return {"cards": [{"id": p.id, "last4": p.last4, "holder": user.name,
             "expiryMonth": c.expiry_month if c else None, "expiryYear": c.expiry_year if c else None,
-            "canReveal": bool(c and os.getenv("CARD_PROVIDER")=="local_fixture" and c.provider_ref=="local-card-01")} for p,c in rows]}
+            "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"),
+            "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and c.provider_ref=="local-card-01")} for p,c in rows]}
 
     @app.post("/api/cards/{product_id}/reveal")
     def reveal_card(product_id: str, payload: CardRevealInput, request: Request, user=Depends(customer), db=Depends(db_session)):
         card_limiter.consume(request.client.host if request.client else "local", user.id)
-        profile=db.scalar(select(CardProfile).join(Product, and_(Product.id==CardProfile.product_id, Product.user_id==CardProfile.user_id)).where(CardProfile.product_id==product_id, CardProfile.user_id==user.id, Product.type=="card"))
+        profile=db.scalar(select(CardProfile).join(Product, and_(Product.id==CardProfile.product_id, Product.user_id==CardProfile.user_id)).where(CardProfile.product_id==product_id, CardProfile.user_id==user.id, Product.type=="card").with_for_update())
         if not profile: raise HTTPException(404, "not_found")
         if not verify(payload.password, user.password_hash): raise HTTPException(403, "card_password")
+        if profile.status=="blocked": raise HTTPException(409, "card_blocked")
         if os.getenv("CARD_PROVIDER")!="local_fixture": raise HTTPException(503, "card_unavailable")
         result=reveal_local_card(profile)
         add_audit(db, user.id, "card_details_viewed", user.id)
@@ -202,11 +205,12 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     @app.get("/api/bootstrap")
     def bootstrap(user=Depends(current_user),db=Depends(db_session)):
         products=db.scalars(select(Product).where(Product.user_id==user.id).order_by(Product.id)).all()
+        card_status={c.product_id:c.status for c in db.scalars(select(CardProfile).where(CardProfile.user_id==user.id))}
         txs=db.scalars(select(Transaction).where(Transaction.user_id==user.id).order_by(Transaction.occurred_at.desc())).all()
         cases=db.scalars(select(RequestCase).where(RequestCase.user_id==user.id).order_by(RequestCase.created_at.desc())).all()
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).where(AuditEvent.user_id==user.id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
         return {
-            "products":[{"id":p.id,"type":p.type,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency} for p in products],
+            "products":[{"id":p.id,"type":p.type,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency,"status":card_status.get(p.id,"active")} for p in products],
             "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status} for t in txs],
             "requests":[request_view(r) for r in cases],
             "audit":[audit_view(e,name) for e,name in events]
@@ -396,4 +400,5 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             add_audit(db,case.user_id,"reviewed",user.id,case.id);db.commit()
         elif case.status!="in_review": raise HTTPException(409,"invalid_transition")
         return {"ok":True}
+    app.include_router(operations_router())
     return app

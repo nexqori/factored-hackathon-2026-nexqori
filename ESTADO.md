@@ -331,3 +331,17 @@
 - Último avance: implementación disponible en banco/LAB y publicada en PR #3. Guía de inicio y guía de registro/auditoría/contratos compartidas; claves, conversaciones y ejecuciones siguen excluidas de Git. [CI de entrega 25605fa exitosa](https://github.com/nexqori/nexqori/actions/runs/36774383278).
 - Fecha de cierre de implementación: 2026-09-30 15:44 -05:00, America/Lima.
 - Siguiente paso: Bryan y el equipo revisan la aplicación y PR #3; la integración en main requiere revisión posterior. Sin pendientes de implementación de este encargo. No se importaron datos fuente ni se conectaron modelos al chat bancario.
+
+## Frente: Nexqori — acciones de problemas con autorización
+- Fecha: 2026-09-30 16:29 -05:00, America/Lima. Rama bryan; PR #3.
+- Pedido vigente: separar consultas de contratos de problemas; implementar bloqueo de tarjeta y devolución dentro del titular autenticado. Bryan eligió devolución solicitada por el cliente y aprobada por administrador.
+- [x] Separar consultas y servicios de los seis contratos de problemas v2. El LAB no carga contrato ni llama a Luna para consultas en ese recorrido; el benchmark conserva las 23 etiquetas.
+- [x] Bloqueo persistente de tarjeta propia con contraseña, confirmación, idempotencia y auditoría; impide revelar datos y actualiza Mis productos. Devolución completa solicitada por titular y aprobada/rechazada por administrador con evidencia declarada y contraseña; importe/cuenta derivados del servidor, una por cargo, sin redirigir a otro titular.
+- [x] Integrar pantallas ES/EN/PT y desplegar en Docker local. Migración a318d902bc44 conserva productos, movimientos, solicitudes y mensajes comprobados por hash; respaldo previo privado. Añade estado/cuenta de tarjeta, refunds y referencias de producto en auditoría.
+- [x] Validar 105 pruebas API (104 en la suite completa y 11 de operaciones tras añadir reversión por fallo de auditoría), 41 LAB y 10 frontend; compilaciones correctas. Concurrencia PostgreSQL: un abono para dos aprobaciones del mismo cargo; dos cargos sobre la misma cuenta sin perder importes; saldos de otros titulares intactos. Créditos, pendientes, rechazados, cuentas ajenas y decisiones cambiadas se rechazan.
+- [x] Recorrido real cliente → revisión administrativa → abono, bloqueo persistente y actualización de productos: 12 comprobaciones axe sin infracciones. Regresión en serie: 56 combinaciones generales/6 comandos/5 axe, conversaciones 5 axe, servicios 17 vistas/9 axe y tarjetas 6 axe. LAB 14 recorridos/11 axe y diálogo/consulta 2 axe; sin errores JavaScript observados. Registros de prueba ficticios identificados Verificación, privados.
+- [x] Prueba real acotada de proveedores con textos ficticios: cargo no reconocido activa contrato v2 y respuesta de Luna con acciones propuestas; consulta de saldo omite contrato/Luna. Cero operaciones ejecutadas desde LAB. No es un benchmark.
+- [x] Documentar recorridos, endpoints, regla de revisión y límites en [acciones de problemas](docs/acciones-problemas.md) e [inicio del equipo](INICIO-EQUIPO.md).
+- [ ] Publicar cambios en bryan y actualizar PR #3, sin fusionar.
+- Último avance: implementado, desplegado y validado localmente; preparados código y guía para publicación. Bloqueos y abonos sólo tienen efectos dentro de Nexqori; sin emisor, liquidación externa ni libro mayor de doble partida.
+- Siguiente paso: publicar y comprobar CI; luego Bryan/equipo revisan PR #3. Sin bloqueo de implementación.

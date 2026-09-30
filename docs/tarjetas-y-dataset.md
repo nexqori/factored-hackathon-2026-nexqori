@@ -2,7 +2,7 @@
 
 ## Qué contiene PostgreSQL
 
-La base de la app **se creó de cero mediante Alembic**, con fixtures coherentes en `backend/seed.py`. No se importaron las 13 tablas ni los registros individuales del organizador. Antes de esta ampliación se verificaron ocho tablas de aplicación (`users`, `sessions`, `products`, `transactions`, `requests`, `audit_events`, `conversations`, `messages`) y `alembic_version`. Se añadieron `card_profiles` y `customer_profiles`, preservando las anteriores: diez tablas de aplicación más `alembic_version`.
+La base de la app **se creó de cero mediante Alembic**, con fixtures coherentes en `backend/seed.py`. No se importaron las 13 tablas ni los registros individuales del organizador. Antes de esta ampliación se verificaron ocho tablas de aplicación (`users`, `sessions`, `products`, `transactions`, `requests`, `audit_events`, `conversations`, `messages`) y `alembic_version`. Se añadieron `card_profiles` y `customer_profiles`, preservando las anteriores: diez tablas de aplicación más `alembic_version` en aquella ampliación. La implementación de acciones añade `refunds` como undécima tabla y conserva las demás; ver [acciones de problemas](acciones-problemas.md).
 
 El dataset permanece local, con su análisis separado. El catálogo toma categorías y evidencia agregada; eso no implica correspondencia fila a fila entre Andrea y un cliente fuente.
 
@@ -13,7 +13,7 @@ El dataset permanece local, con su análisis separado. El catálogo toma categor
 | `products.product_number` | `products.last4` + referencia de proveedor en `card_profiles` | Antes sólo se guardaba terminación. No copiar ni inferir PAN completo desde cuatro dígitos. El proveedor local entrega un número no operativo de prueba. |
 | `products.expiration_date` | `card_profiles.expiry_month`, `expiry_year` | El campo existe en la fuente, pero no se ha importado. Vigencia 12/2029 pertenece al fixture, no al dataset. Valores ausentes se muestran como no disponibles. |
 | CVV / CVV dinámico | Sin columna | No existe en el esquema fuente revisado. El código temporal no se persiste; no reconstruirlo de otros campos. |
-| `products.product_status` | Sin equivalencia completa aún | El modelo base no conserva todos los estados fuente; no asumir bloqueo/activación funcional. Revelación rechaza vigencia expirada. |
+| `products.product_status` | `card_profiles.status` propio, no importado | active/blocked controla el bloqueo local y la revelación; no refleja un estado del emisor. La vigencia expirada también impide revelar. |
 | `products.current_balance`, `currency` | `balance_minor`, `currency` | Importes enteros en unidades menores; fixtures MXN, no conversión automática de las tres monedas fuente. |
 | `transactions` | `transactions` | Modelo reducido, propietario coherente. `Approved` → `completed` es correspondencia conceptual; `Reversed` requiere un estado adicional antes de importar. |
 | `complaints` | `requests` | Solicitudes propias, sin importar vínculos inconsistentes. `received/in_review/handed_off` no representan todas las resoluciones fuente. |
