@@ -70,3 +70,8 @@ def test_dialogue_does_not_call_llm_if_jev_fails(private_config,monkeypatch):
     result=dialogue.respond([{'role':'user','content':'Hi'}],'en','Classify')
     assert len(calls)==1 and result['contract'] is None
     assert result['llm']['error']=='classification_required' and result['executed_operations']==[]
+
+def test_generated_reply_fits_the_next_conversation_turn():
+    with pytest.raises(ValueError):
+        dialogue.validate_reply({'reply':'x'*2001,'next_step':'clarify','missing_information':[]})
+    assert dialogue.validate_reply({'reply':'x'*2000,'next_step':'clarify','missing_information':[]})['status']=='ok'

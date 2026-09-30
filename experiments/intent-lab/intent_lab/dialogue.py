@@ -49,7 +49,7 @@ def contract_for(intent, language):
 
 def validate_reply(value):
     if not isinstance(value,dict) or set(value)!={'reply','next_step','missing_information'}: raise ValueError('Invalid reply')
-    if type(value['reply']) is not str or not 1<=len(value['reply'].strip())<=4000: raise ValueError('Invalid reply')
+    if type(value['reply']) is not str or not 1<=len(value['reply'].strip())<=2000: raise ValueError('Invalid reply')
     if value['next_step'] not in {'clarify','collect_context','explain_procedure','suggest_human'}: raise ValueError('Invalid step')
     if not isinstance(value['missing_information'],list) or len(value['missing_information'])>6 or any(type(s)is not str or len(s)>200 for s in value['missing_information']): raise ValueError('Invalid missing information')
     return {'status':'ok',**value}
@@ -60,7 +60,7 @@ def respond(messages, language, instructions, context='', thread_id=None):
     llm={'status':'pending','error':'classification_required'}
     if contract:
         schema={'type':'object','additionalProperties':False,'required':['reply','next_step','missing_information'],
-                'properties':{'reply':{'type':'string'},'next_step':{'type':'string','enum':['clarify','collect_context','explain_procedure','suggest_human']},'missing_information':{'type':'array','items':{'type':'string'}}}}
+                'properties':{'reply':{'type':'string','maxLength':2000},'next_step':{'type':'string','enum':['clarify','collect_context','explain_procedure','suggest_human']},'missing_information':{'type':'array','items':{'type':'string'}}}}
         llm=openai_response({'language':language,'messages':messages,'unverified_context':context,'contract':contract},GUARDRAILS,schema,'banking_reply',validate_reply)
     result={'id':str(uuid.uuid4()),'thread_id':thread_id or str(uuid.uuid4()),'created_at':datetime.now(timezone.utc).isoformat(),'jev':jev,'llm':llm,'contract':contract,'executed_operations':[],
             'instructions_sha256':hashlib.sha256((GUARDRAILS+instructions+json.dumps(contract,sort_keys=True)).encode()).hexdigest()}
