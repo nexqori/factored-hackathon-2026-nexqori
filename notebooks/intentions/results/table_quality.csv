@@ -1,0 +1,14 @@
+table,rows,columns,missing_cells,null_key_rows,duplicate_key_extra_rows,exact_duplicate_extra_rows
+branches,350,22,0,0,0,0
+call_center_interactions,686296,21,1123307,0,0,0
+call_transcripts,171321,18,147309,0,0,0
+campaign_sends,1746801,22,14405290,0,0,0
+complaints,67095,27,654325,0,0,0
+customers,150000,27,247446,0,0,0
+daily_exchange_rates,13164,7,0,0,0,0
+digital_events,15620994,26,129417054,0,0,0
+marketing_campaigns,200,13,296,0,0,0
+products,400000,17,950515,0,0,0
+satisfaction_surveys,212759,20,1198234,0,0,0
+service_agents,1200,18,1157,0,0,0
+transactions,4425008,22,23744237,0,0,0

@@ -1,0 +1,22 @@
+check,passed
+Tablas inventariadas y perfiladas coinciden,True
+Todos los campos perfilados,True
+Nulos y blancos no superan filas,True
+Tipos inválidos no superan no vacíos,True
+Conservación filas call_center_interactions,True
+Parquet legible call_center_interactions,True
+Conservación filas call_transcripts,True
+Parquet legible call_transcripts,True
+Conservación filas complaints,True
+Parquet legible complaints,True
+Conservación filas satisfaction_surveys,True
+Parquet legible satisfaction_surveys,True
+Baseline reconcilia call_transcripts,True
+Grupos de texto <= filas call_transcripts,True
+Baseline reconcilia complaints,True
+Grupos de texto <= filas complaints,True
+Baseline reconcilia satisfaction_surveys,True
+Grupos de texto <= filas satisfaction_surveys,True
+Idiomas declarados reconcilian,True
+Enlace no multiplica transcripciones,True
+Originales sin cambios observados,True

@@ -20,6 +20,8 @@ Destinos: home, products, movements, requests, services, help, accounts, cards, 
 
 ## Incorporar un modelo después
 
+La [configuración inicial de intención](clasificacion-intenciones.md) y el [protocolo de evaluación](evaluacion-intenciones.md) están preparados. Los JSON de `backend/config/` son declarativos y no se cargan todavía; las variables INTENT_* y TYPESAFE_* no activan un modelo. Se conserva el contrato actual y las reglas como baseline. No hay porcentaje de intención disponible en esta entrega.
+
 Añadir un adaptador en servidor que reciba mensaje, locale y contexto autorizado, y devuelva texto o una propuesta de herramienta. Registrar el esquema de `NAVIGATION_TOOL`, validar su salida con `NavigateInput` y resolver permisos desde la sesión. Mantener timeouts, error localizable y fallback guiado. Las claves del proveedor permanecen fuera de React y Git.
 
 El contexto del modelo sólo debe incluir datos autorizados del usuario. Un documento o mensaje puede aportar información, pero no cambiar permisos, identidad o instrucciones de aplicación. El modelo no confirma acciones por el cliente: pagos, bloqueos o contrataciones requerirían servicios propios, política explícita, confirmación fuera del chat, idempotencia y comprobación posterior. No están implementados en esta base.

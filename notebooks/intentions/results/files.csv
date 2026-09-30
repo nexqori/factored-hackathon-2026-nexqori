@@ -1,0 +1,14 @@
+table,files,bytes,schema_variants,first_file,last_file
+branches,1,89529,1,branches.csv,branches.csv
+call_center_interactions,1097,139734950,1,call_center_interactions\year=2023\month=06\day=17\call_center_interactions_20230617.csv,call_center_interactions\year=2026\month=06\day=17\call_center_interactions_20260617.csv
+call_transcripts,1097,137235657,1,call_transcripts\year=2023\month=06\day=17\call_transcripts_20230617.csv,call_transcripts\year=2026\month=06\day=17\call_transcripts_20260617.csv
+campaign_sends,1083,325976325,1,campaign_sends\year=2023\month=07\day=01\campaign_sends_20230701.csv,campaign_sends\year=2026\month=06\day=17\campaign_sends_20260617.csv
+complaints,1097,17990612,1,complaints\year=2023\month=06\day=17\complaints_20230617.csv,complaints\year=2026\month=06\day=17\complaints_20260617.csv
+customers,1,46897358,1,customers.csv,customers.csv
+daily_exchange_rates,1,778914,1,daily_exchange_rates.csv,daily_exchange_rates.csv
+digital_events,1097,3757355051,1,digital_events\year=2023\month=06\day=17\digital_events_20230617.csv,digital_events\year=2026\month=06\day=17\digital_events_20260617.csv
+marketing_campaigns,1,32710,1,marketing_campaigns.csv,marketing_campaigns.csv
+products,1,68213646,1,products.csv,products.csv
+satisfaction_surveys,1097,46446098,1,satisfaction_surveys\year=2023\month=06\day=17\satisfaction_surveys_20230617.csv,satisfaction_surveys\year=2026\month=06\day=17\satisfaction_surveys_20260617.csv
+service_agents,1,237992,1,service_agents.csv,service_agents.csv
+transactions,1097,808333639,1,transactions\year=2023\month=06\day=17\transactions_20230617.csv,transactions\year=2026\month=06\day=17\transactions_20260617.csv

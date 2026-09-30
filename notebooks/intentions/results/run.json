@@ -1,0 +1,27 @@
+{
+  "finished_at_lima": "2026-09-29T14:38:10.040744-05:00",
+  "dataset_root": "C:\\Users\\santi\\Documents\\Projects\\nexqori-dataset",
+  "files": 7671,
+  "tables": 13,
+  "rows": 23495188,
+  "elapsed_seconds": 207.0,
+  "python": "3.12.14",
+  "versions": {
+    "duckdb": "1.5.5",
+    "pandas": "3.0.1",
+    "numpy": "2.3.5",
+    "matplotlib": "3.11.2"
+  },
+  "baseline_sha256": "f86e4a936f24476a82911f4c7111781618928d5d702d6406d77928e031b659c1",
+  "source_manifest_sha256": "d3669d4d774afc3caeff9915d89e4b7344b21a1f5db6662aa99322a2e4551422",
+  "checks_passed": 21,
+  "scope": "all discovered known CSV tables, no sampling",
+  "cleaned_tables": [
+    "call_center_interactions",
+    "call_transcripts",
+    "complaints",
+    "satisfaction_surveys"
+  ],
+  "external_requests": 0,
+  "gpu_used": false
+}

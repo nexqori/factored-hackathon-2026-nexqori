@@ -1,0 +1,4 @@
+source_table,rows_with_text,distinct_clean_texts,normalized_groups,min_chars,median_chars,max_chars,raw_nonnull,raw_unique_texts
+call_transcripts,171321,42,42,68,82.0,162,171321,42
+complaints,67095,5,5,26,29.0,34,67095,5
+satisfaction_surveys,101196,13,13,10,34.0,48,101196,13

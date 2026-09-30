@@ -1,0 +1,87 @@
+table,column,changed_rows,operation
+call_center_interactions,interaction_id,0,trim + vacío a NULL
+call_center_interactions,interaction_date,0,trim + vacío a NULL
+call_center_interactions,process_date,0,trim + vacío a NULL
+call_center_interactions,customer_id,0,trim + vacío a NULL
+call_center_interactions,agent_id,0,trim + vacío a NULL
+call_center_interactions,interaction_type,0,trim + vacío a NULL
+call_center_interactions,channel,0,trim + vacío a NULL
+call_center_interactions,contact_reason,0,trim + vacío a NULL
+call_center_interactions,reason_category,0,trim + vacío a NULL
+call_center_interactions,duration_seconds,0,trim + vacío a NULL
+call_center_interactions,wait_time_seconds,0,trim + vacío a NULL
+call_center_interactions,was_resolved,0,trim + vacío a NULL
+call_center_interactions,requires_followup,0,trim + vacío a NULL
+call_center_interactions,detected_sentiment,0,trim + vacío a NULL
+call_center_interactions,sentiment_score,0,trim + vacío a NULL
+call_center_interactions,customer_detected_accent,0,trim + vacío a NULL
+call_center_interactions,agent_used_accent,0,trim + vacío a NULL
+call_center_interactions,was_escalated,0,trim + vacío a NULL
+call_center_interactions,mentioned_products,0,trim + vacío a NULL
+call_center_interactions,has_transcript,0,trim + vacío a NULL
+call_center_interactions,has_recording,0,trim + vacío a NULL
+call_transcripts,transcript_id,0,trim + vacío a NULL
+call_transcripts,interaction_id,0,trim + vacío a NULL
+call_transcripts,process_date,0,trim + vacío a NULL
+call_transcripts,customer_id,0,trim + vacío a NULL
+call_transcripts,agent_id,0,trim + vacío a NULL
+call_transcripts,full_text,171321,NFC + espacios + vacío a NULL
+call_transcripts,customer_text,0,NFC + espacios + vacío a NULL
+call_transcripts,agent_text,0,NFC + espacios + vacío a NULL
+call_transcripts,detected_language,0,trim + vacío a NULL
+call_transcripts,detected_accent,0,trim + vacío a NULL
+call_transcripts,accent_confidence,0,trim + vacío a NULL
+call_transcripts,detected_keywords,0,trim + vacío a NULL
+call_transcripts,mentioned_entities,0,trim + vacío a NULL
+call_transcripts,detected_intents,0,trim + vacío a NULL
+call_transcripts,main_topics,0,trim + vacío a NULL
+call_transcripts,transcription_model,0,trim + vacío a NULL
+call_transcripts,audio_quality,0,trim + vacío a NULL
+call_transcripts,duration_seconds,0,trim + vacío a NULL
+complaints,complaint_id,0,trim + vacío a NULL
+complaints,creation_date,0,trim + vacío a NULL
+complaints,process_date,0,trim + vacío a NULL
+complaints,customer_id,0,trim + vacío a NULL
+complaints,case_type,0,trim + vacío a NULL
+complaints,category,0,trim + vacío a NULL
+complaints,subcategory,0,trim + vacío a NULL
+complaints,reception_channel,0,trim + vacío a NULL
+complaints,affected_product_id,0,trim + vacío a NULL
+complaints,related_branch_id,0,trim + vacío a NULL
+complaints,origin_interaction_id,0,trim + vacío a NULL
+complaints,description,0,NFC + espacios + vacío a NULL
+complaints,claimed_amount,0,trim + vacío a NULL
+complaints,currency,0,trim + vacío a NULL
+complaints,priority,0,trim + vacío a NULL
+complaints,status,0,trim + vacío a NULL
+complaints,assigned_agent_id,0,trim + vacío a NULL
+complaints,assignment_date,0,trim + vacío a NULL
+complaints,first_response_date,0,trim + vacío a NULL
+complaints,resolution_date,0,trim + vacío a NULL
+complaints,closing_date,0,trim + vacío a NULL
+complaints,sla_breached,0,trim + vacío a NULL
+complaints,resolution_days,0,trim + vacío a NULL
+complaints,resolution,0,NFC + espacios + vacío a NULL
+complaints,compensation_granted,0,trim + vacío a NULL
+complaints,resolution_satisfaction,0,trim + vacío a NULL
+complaints,is_repeat_complainer,0,trim + vacío a NULL
+satisfaction_surveys,survey_id,0,trim + vacío a NULL
+satisfaction_surveys,survey_date,0,trim + vacío a NULL
+satisfaction_surveys,process_date,0,trim + vacío a NULL
+satisfaction_surveys,interaction_id,0,trim + vacío a NULL
+satisfaction_surveys,customer_id,0,trim + vacío a NULL
+satisfaction_surveys,agent_id,0,trim + vacío a NULL
+satisfaction_surveys,survey_type,0,trim + vacío a NULL
+satisfaction_surveys,send_channel,0,trim + vacío a NULL
+satisfaction_surveys,main_score,0,trim + vacío a NULL
+satisfaction_surveys,nps_category,0,trim + vacío a NULL
+satisfaction_surveys,question_1_text,0,trim + vacío a NULL
+satisfaction_surveys,question_1_response,0,trim + vacío a NULL
+satisfaction_surveys,question_2_text,0,trim + vacío a NULL
+satisfaction_surveys,question_2_response,0,trim + vacío a NULL
+satisfaction_surveys,question_3_text,0,trim + vacío a NULL
+satisfaction_surveys,question_3_response,0,trim + vacío a NULL
+satisfaction_surveys,open_comments,0,NFC + espacios + vacío a NULL
+satisfaction_surveys,comment_sentiment,0,trim + vacío a NULL
+satisfaction_surveys,response_time_hours,0,trim + vacío a NULL
+satisfaction_surveys,campaign_response_rate,0,trim + vacío a NULL

@@ -260,3 +260,50 @@
 - Último avance: base y ajuste de tono publicados en GitHub privado; Docker local operativo en http://localhost:5180. 8 pruebas frontend + 33 API, build y CI correctos; 56 combinaciones de interfaz y cinco revisiones axe sin infracciones observadas. Fuentes, análisis, skill y guía de acceso incluidos.
 - Siguiente paso: Bryan revisa la aplicación local; credenciales propias en .env y guía en README.md. Sin pendientes de esta entrega. La conexión futura de un modelo, un banco o atención humana requiere definir proveedor y alcance; sus contratos y límites están documentados, sin activar servicios externos.
 - Limitación conocida: TestClient emite aviso de deprecación httpx; las 33 pruebas pasan. No equivale a una plataforma bancaria certificada o lista para producción.
+
+## Frente: configuración inicial de clasificación de intenciones
+- Fecha: 2026-09-29 13:17:17 -05:00, America/Lima.
+- Objetivo: aplicar la propuesta de configuración inicial sin conectar proveedores ni alterar el flujo existente.
+- [x] Añadir variables reservadas con modo off, reglas como proveedor/respaldo, salida externa deshabilitada y claves vacías en .env.example, Compose (sólo API) y setup para instalaciones nuevas.
+- [x] Crear backend/config/intent-taxonomy.json con 19 intenciones compatibles y ejemplos ES/EN/PT, y política declarativa con umbrales pendientes y activación bloqueada hasta evaluación.
+- [x] Documentar contrato futuro, credenciales, privacidad, límites del dataset, evaluación, shadow y reversión en docs/clasificacion-intenciones.md y docs/evaluacion-intenciones.md; enlazar desde README/docs/agente y actualizar AGENTS.md.
+- [x] Preparar .local/intent-evaluation/ excluido de Git. No existe .env en este checkout; el setup lo generará cuando se solicite el arranque. No se añadieron credenciales.
+- [x] Validar: npm test (8), npm run build y .venv-app/Scripts/python.exe -m pytest backend/tests -q (33); JSON legibles, 19 IDs cotejados con AST del baseline y cobertura ES/EN/PT; git diff --check y Compose config --quiet satisfactorios con valores ficticios sólo en proceso.
+- [x] Verificar setup en fixture local aislado: genera defaults desactivados y conserva byte por byte un entorno existente. Dependencias fijadas instaladas en node_modules y .venv-app, excluidas de Git; sin modificar lockfiles.
+- Implementado: configuración y documentación local. No implementado: consumidor de JSON/variables, adaptador de inferencia o porcentajes en API. No desplegado ni publicado; no se reiniciaron servicios ni se alteraron datos persistentes.
+- Limitaciones: aviso de deprecación httpx conocido en pruebas; Compose validó aunque avisó de acceso denegado a la configuración personal de Docker. No se comprobó arranque real ni UI; no hubo cambios de presentación o recorrido.
+- Bloqueos: ninguno para esta entrega. Clave/modelo TypeSafe, condiciones de uso de entradas externas, etiquetas revisadas y umbrales quedan pendientes para una integración futura.
+- Siguiente paso: implementar y evaluar el adaptador sólo en una siguiente fase autorizada; conservar off y reglas mientras tanto.
+
+## Frente: notebooks locales de intenciones
+- Fecha: 2026-09-29 15:13:26 -05:00, America/Lima.
+- Objetivo: notebook de limpieza/EDA ejecutado sobre la ruta real y segundo notebook de primer experimento LLM, expresamente sin ejecutar.
+- [x] Detectar fuente indicada por el usuario: C:/Users/santi/Documents/Projects/nexqori-dataset. No usar como corpus completo el CSV aislado de Descargas ni la antigua ruta E:/factoredai.
+- [x] Crear y ejecutar notebooks/intentions/INTENTIONS_EDA.ipynb: ocho celdas Python sin errores, censo de 7.671 CSV/13 tablas/23.495.188 filas/260 columnas, hashes, esquemas, nulos/blancos, tipos analíticos, duplicados, tiempo e idioma. Ejecución completa final: 207 segundos, CPU, sin muestreo.
+- [x] Guardar perfiles CSV, conclusiones, manifiesto, HTML y cuatro gráficos revisados visualmente en notebooks/intentions. Copias limpias de cuatro tablas de atención y corpus individual en private/, excluido de Git; originales no modificados.
+- [x] Comprobar 21 invariantes y contraste independiente con csv.DictReader para transcripciones, reclamos y encuestas. Evidencia: results/validation.csv, independent_validation.json y run.json. Confirmadas 42 variantes de texto de cliente, cinco descripciones de reclamo y trece comentarios de encuesta; idioma declarado es. No equivalen a etiquetas multiclase válidas.
+- [x] Crear notebooks/intentions/LLM/LLM_INTENTIONS_EXPERIMENT.ipynb con limpieza, plantilla de revisión, ejemplos ficticios ES/PT/EN, separación train/validation/test por grupos, carga local Qwen configurable, few-shot, LoRA opcional, baseline, métricas/gráficos y manifiestos futuros.
+- [x] Validar exclusivamente estructura nbformat y sintaxis del notebook LLM; todos sus execution_count son null y outputs están vacíos. No se descargó/cargó un modelo, ni se ejecutó entrenamiento, inferencia o evaluación LLM. No hay resultados LLM proporcionados.
+- Implementado: dos notebooks y documentación local. Ejecutado/validado: EDA y sus gráficos. Sólo autoría/validación estática: experimento LLM. Sin despliegue, publicación, cambios a la aplicación ni llamadas a proveedores de inferencia.
+- Bloqueos: ninguno para la entrega. Ejecutar el LLM en el futuro requiere entorno/modelo configurados; para datos del organizador, etiquetas humanas y diversidad suficiente. Los ejemplos ficticios sólo verifican el circuito técnico.
+- Siguiente paso: usuario revisa el notebook LLM y decide cuándo ejecutarlo. Mantenerlo sin resultados hasta una nueva instrucción de ejecución.
+
+- Actualización 2026-09-29 16:22:00 -05:00, America/Lima: cambio de modelos del notebook LLM solicitado por el usuario.
+- [x] Sustituir Qwen/LoRA por adaptadores HTTP de Gemini 3 Pro Preview (high), GPT-5.2 y Claude Sonnet 4.5; conservar preparación y particiones, añadir comparación de métricas/gráficos por modelo y claves mediante variables de entorno.
+- [x] Validación estática: nbformat y compilación sintáctica de las 11 celdas Python; 21 celdas totales, execution_count null y outputs vacíos. Sin ejecutar notebook, instalar paquetes ni invocar APIs. Sin cambios al flujo de la aplicación, despliegue o publicación.
+- Bloqueo de comparación completa: Google declara retirado gemini-3-pro-preview desde 2026-03-09; configuración high conservada y modelo marcado no disponible, sin sustitución automática. Las APIs sólo admiten ejemplos ficticios; datos del organizador permanecen locales.
+- Siguiente paso de este frente: revisar configuración y disponibilidad; mantener notebook sin ejecutar hasta nueva instrucción. Credenciales futuras: OPENAI_API_KEY, ANTHROPIC_API_KEY y GEMINI_API_KEY sólo si el modelo exacto vuelve a estar disponible.
+
+- Actualización 2026-09-29 16:33:34 -05:00, America/Lima: sustitución solicitada por Gemini 3.8 Flash en el notebook LLM.
+- [x] Cambiar identificador, endpoint, comprobación de modelo y documentación a gemini-3.8-flash; conservar high y habilitar su selección. Retirar el bloqueo por deprecación anterior. GPT-5.2 y Claude Sonnet 4.5 permanecen iguales.
+- [x] Evidencia: cinco celdas modificadas, estructura nbformat y sintaxis Python válidas, sin referencias al modelo retirado en el notebook; execution_count null y outputs vacíos. ALLOW_API_CALLS=False conservado.
+- Implementado y validado estáticamente; no ejecutado, desplegado ni probado contra APIs. Bloqueos de autoría: ninguno. Acceso real pendiente de credenciales y ejecución autorizada.
+- Siguiente paso: revisar el notebook; no ejecutarlo hasta nueva instrucción. GEMINI_API_KEY corresponde ahora a Gemini 3.8 Flash.
+
+- Actualización 2026-09-29 17:21:43 -05:00, America/Lima: ampliar el notebook LLM con NLP y Jev, sin ejecución.
+- [x] Añadir dos pipelines locales TF-IDF (palabras/caracteres) + regresión logística, ajuste sólo con train, y Jev Choice por HTTP con versión jev-1.13.0 y TYPESAFE_API_KEY. Conservar las particiones y los tres LLM anteriores; reglas como candidato y baseline.
+- [x] Unificar comparación de siete candidatos: métricas por modelo/idioma/clase, latencias, fallos, matrices de confusión y diagnóstico probabilístico Brier/log-loss/fiabilidad con cobertura explícita. Distinguir probabilidad, confianza de Jev y precisión medida; sin calibración demostrada.
+- [x] Conservar ALLOW_API_CALLS=False, habilitar evaluación local sin claves y bloquear datos del organizador en adaptadores remotos. Credenciales por entorno; ningún adaptador conectado a la aplicación.
+- [x] Evidencia estática: nbformat válido y sintaxis compilable de las 11 celdas Python; preparación de datos y splits conservados. Detectados contadores/salida anteriores del usuario: copia íntegra en notebooks/intentions/LLM/private/backups/ antes de limpiar outputs y execution_count en la versión ampliada.
+- Implementado: código de experimento; validado sólo estructura/sintaxis. No ejecutado por el agente, sin entrenamiento, inferencia, nuevas métricas, despliegue ni llamadas a proveedores. El terminal restringido falló al inicializar; operaciones de autoría/lectura realizadas con aprobación fuera del sandbox.
+- Bloqueos de autoría: ninguno. Acceso real a Jev/LLM, calidad multilingüe y calibración quedan sin verificar. Siguiente paso: revisar el notebook y preparar TYPESAFE_API_KEY para una ejecución futura expresamente autorizada.

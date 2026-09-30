@@ -1,0 +1,4 @@
+source_table,rows,unique_texts,top1_pct,top5_pct,mentions_saldo_rows,repeated_text_extra_rows
+call_transcripts,171321,42,30.09263312728737,67.60992522808063,171321,171279
+complaints,67095,5,20.239958268127282,100.0,0,67090
+satisfaction_surveys,101196,13,13.459030001185818,66.6795130242302,0,101183

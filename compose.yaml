@@ -27,6 +27,16 @@ services:
       SECOND_CUSTOMER_PASSWORD: ${SECOND_CUSTOMER_PASSWORD:?Run npm run setup}
       APP_ORIGINS: http://localhost:5180,http://127.0.0.1:5180
       COOKIE_SECURE: "false"
+      # Reserved for the future server adapter; optional even without API credentials.
+      INTENT_MODE: ${INTENT_MODE:-off}
+      INTENT_PROVIDER: ${INTENT_PROVIDER:-rules}
+      INTENT_FALLBACK: ${INTENT_FALLBACK:-rules}
+      INTENT_EXTERNAL_DATA_ALLOWED: ${INTENT_EXTERNAL_DATA_ALLOWED:-false}
+      INTENT_TIMEOUT_MS: ${INTENT_TIMEOUT_MS:-3000}
+      INTENT_MAX_RETRIES: ${INTENT_MAX_RETRIES:-1}
+      INTENT_LOG_RAW_TEXT: ${INTENT_LOG_RAW_TEXT:-false}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      TYPESAFE_MODEL: ${TYPESAFE_MODEL:-}
     depends_on:
       db:
         condition: service_healthy

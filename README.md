@@ -1,5 +1,9 @@
 # Nexqori
 
+Configuración de IA preparada, sin modelo conectado: [clasificación de intenciones](docs/clasificacion-intenciones.md) y [evaluación antes de activar](docs/evaluacion-intenciones.md). El agente sigue usando reglas locales; no necesita clave TypeSafe para arrancar.
+
+Análisis local para intenciones: [notebook Python](notebooks/intentions/INTENTIONS_EDA.ipynb), [lectura HTML](notebooks/intentions/INTENTIONS_EDA.html) e [instrucciones y resultados](notebooks/intentions/README.md). La fuente se detecta en la carpeta hermana `nexqori-dataset`; los derivados individuales permanecen excluidos de Git.
+
 Base bancaria local con **React + TypeScript, FastAPI y PostgreSQL**. Identidad Terracota suave, español/inglés/portugués, acceso de cliente y administrador, productos, movimientos, servicios, solicitudes y agente de navegación.
 
 La base tiene autenticación y persistencia reales en el servidor local. Los datos son ficticios; no ejecuta operaciones bancarias. El asistente usa reglas guiadas, sin LLM ni operador humano conectado.

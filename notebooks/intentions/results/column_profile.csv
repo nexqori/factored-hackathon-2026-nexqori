@@ -1,0 +1,261 @@
+table,column,description,csv_storage_type,expected_type,rows,nulls,blank_strings,missing_total,missing_pct,replacement_character_rows,invalid_cast_nonmissing
+branches,branch_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,branch_code,Atributo textual/categórico del origen: branch_code; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,branch_name,Atributo textual/categórico del origen: branch_name; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,branch_type,Atributo textual/categórico del origen: branch_type; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,address,Atributo textual/categórico del origen: address; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,city,Atributo textual/categórico del origen: city; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,state,Atributo textual/categórico del origen: state; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,country,Atributo textual/categórico del origen: country; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,postal_code,Atributo textual/categórico del origen: postal_code; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,geographic_zone,Atributo textual/categórico del origen: geographic_zone; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,phone,Atributo textual/categórico del origen: phone; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,email,Atributo textual/categórico del origen: email; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+branches,opening_time,Campo temporal opening_time; semántica y zona dependen del origen.,VARCHAR,TIME,350,0,0,0,0.0,0,0
+branches,closing_time,Campo temporal closing_time; semántica y zona dependen del origen.,VARCHAR,TIME,350,0,0,0,0.0,0,0
+branches,has_atms,Indicador booleano del origen: has_atms,VARCHAR,BOOLEAN,350,0,0,0,0.0,0,0
+branches,atm_count,Medida numérica del origen: atm_count; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,350,0,0,0,0.0,0,0
+branches,has_teller_windows,Indicador booleano del origen: has_teller_windows,VARCHAR,BOOLEAN,350,0,0,0,0.0,0,0
+branches,teller_window_count,Medida numérica del origen: teller_window_count; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,350,0,0,0,0.0,0,0
+branches,latitude,Medida numérica del origen: latitude; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,350,0,0,0,0.0,0,0
+branches,longitude,Medida numérica del origen: longitude; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,350,0,0,0,0.0,0,0
+branches,branch_opening_date,Campo temporal branch_opening_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,350,0,0,0,0.0,0,0
+branches,branch_status,Atributo textual/categórico del origen: branch_status; conservar dominio original.,VARCHAR,VARCHAR,350,0,0,0,0.0,0,0
+call_center_interactions,interaction_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,interaction_date,Campo temporal interaction_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,686296,0,0,0,0.0,0,0
+call_center_interactions,process_date,Fecha de partición/proceso; no asumir fecha de ocurrencia o disponibilidad.,VARCHAR,DATE,686296,0,0,0,0.0,0,0
+call_center_interactions,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,agent_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,interaction_type,Atributo textual/categórico del origen: interaction_type; conservar dominio original.,VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,channel,Atributo textual/categórico del origen: channel; conservar dominio original.,VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,contact_reason,"Motivo histórico registrado, no verdad textual garantizada.",VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,reason_category,Categoría histórica; comparar contra evidencia textual.,VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,duration_seconds,Medida numérica del origen: duration_seconds; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,686296,96234,0,96234,14.02222947532843,0,0
+call_center_interactions,wait_time_seconds,Medida numérica del origen: wait_time_seconds; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,686296,205618,0,205618,29.9605418070337,0,0
+call_center_interactions,was_resolved,Resultado histórico; no usar para clasificar pedido inicial.,VARCHAR,BOOLEAN,686296,0,0,0,0.0,0,0
+call_center_interactions,requires_followup,Indicador booleano del origen: requires_followup,VARCHAR,BOOLEAN,686296,0,0,0,0.0,0,0
+call_center_interactions,detected_sentiment,Atributo textual/categórico del origen: detected_sentiment; conservar dominio original.,VARCHAR,VARCHAR,686296,0,0,0,0.0,0,0
+call_center_interactions,sentiment_score,Medida numérica del origen: sentiment_score; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,686296,0,0,0,0.0,0,0
+call_center_interactions,customer_detected_accent,Acento declarado; no demuestra idioma ni intención.,VARCHAR,VARCHAR,686296,204750,0,204750,29.834065767540537,0,0
+call_center_interactions,agent_used_accent,Acento declarado; no demuestra idioma ni intención.,VARCHAR,VARCHAR,686296,204750,0,204750,29.834065767540537,0,0
+call_center_interactions,was_escalated,Escalamiento histórico; no usar como entrada inicial.,VARCHAR,BOOLEAN,686296,0,0,0,0.0,0,0
+call_center_interactions,mentioned_products,Atributo textual/categórico del origen: mentioned_products; conservar dominio original.,VARCHAR,VARCHAR,686296,411955,0,411955,60.02584890484572,0,0
+call_center_interactions,has_transcript,Indicador de transcripción; verificar existencia real por ID.,VARCHAR,BOOLEAN,686296,0,0,0,0.0,0,0
+call_center_interactions,has_recording,Indicador booleano del origen: has_recording,VARCHAR,BOOLEAN,686296,0,0,0,0.0,0,0
+call_transcripts,transcript_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,interaction_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,process_date,Fecha de partición/proceso; no asumir fecha de ocurrencia o disponibilidad.,VARCHAR,DATE,171321,0,0,0,0.0,0,0
+call_transcripts,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,agent_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,full_text,Conversación completa: contiene agente y posible información posterior.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,customer_text,Texto del cliente: candidato principal para intención; no etiqueta.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,agent_text,Texto del agente: excluir de predicción inicial para evitar fuga.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,detected_language,"Idioma declarado por el origen, no detección independiente.",VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,detected_accent,Acento declarado; no demuestra idioma ni intención.,VARCHAR,VARCHAR,171321,63083,0,63083,36.82152217182949,0,0
+call_transcripts,accent_confidence,Confianza del acento; NO probabilidad de intención.,VARCHAR,DOUBLE,171321,17141,0,17141,10.005194926483036,0,0
+call_transcripts,detected_keywords,Palabras detectadas por origen; no etiquetas revisadas.,VARCHAR,VARCHAR,171321,8797,0,8797,5.134805423736728,0,0
+call_transcripts,mentioned_entities,Entidades derivadas del origen; no contexto verificado.,VARCHAR,VARCHAR,171321,17164,0,17164,10.018620017394248,0,0
+call_transcripts,detected_intents,Intenciones históricas detectadas; necesitan revisión humana.,VARCHAR,VARCHAR,171321,8457,0,8457,4.936347558092703,0,0
+call_transcripts,main_topics,Temas históricos; su coherencia textual debe comprobarse.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,transcription_model,Atributo textual/categórico del origen: transcription_model; conservar dominio original.,VARCHAR,VARCHAR,171321,0,0,0,0.0,0,0
+call_transcripts,audio_quality,Atributo textual/categórico del origen: audio_quality; conservar dominio original.,VARCHAR,VARCHAR,171321,8638,0,8638,5.0419971865679045,0,0
+call_transcripts,duration_seconds,Medida numérica del origen: duration_seconds; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,171321,24029,0,24029,14.025717804589046,0,0
+campaign_sends,send_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,1746801,0,0,0,0.0,0,0
+campaign_sends,send_date,Campo temporal send_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,1746801,0,0,0,0.0,0,0
+campaign_sends,process_date,Fecha de partición/proceso; no asumir fecha de ocurrencia o disponibilidad.,VARCHAR,DATE,1746801,0,0,0,0.0,0,0
+campaign_sends,campaign_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,1746801,0,0,0,0.0,0,0
+campaign_sends,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,1746801,0,0,0,0.0,0,0
+campaign_sends,send_channel,Atributo textual/categórico del origen: send_channel; conservar dominio original.,VARCHAR,VARCHAR,1746801,0,0,0,0.0,0,0
+campaign_sends,template_used,Atributo textual/categórico del origen: template_used; conservar dominio original.,VARCHAR,VARCHAR,1746801,175218,0,175218,10.03079343325313,0,0
+campaign_sends,subject,Atributo textual/categórico del origen: subject; conservar dominio original.,VARCHAR,VARCHAR,1746801,1188342,0,1188342,68.02961527958823,0,0
+campaign_sends,send_status,Atributo textual/categórico del origen: send_status; conservar dominio original.,VARCHAR,VARCHAR,1746801,0,0,0,0.0,0,0
+campaign_sends,was_delivered,Indicador booleano del origen: was_delivered,VARCHAR,BOOLEAN,1746801,0,0,0,0.0,0,0
+campaign_sends,was_opened,Indicador booleano del origen: was_opened,VARCHAR,BOOLEAN,1746801,484229,0,484229,27.720902380981006,0,0
+campaign_sends,open_date,Campo temporal open_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,1746801,1259492,0,1259492,72.10277530182316,0,0
+campaign_sends,was_clicked,Indicador booleano del origen: was_clicked,VARCHAR,BOOLEAN,1746801,0,0,0,0.0,0,0
+campaign_sends,click_date,Campo temporal click_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,1746801,1649008,0,1649008,94.40159468651552,0,0
+campaign_sends,click_count,Medida numérica del origen: click_count; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,1746801,1649008,0,1649008,94.40159468651552,0,0
+campaign_sends,had_conversion,Indicador booleano del origen: had_conversion,VARCHAR,BOOLEAN,1746801,0,0,0,0.0,0,0
+campaign_sends,conversion_date,Campo temporal conversion_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,1746801,1737002,0,1737002,99.43903169279156,0,0
+campaign_sends,conversion_value,Medida numérica del origen: conversion_value; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,1746801,1737002,0,1737002,99.43903169279156,0,0
+campaign_sends,open_device,Atributo textual/categórico del origen: open_device; conservar dominio original.,VARCHAR,VARCHAR,1746801,1308424,0,1308424,74.9040102450136,0,0
+campaign_sends,open_country,Atributo textual/categórico del origen: open_country; conservar dominio original.,VARCHAR,VARCHAR,1746801,1308278,0,1308278,74.89565210919847,0,0
+campaign_sends,failure_reason,Atributo textual/categórico del origen: failure_reason; conservar dominio original.,VARCHAR,VARCHAR,1746801,1647204,0,1647204,94.29832018644368,0,0
+campaign_sends,send_cost,Medida numérica del origen: send_cost; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,1746801,262083,0,262083,15.003598005725895,0,0
+complaints,complaint_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,creation_date,Campo temporal creation_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,67095,0,0,0,0.0,0,0
+complaints,process_date,Fecha de partición/proceso; no asumir fecha de ocurrencia o disponibilidad.,VARCHAR,DATE,67095,0,0,0,0.0,0,0
+complaints,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,case_type,Atributo textual/categórico del origen: case_type; conservar dominio original.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,category,Atributo textual/categórico del origen: category; conservar dominio original.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,subcategory,Atributo textual/categórico del origen: subcategory; conservar dominio original.,VARCHAR,VARCHAR,67095,6698,0,6698,9.982860123705194,0,0
+complaints,reception_channel,Atributo textual/categórico del origen: reception_channel; conservar dominio original.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,affected_product_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,67095,22525,0,22525,33.57180117743498,0,0
+complaints,related_branch_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,67095,47917,0,47917,71.41664803636634,0,0
+complaints,origin_interaction_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,67095,67095,0,67095,100.0,0,0
+complaints,description,Descripción libre; evaluar repetición y especificidad.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,claimed_amount,Medida numérica del origen: claimed_amount; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,67095,45344,0,45344,67.58178701840674,0,0
+complaints,currency,Atributo textual/categórico del origen: currency; conservar dominio original.,VARCHAR,VARCHAR,67095,45319,0,45319,67.54452641776585,0,0
+complaints,priority,Atributo textual/categórico del origen: priority; conservar dominio original.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,status,Atributo textual/categórico del origen: status; conservar dominio original.,VARCHAR,VARCHAR,67095,0,0,0,0.0,0,0
+complaints,assigned_agent_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,67095,23115,0,23115,34.451151352559805,0,0
+complaints,assignment_date,Campo temporal assignment_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,67095,23128,0,23128,34.47052686489306,0,0
+complaints,first_response_date,Campo temporal first_response_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,67095,26242,0,26242,39.11170728072136,0,0
+complaints,resolution_date,Campo temporal resolution_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,67095,51746,0,51746,77.12348163052388,0,0
+complaints,closing_date,Campo temporal closing_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,67095,64614,0,64614,96.30225799239884,0,0
+complaints,sla_breached,Indicador booleano del origen: sla_breached,VARCHAR,BOOLEAN,67095,0,0,0,0.0,0,0
+complaints,resolution_days,Medida numérica del origen: resolution_days; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,67095,51732,0,51732,77.102615694165,0,0
+complaints,resolution,Resultado posterior del reclamo: excluir del input inicial.,VARCHAR,VARCHAR,67095,51785,0,51785,77.18160816752366,0,0
+complaints,compensation_granted,Medida numérica del origen: compensation_granted; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,67095,62454,0,62454,93.0829420970266,0,0
+complaints,resolution_satisfaction,Medida numérica del origen: resolution_satisfaction; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,67095,64611,0,64611,96.29778672032194,0,0
+complaints,is_repeat_complainer,Indicador booleano del origen: is_repeat_complainer,VARCHAR,BOOLEAN,67095,0,0,0,0.0,0,0
+customers,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,document_number,Atributo textual/categórico del origen: document_number; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,document_type,Atributo textual/categórico del origen: document_type; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,first_name,Atributo textual/categórico del origen: first_name; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,last_name,Atributo textual/categórico del origen: last_name; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,date_of_birth,Campo temporal date_of_birth; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,150000,0,0,0,0.0,0,0
+customers,gender,Atributo textual/categórico del origen: gender; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,email,Atributo textual/categórico del origen: email; conservar dominio original.,VARCHAR,VARCHAR,150000,2984,0,2984,1.9893333333333334,0,0
+customers,mobile_phone,Atributo textual/categórico del origen: mobile_phone; conservar dominio original.,VARCHAR,VARCHAR,150000,4707,0,4707,3.138,0,0
+customers,landline_phone,Atributo textual/categórico del origen: landline_phone; conservar dominio original.,VARCHAR,VARCHAR,150000,75053,0,75053,50.035333333333334,0,0
+customers,address,Atributo textual/categórico del origen: address; conservar dominio original.,VARCHAR,VARCHAR,150000,7370,0,7370,4.913333333333333,0,0
+customers,city,Atributo textual/categórico del origen: city; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,state,Atributo textual/categórico del origen: state; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,country,Atributo textual/categórico del origen: country; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,postal_code,Atributo textual/categórico del origen: postal_code; conservar dominio original.,VARCHAR,VARCHAR,150000,15044,0,15044,10.029333333333334,0,0
+customers,detected_accent,Acento declarado; no demuestra idioma ni intención.,VARCHAR,VARCHAR,150000,44817,0,44817,29.878,0,0
+customers,segment,Atributo textual/categórico del origen: segment; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,credit_score,Medida numérica del origen: credit_score; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,150000,22492,0,22492,14.994666666666667,0,0
+customers,estimated_monthly_income,Medida numérica del origen: estimated_monthly_income; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,150000,30033,0,30033,20.022,0,0
+customers,occupation,Atributo textual/categórico del origen: occupation; conservar dominio original.,VARCHAR,VARCHAR,150000,15039,0,15039,10.026,0,0
+customers,marital_status,Atributo textual/categórico del origen: marital_status; conservar dominio original.,VARCHAR,VARCHAR,150000,11955,0,11955,7.97,0,0
+customers,education_level,Atributo textual/categórico del origen: education_level; conservar dominio original.,VARCHAR,VARCHAR,150000,17952,0,17952,11.968,0,0
+customers,registration_date,Campo temporal registration_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,150000,0,0,0,0.0,0,0
+customers,registration_branch_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,customer_status,Atributo textual/categórico del origen: customer_status; conservar dominio original.,VARCHAR,VARCHAR,150000,0,0,0,0.0,0,0
+customers,last_updated,Campo temporal last_updated; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,150000,0,0,0,0.0,0,0
+customers,accepts_marketing,Indicador booleano del origen: accepts_marketing,VARCHAR,BOOLEAN,150000,0,0,0,0.0,0,0
+daily_exchange_rates,date,Campo temporal date; semántica y zona dependen del origen.,VARCHAR,DATE,13164,0,0,0,0.0,0,0
+daily_exchange_rates,source_currency,Atributo textual/categórico del origen: source_currency; conservar dominio original.,VARCHAR,VARCHAR,13164,0,0,0,0.0,0,0
+daily_exchange_rates,target_currency,Atributo textual/categórico del origen: target_currency; conservar dominio original.,VARCHAR,VARCHAR,13164,0,0,0,0.0,0,0
+daily_exchange_rates,exchange_rate,Medida numérica del origen: exchange_rate; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,13164,0,0,0,0.0,0,0
+daily_exchange_rates,buy_rate,Medida numérica del origen: buy_rate; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,13164,0,0,0,0.0,0,0
+daily_exchange_rates,sell_rate,Medida numérica del origen: sell_rate; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,13164,0,0,0,0.0,0,0
+daily_exchange_rates,source,Atributo textual/categórico del origen: source; conservar dominio original.,VARCHAR,VARCHAR,13164,0,0,0,0.0,0,0
+digital_events,event_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,15620994,0,0,0,0.0,0,0
+digital_events,event_date,Campo temporal event_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,15620994,0,0,0,0.0,0,0
+digital_events,process_date,Fecha de partición/proceso; no asumir fecha de ocurrencia o disponibilidad.,VARCHAR,DATE,15620994,0,0,0,0.0,0,0
+digital_events,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,15620994,3745446,0,3745446,23.97700171960888,0,0
+digital_events,session_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,15620994,0,0,0,0.0,0,0
+digital_events,event_type,Atributo textual/categórico del origen: event_type; conservar dominio original.,VARCHAR,VARCHAR,15620994,0,0,0,0.0,0,0
+digital_events,event_category,Atributo textual/categórico del origen: event_category; conservar dominio original.,VARCHAR,VARCHAR,15620994,0,0,0,0.0,0,0
+digital_events,channel,Atributo textual/categórico del origen: channel; conservar dominio original.,VARCHAR,VARCHAR,15620994,0,0,0,0.0,0,0
+digital_events,platform,Atributo textual/categórico del origen: platform; conservar dominio original.,VARCHAR,VARCHAR,15620994,780527,0,780527,4.9966538621037815,0,0
+digital_events,browser,Atributo textual/categórico del origen: browser; conservar dominio original.,VARCHAR,VARCHAR,15620994,9687736,0,9687736,62.017410671817686,0,0
+digital_events,app_version,Atributo textual/categórico del origen: app_version; conservar dominio original.,VARCHAR,VARCHAR,15620994,6714416,0,6714416,42.983282625932766,0,0
+digital_events,page_url,Atributo textual/categórico del origen: page_url; conservar dominio original.,VARCHAR,VARCHAR,15620994,780394,0,780394,4.995802443813755,0,0
+digital_events,page_title,Atributo textual/categórico del origen: page_title; conservar dominio original.,VARCHAR,VARCHAR,15620994,779824,0,779824,4.992153508285068,0,0
+digital_events,action,Atributo textual/categórico del origen: action; conservar dominio original.,VARCHAR,VARCHAR,15620994,1561432,0,1561432,9.995727544610798,0,0
+digital_events,element_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,15620994,2343244,0,2343244,15.00060751575732,0,0
+digital_events,product_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,15620994,14180656,0,14180656,90.77947280435548,0,0
+digital_events,event_value,Medida numérica del origen: event_value; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,15620994,14826484,0,14826484,94.91383198790038,0,0
+digital_events,duration_seconds,Medida numérica del origen: duration_seconds; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,15620994,9946209,0,9946209,63.672062097968926,0,0
+digital_events,ip_address,Atributo textual/categórico del origen: ip_address; conservar dominio original.,VARCHAR,VARCHAR,15620994,780855,0,780855,4.998753600443096,0,0
+digital_events,ip_country,Atributo textual/categórico del origen: ip_country; conservar dominio original.,VARCHAR,VARCHAR,15620994,0,0,0,0.0,0,0
+digital_events,ip_city,Atributo textual/categórico del origen: ip_city; conservar dominio original.,VARCHAR,VARCHAR,15620994,4370476,0,4370476,27.97821956784568,0,0
+digital_events,is_mobile,Indicador booleano del origen: is_mobile,VARCHAR,BOOLEAN,15620994,0,0,0,0.0,0,0
+digital_events,referrer,Atributo textual/categórico del origen: referrer; conservar dominio original.,VARCHAR,VARCHAR,15620994,14573469,0,14573469,93.29412071984663,0,0
+digital_events,utm_source,Atributo textual/categórico del origen: utm_source; conservar dominio original.,VARCHAR,VARCHAR,15620994,14781949,0,14781949,94.62873489356696,0,0
+digital_events,utm_medium,Atributo textual/categórico del origen: utm_medium; conservar dominio original.,VARCHAR,VARCHAR,15620994,14781860,0,14781860,94.62816514749318,0,0
+digital_events,utm_campaign,Atributo textual/categórico del origen: utm_campaign; conservar dominio original.,VARCHAR,VARCHAR,15620994,14782077,0,14782077,94.6295543036506,0,0
+marketing_campaigns,campaign_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,200,0,0,0,0.0,0,0
+marketing_campaigns,campaign_name,Atributo textual/categórico del origen: campaign_name; conservar dominio original.,VARCHAR,VARCHAR,200,0,0,0,0.0,0,0
+marketing_campaigns,description,Descripción libre; evaluar repetición y especificidad.,VARCHAR,VARCHAR,200,39,0,39,19.5,0,0
+marketing_campaigns,campaign_type,Atributo textual/categórico del origen: campaign_type; conservar dominio original.,VARCHAR,VARCHAR,200,0,0,0,0.0,0,0
+marketing_campaigns,campaign_objective,Atributo textual/categórico del origen: campaign_objective; conservar dominio original.,VARCHAR,VARCHAR,200,0,0,0,0.0,0,0
+marketing_campaigns,promoted_product,Atributo textual/categórico del origen: promoted_product; conservar dominio original.,VARCHAR,VARCHAR,200,22,0,22,11.0,0,0
+marketing_campaigns,target_segment,Atributo textual/categórico del origen: target_segment; conservar dominio original.,VARCHAR,VARCHAR,200,79,0,79,39.5,0,0
+marketing_campaigns,target_country,Atributo textual/categórico del origen: target_country; conservar dominio original.,VARCHAR,VARCHAR,200,111,0,111,55.5,0,0
+marketing_campaigns,start_date,Campo temporal start_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,200,0,0,0,0.0,0,0
+marketing_campaigns,end_date,Campo temporal end_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,200,0,0,0,0.0,0,0
+marketing_campaigns,budget,Medida numérica del origen: budget; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,200,31,0,31,15.5,0,0
+marketing_campaigns,campaign_status,Atributo textual/categórico del origen: campaign_status; conservar dominio original.,VARCHAR,VARCHAR,200,0,0,0,0.0,0,0
+marketing_campaigns,expected_conversion_rate,Medida numérica del origen: expected_conversion_rate; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,200,14,0,14,7.0,0,0
+products,product_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,product_type,Atributo textual/categórico del origen: product_type; conservar dominio original.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,product_number,Atributo textual/categórico del origen: product_number; conservar dominio original.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,currency,Atributo textual/categórico del origen: currency; conservar dominio original.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,current_balance,Medida numérica del origen: current_balance; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,400000,0,0,0,0.0,0,0
+products,credit_limit,Medida numérica del origen: credit_limit; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,400000,274683,0,274683,68.67075,0,0
+products,interest_rate,Medida numérica del origen: interest_rate; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,400000,40066,0,40066,10.0165,0,0
+products,opening_date,Campo temporal opening_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,400000,0,0,0,0.0,0,0
+products,expiration_date,Campo temporal expiration_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,400000,266839,0,266839,66.70975,0,0
+products,opening_branch_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,product_status,Atributo textual/categórico del origen: product_status; conservar dominio original.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,opening_channel,Atributo textual/categórico del origen: opening_channel; conservar dominio original.,VARCHAR,VARCHAR,400000,0,0,0,0.0,0,0
+products,has_linked_app,Indicador booleano del origen: has_linked_app,VARCHAR,BOOLEAN,400000,0,0,0,0.0,0,0
+products,days_past_due,Medida numérica del origen: days_past_due; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,400000,274650,0,274650,68.6625,0,0
+products,last_transaction_date,Campo temporal last_transaction_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,400000,94277,0,94277,23.56925,0,0
+products,last_updated,Campo temporal last_updated; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,400000,0,0,0,0.0,0,0
+satisfaction_surveys,survey_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,212759,0,0,0,0.0,0,0
+satisfaction_surveys,survey_date,Campo temporal survey_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,212759,0,0,0,0.0,0,0
+satisfaction_surveys,process_date,Fecha de partición/proceso; no asumir fecha de ocurrencia o disponibilidad.,VARCHAR,DATE,212759,0,0,0,0.0,0,0
+satisfaction_surveys,interaction_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,212759,0,0,0,0.0,0,0
+satisfaction_surveys,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,212759,0,0,0,0.0,0,0
+satisfaction_surveys,agent_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,212759,0,0,0,0.0,0,0
+satisfaction_surveys,survey_type,Atributo textual/categórico del origen: survey_type; conservar dominio original.,VARCHAR,VARCHAR,212759,0,0,0,0.0,0,0
+satisfaction_surveys,send_channel,Atributo textual/categórico del origen: send_channel; conservar dominio original.,VARCHAR,VARCHAR,212759,0,0,0,0.0,0,0
+satisfaction_surveys,main_score,Medida numérica del origen: main_score; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,212759,0,0,0,0.0,0,0
+satisfaction_surveys,nps_category,Atributo textual/categórico del origen: nps_category; conservar dominio original.,VARCHAR,VARCHAR,212759,152365,0,152365,71.61389177426102,0,0
+satisfaction_surveys,question_1_text,Atributo textual/categórico del origen: question_1_text; conservar dominio original.,VARCHAR,VARCHAR,212759,91456,0,91456,42.985725633228206,0,0
+satisfaction_surveys,question_1_response,Medida numérica del origen: question_1_response; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,212759,91389,0,91389,42.954234603471534,0,0
+satisfaction_surveys,question_2_text,Atributo textual/categórico del origen: question_2_text; conservar dominio original.,VARCHAR,VARCHAR,212759,131388,0,131388,61.75437936820534,0,0
+satisfaction_surveys,question_2_response,Medida numérica del origen: question_2_response; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,212759,131263,0,131263,61.695627447017515,0,0
+satisfaction_surveys,question_3_text,Atributo textual/categórico del origen: question_3_text; conservar dominio original.,VARCHAR,VARCHAR,212759,172615,0,172615,81.13170300668831,0,0
+satisfaction_surveys,question_3_response,Medida numérica del origen: question_3_response; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,212759,172656,0,172656,81.15097363683792,0,0
+satisfaction_surveys,open_comments,Comentario posterior de encuesta: dominio distinto al pedido inicial.,VARCHAR,VARCHAR,212759,111563,0,111563,52.436324667816635,0,0
+satisfaction_surveys,comment_sentiment,Atributo textual/categórico del origen: comment_sentiment; conservar dominio original.,VARCHAR,VARCHAR,212759,111502,0,111502,52.407653730276984,0,0
+satisfaction_surveys,response_time_hours,Medida numérica del origen: response_time_hours; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,212759,0,0,0,0.0,0,0
+satisfaction_surveys,campaign_response_rate,Medida numérica del origen: campaign_response_rate; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,212759,32037,0,32037,15.057882392754243,0,0
+service_agents,agent_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,employee_code,Atributo textual/categórico del origen: employee_code; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,first_name,Atributo textual/categórico del origen: first_name; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,last_name,Atributo textual/categórico del origen: last_name; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,email,Atributo textual/categórico del origen: email; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,phone,Atributo textual/categórico del origen: phone; conservar dominio original.,VARCHAR,VARCHAR,1200,69,0,69,5.75,0,0
+service_agents,native_accent,Acento declarado; no demuestra idioma ni intención.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,country_of_origin,Atributo textual/categórico del origen: country_of_origin; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,assigned_branch_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,1200,367,0,367,30.583333333333332,0,0
+service_agents,agent_type,Atributo textual/categórico del origen: agent_type; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,experience_level,Atributo textual/categórico del origen: experience_level; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,languages,Atributo textual/categórico del origen: languages; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,specialty,Atributo textual/categórico del origen: specialty; conservar dominio original.,VARCHAR,VARCHAR,1200,476,0,476,39.666666666666664,0,0
+service_agents,hire_date,Campo temporal hire_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,1200,0,0,0,0.0,0,0
+service_agents,avg_csat,Medida numérica del origen: avg_csat; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,1200,134,0,134,11.166666666666666,0,0
+service_agents,total_monthly_interactions,Medida numérica del origen: total_monthly_interactions; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,1200,111,0,111,9.25,0,0
+service_agents,agent_status,Atributo textual/categórico del origen: agent_status; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+service_agents,work_shift,Atributo textual/categórico del origen: work_shift; conservar dominio original.,VARCHAR,VARCHAR,1200,0,0,0,0.0,0,0
+transactions,transaction_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,transaction_date,Campo temporal transaction_date; semántica y zona dependen del origen.,VARCHAR,TIMESTAMP,4425008,0,0,0,0.0,0,0
+transactions,process_date,Fecha de partición/proceso; no asumir fecha de ocurrencia o disponibilidad.,VARCHAR,DATE,4425008,0,0,0,0.0,0,0
+transactions,product_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,customer_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,transaction_type,Atributo textual/categórico del origen: transaction_type; conservar dominio original.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,transaction_category,Atributo textual/categórico del origen: transaction_category; conservar dominio original.,VARCHAR,VARCHAR,4425008,2693520,0,2693520,60.870398426398324,0,0
+transactions,amount,Medida numérica del origen: amount; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,4425008,0,0,0,0.0,0,0
+transactions,currency,Atributo textual/categórico del origen: currency; conservar dominio original.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,amount_usd,Medida numérica del origen: amount_usd; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,4425008,2537456,0,2537456,57.343534746151875,0,0
+transactions,channel,Atributo textual/categórico del origen: channel; conservar dominio original.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,branch_id,Identificador / referencia; conservar texto y comprobar vínculo antes de unir.,VARCHAR,VARCHAR,4425008,3037076,0,3037076,68.63436179098433,0,0
+transactions,merchant_name,Atributo textual/categórico del origen: merchant_name; conservar dominio original.,VARCHAR,VARCHAR,4425008,3395774,0,3395774,76.74051662731458,0,0
+transactions,merchant_category,Atributo textual/categórico del origen: merchant_category; conservar dominio original.,VARCHAR,VARCHAR,4425008,3396215,0,3396215,76.7504827109917,0,0
+transactions,transaction_country,Atributo textual/categórico del origen: transaction_country; conservar dominio original.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,transaction_city,Atributo textual/categórico del origen: transaction_city; conservar dominio original.,VARCHAR,VARCHAR,4425008,442611,0,442611,10.002490390977824,0,0
+transactions,transaction_status,Atributo textual/categórico del origen: transaction_status; conservar dominio original.,VARCHAR,VARCHAR,4425008,0,0,0,0.0,0,0
+transactions,response_code,Atributo textual/categórico del origen: response_code; conservar dominio original.,VARCHAR,VARCHAR,4425008,221033,0,221033,4.9950870145319515,0,0
+transactions,is_fraud,Indicador booleano del origen: is_fraud,VARCHAR,BOOLEAN,4425008,0,0,0,0.0,0,0
+transactions,fraud_score,Medida numérica del origen: fraud_score; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,4425008,885157,0,885157,20.003511858057657,0,0
+transactions,latitude,Medida numérica del origen: latitude; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,4425008,3567680,0,3567680,80.62539095974516,0,0
+transactions,longitude,Medida numérica del origen: longitude; no imputada ni sumada entre monedas.,VARCHAR,DOUBLE,4425008,3567715,0,3567715,80.62618191876716,0,0

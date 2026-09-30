@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "status": "declarative_not_loaded",
+  "taxonomy_version": "1.0.0",
+  "runtime_defaults_source": ".env.example",
+  "activation_sequence": [
+    "off",
+    "offline_evaluation",
+    "shadow",
+    "active_after_validation"
+  ],
+  "fallback": "rules",
+  "external_data_allowed": false,
+  "log_raw_text": false,
+  "timeout_ms": 3000,
+  "max_retries": 1,
+  "timeout_includes_retries": true,
+  "thresholds": {
+    "probability_min": null,
+    "confidence_min": null,
+    "top_two_margin_min": null
+  },
+  "threshold_status": "pending_evaluation",
+  "null_threshold_behavior": "do_not_activate",
+  "model_version": null,
+  "rules_probability": null,
+  "unknown_behavior": "clarify",
+  "multiple_intents_behavior": "clarify",
+  "provider_error_behavior": "rules",
+  "invalid_output_behavior": "rules",
+  "authorization": "server_session_and_existing_tools",
+  "raw_dataset_export": "forbidden",
+  "retention": {
+    "raw_text_in_inference_logs": false,
+    "evaluation_results": "local_until_review_then_delete_or_archive_locally",
+    "production_retention_days": null
+  },
+  "precedence": "Environment cannot relax authorization, data-use boundaries or evaluation gates."
+}

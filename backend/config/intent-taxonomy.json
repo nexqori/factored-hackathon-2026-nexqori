@@ -1,0 +1,206 @@
+{
+  "version": "1.0.0",
+  "status": "declarative_not_loaded",
+  "locales": [
+    "es",
+    "en",
+    "pt"
+  ],
+  "notes": [
+    "Ejemplos creados por el equipo; no usarlos como evaluación reservada.",
+    "Destinos documentan compatibilidad; sólo el servidor construye herramientas.",
+    "Varias intenciones sin prioridad requieren aclaración. restricted no sustituye autorización."
+  ],
+  "intents": [
+    {
+      "id": "balance",
+      "definition": "Consultar saldo, sin operar.",
+      "legacy_destination": "products",
+      "examples": {
+        "es": "¿Cuál es mi saldo?",
+        "en": "What is my balance?",
+        "pt": "Qual é meu saldo?"
+      }
+    },
+    {
+      "id": "movements",
+      "definition": "Consultar historial; disputa corresponde a report.",
+      "legacy_destination": "movements",
+      "examples": {
+        "es": "Ver movimientos",
+        "en": "Show transactions",
+        "pt": "Ver movimentações"
+      }
+    },
+    {
+      "id": "report",
+      "definition": "Iniciar revisión de cargo; no seguir caso existente.",
+      "legacy_destination": "new-request",
+      "examples": {
+        "es": "No reconozco este cargo",
+        "en": "I do not recognize this charge",
+        "pt": "Não reconheço esta cobrança"
+      }
+    },
+    {
+      "id": "requests",
+      "definition": "Seguir solicitudes existentes.",
+      "legacy_destination": "requests",
+      "examples": {
+        "es": "Seguir mi solicitud",
+        "en": "Track my request",
+        "pt": "Acompanhar minha solicitação"
+      }
+    },
+    {
+      "id": "human",
+      "definition": "Preparar atención humana; no conectar operador.",
+      "legacy_destination": "new-request",
+      "examples": {
+        "es": "Quiero atención humana",
+        "en": "I want human support",
+        "pt": "Quero atendimento humano"
+      }
+    },
+    {
+      "id": "accounts",
+      "definition": "Consultar cuentas; saldo explícito corresponde a balance.",
+      "legacy_destination": "accounts",
+      "examples": {
+        "es": "Ver cuentas",
+        "en": "Show accounts",
+        "pt": "Ver contas"
+      }
+    },
+    {
+      "id": "cards",
+      "definition": "Consultar tarjetas; disputa corresponde a report.",
+      "legacy_destination": "cards",
+      "examples": {
+        "es": "Ver tarjetas",
+        "en": "Show cards",
+        "pt": "Ver cartões"
+      }
+    },
+    {
+      "id": "transfers",
+      "definition": "Abrir transferencias, sin ejecutar.",
+      "legacy_destination": "transfers",
+      "examples": {
+        "es": "Abrir transferencias",
+        "en": "Open transfers",
+        "pt": "Abrir transferências"
+      }
+    },
+    {
+      "id": "payments",
+      "definition": "Abrir pagos, sin ejecutar ni inferir obligación.",
+      "legacy_destination": "payments",
+      "examples": {
+        "es": "Abrir pagos",
+        "en": "Open payments",
+        "pt": "Abrir pagamentos"
+      }
+    },
+    {
+      "id": "loans",
+      "definition": "Consultar préstamos, sin decidir elegibilidad.",
+      "legacy_destination": "loans",
+      "examples": {
+        "es": "Ver préstamos",
+        "en": "Show loans",
+        "pt": "Ver empréstimos"
+      }
+    },
+    {
+      "id": "investments",
+      "definition": "Consultar inversiones, sin contratar.",
+      "legacy_destination": "investments",
+      "examples": {
+        "es": "Ver inversiones",
+        "en": "Show investments",
+        "pt": "Ver investimentos"
+      }
+    },
+    {
+      "id": "insurance",
+      "definition": "Consultar seguros, sin contratar.",
+      "legacy_destination": "insurance",
+      "examples": {
+        "es": "Ver seguros",
+        "en": "Show insurance",
+        "pt": "Ver seguros"
+      }
+    },
+    {
+      "id": "cash",
+      "definition": "Consultar retiros y depósitos, sin operar.",
+      "legacy_destination": "cash",
+      "examples": {
+        "es": "Ver retiros",
+        "en": "Show withdrawals",
+        "pt": "Ver saques"
+      }
+    },
+    {
+      "id": "products",
+      "definition": "Consultar productos sin tipo específico.",
+      "legacy_destination": "products",
+      "examples": {
+        "es": "Ver productos",
+        "en": "Show products",
+        "pt": "Ver produtos"
+      }
+    },
+    {
+      "id": "services",
+      "definition": "Consultar índice de servicios.",
+      "legacy_destination": "services",
+      "examples": {
+        "es": "Ver servicios",
+        "en": "Show services",
+        "pt": "Ver serviços"
+      }
+    },
+    {
+      "id": "help",
+      "definition": "Ayuda general; atención humana explícita corresponde a human.",
+      "legacy_destination": "help",
+      "examples": {
+        "es": "Abrir ayuda",
+        "en": "Open help",
+        "pt": "Abrir ajuda"
+      }
+    },
+    {
+      "id": "home",
+      "definition": "Volver al inicio.",
+      "legacy_destination": "home",
+      "examples": {
+        "es": "Ir al inicio",
+        "en": "Go home",
+        "pt": "Ir ao início"
+      }
+    },
+    {
+      "id": "unknown",
+      "definition": "Ambigüedad, negación, sin coincidencia o fuera de alcance.",
+      "legacy_destination": null,
+      "examples": {
+        "es": "Necesito algo",
+        "en": "I need something",
+        "pt": "Preciso de algo"
+      }
+    },
+    {
+      "id": "restricted",
+      "definition": "Administración: señal informativa, permisos en servidor.",
+      "legacy_destination": null,
+      "examples": {
+        "es": "Abrir administración",
+        "en": "Open administration",
+        "pt": "Abrir administração"
+      }
+    }
+  ]
+}

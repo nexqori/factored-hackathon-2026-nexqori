@@ -1,0 +1,5 @@
+table,event_column,observed_days,calendar_span_days,missing_days_within_span,event_vs_process_date_mismatch
+call_center_interactions,interaction_date,1098,1098,0,228318
+call_transcripts,process_date,1097,1097,0,0
+complaints,creation_date,1098,1098,0,22585
+satisfaction_surveys,survey_date,1099,1099,0,169092

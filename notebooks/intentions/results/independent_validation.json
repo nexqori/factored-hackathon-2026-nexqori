@@ -1,0 +1,28 @@
+[
+  {
+    "table": "call_transcripts",
+    "parser": "stdlib.csv.DictReader",
+    "rows": 171321,
+    "nonempty_texts": 171321,
+    "raw_unique_trimmed_texts": 42,
+    "declared_languages": {
+      "es": 171321
+    }
+  },
+  {
+    "table": "complaints",
+    "parser": "stdlib.csv.DictReader",
+    "rows": 67095,
+    "nonempty_texts": 67095,
+    "raw_unique_trimmed_texts": 5,
+    "declared_languages": {}
+  },
+  {
+    "table": "satisfaction_surveys",
+    "parser": "stdlib.csv.DictReader",
+    "rows": 212759,
+    "nonempty_texts": 101196,
+    "raw_unique_trimmed_texts": 13,
+    "declared_languages": {}
+  }
+]
