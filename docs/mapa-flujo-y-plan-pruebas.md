@@ -1,5 +1,7 @@
 # Flujo completo: brechas y plan de pruebas
 
+Ampliación implementada después de esta revisión: [panel React Flow del LAB](lab-flujos-react-flow.md), con 24 categorías, preguntas por datos declarados, edición versionada y trazas. Las lecturas bancarias autenticadas, evidencia verificada y operaciones siguen separadas; el panel no cierra por sí solo las brechas operativas descritas aquí.
+
 Revisión: 1 de octubre de 2026, America/Lima. Código inspeccionado en `bryan`, revisión `ca5f2e7`. Este documento propone el siguiente trabajo; no afirma que esas ampliaciones estén implementadas ni inicia su ejecución.
 
 Ampliación posterior solicitada: la [guía de tres casos reproducibles](pruebas-tres-casos.md) añade un ejecutador de operaciones desde frontend y un paquete manual nuevo. Comprueba bloqueo, devolución aprobada y derivación en ES/EN/PT. La integración automática de Jev/Luna con esas operaciones continúa pendiente.

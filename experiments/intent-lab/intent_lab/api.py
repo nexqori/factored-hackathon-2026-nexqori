@@ -21,6 +21,7 @@ from . import storage
 from .providers import classify, provider_status
 from .dialogue import respond, overrides, save_instructions, contract_for, problem_intents
 from backend.agent_routing import route_plan
+from . import flow_engine
 
 app = FastAPI(title="Nexqori · Intent Lab", docs_url="/lab-api/docs", redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
@@ -87,6 +88,57 @@ class WorkflowInstructions(BaseModel):
     model_config=ConfigDict(extra="forbid")
     language: Literal["es","en","pt"]
     instructions: str=Field(max_length=2000)
+
+class FlowEdit(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    language: Literal['es', 'en', 'pt']
+    revision: int = Field(ge=0)
+    questions: dict[str, str]
+    instructions: str = Field(default='', max_length=2000)
+
+    @model_validator(mode='after')
+    def bounded_questions(self):
+        if len(self.questions) > 6 or any(not text.strip() or len(text) > 300 for text in self.questions.values()):
+            raise ValueError('invalid_questions')
+        return self
+
+@app.get('/lab-api/flow-map')
+def get_flow_map(language: Literal['es', 'en', 'pt']='es'):
+    return flow_engine.flow_map(language)
+
+@app.get('/lab-api/flow-history')
+def flow_history(language: Literal['es', 'en', 'pt']='es'):
+    rows=[]
+    paths=sorted((storage.DATA_DIR/'runs').glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)
+    for path in paths:
+        try:
+            record=json.loads(path.read_text(encoding='utf-8'))
+            result=record['result']
+            if record.get('kind')!='flow' or result.get('language')!=language: continue
+            rows.append({key:result[key] for key in ('id','created_at','state','thread_id')} | {'title':(result.get('definition') or {}).get('title','')})
+            if len(rows)==30: break
+        except (ValueError,KeyError): continue
+    return {'runs':rows}
+
+@app.put('/lab-api/flow-map/{intent}')
+def update_flow_map(intent: str, body: FlowEdit):
+    with lock:
+        try:
+            return flow_engine.save_definition(intent, body.language, body.revision, body.questions, body.instructions)
+        except ValueError:
+            raise HTTPException(422, 'invalid_fields') from None
+        except RuntimeError:
+            raise HTTPException(409, 'revision_conflict') from None
+
+@app.post('/lab-api/flow-run')
+def run_flow(body: Dialogue):
+    if body.context: raise HTTPException(422, 'use_customer_messages_for_context')
+    if not provider_lock.acquire(blocking=False): raise HTTPException(409, 'classification_running')
+    try:
+        return flow_engine.evaluate([m.model_dump() for m in body.messages], body.language, body.instructions,
+                                    str(body.thread_id) if body.thread_id else None)
+    finally:
+        provider_lock.release()
 
 @app.get('/lab-api/workflows')
 def workflows(language: Literal['es','en','pt']='es'):

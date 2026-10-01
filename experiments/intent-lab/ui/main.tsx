@@ -1,6 +1,7 @@
 import { DialoguePanel } from './DialoguePanel';
+import { ft } from './flowLocales';
 import { ToolPlanPanel, type ToolPlan } from './ToolPlanPanel';
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Activity, ArrowRight, Bot, Check, ChevronDown, Download, FlaskConical, GitBranch, Globe2, MessageCircle, Play, Plus, Save, Settings2, ShieldCheck } from 'lucide-react';
 import { translate, type CopyKey, type Language } from './locales';
@@ -9,6 +10,8 @@ import '../../../src/tokens.css';
 import './style.css';
 import './simple.css';
 import { safeNavigation } from '../../../src/navigation';
+
+const FlowLabPanel=lazy(()=>import('./FlowLabPanel').then(module=>({default:module.FlowLabPanel})));
 
 type Label = { id: string; copy: Record<Language, { title: string; summary: string }> };
 type Action = { intent: string; kind: string; route: string | null; executes_operation: boolean };
@@ -36,8 +39,8 @@ function download(name: string, data: unknown) {
 }
 
 function App() {
-  const [language, setLanguage] = useState<Language>(() => { try { const saved = localStorage.getItem('nexqori-lab-language'); return saved === 'pt' || saved === 'en' ? saved : 'es'; } catch { return 'es'; } });
-  const [page, setPage] = useState<'walkthrough' | 'benchmark' | 'evidence'>('walkthrough');
+  const [language, setLanguage] = useState<Language>(() => { const requested=new URLSearchParams(location.search).get('lang'); if(requested==='es'||requested==='en'||requested==='pt')return requested; try { const saved = localStorage.getItem('nexqori-lab-language'); return saved === 'pt' || saved === 'en' ? saved : 'es'; } catch { return 'es'; } });
+  const [page, setPage] = useState<'walkthrough' | 'benchmark' | 'evidence' | 'flows'>(()=>new URLSearchParams(location.search).get('view')==='flows'?'flows':'walkthrough');
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState(false);
   const [scenarioId, setScenarioId] = useState<CopyKey>('unknown');
@@ -99,12 +102,13 @@ function App() {
 
   return <>
     <header className="topbar"><a className="brand" href="#" onClick={e => { e.preventDefault(); setPage('walkthrough'); }}><span className="brand-mark">n</span>nexqori<span className="lab-tag">LAB</span></a>
-      <nav aria-label={t('lab')}>{(['walkthrough', 'benchmark', 'evidence'] as const).map(tab => <button key={tab} className={page === tab ? 'nav-active' : ''} aria-current={page === tab ? 'page' : undefined} onClick={() => setPage(tab)}>{t(tab)}</button>)}</nav>
+      <nav aria-label={t('lab')}>{(['walkthrough', 'flows', 'benchmark', 'evidence'] as const).map(tab => <button key={tab} className={page === tab ? 'nav-active' : ''} aria-current={page === tab ? 'page' : undefined} onClick={() => setPage(tab)}>{tab==='flows'?ft(language,'flows'):t(tab)}</button>)}</nav>
       <div className="header-tools"><span className="local-badge"><span />{t('local')}</span><details className="language"><summary><Globe2 size={17} />{languageNames[language]}<ChevronDown size={15} /></summary><div>{(Object.keys(languageNames) as Language[]).map(lang => <button key={lang} lang={lang} aria-pressed={lang === language} onClick={e => { setLanguage(lang); e.currentTarget.closest('details')!.open = false; }}>{languageNames[lang]}{lang === language && <Check size={15} />}</button>)}</div></details></div>
     </header>
     <main>
       {error && <div role="alert" className="error">{t('loadError')} <button onClick={() => void load()}>{t('retry')}</button></div>}
       {!meta ? <p role="status">{t('loading')}</p> : <>
+        {page === 'flows' && <Suspense fallback={<p role="status">{t('loading')}</p>}><FlowLabPanel key={language} language={language}/></Suspense>}
         {page === 'walkthrough' && <>
           <div className="simple-heading"><div><h1>{t('simpleTitle')}</h1><p>{t('simpleIntro')}</p></div><div className="button-row"><button className="primary" onClick={() => startConversation()}><Plus size={17}/>{t('newConversation')}</button><button className="secondary" onClick={exportConversations}><Download size={16}/>{t('downloadConversations')}</button></div></div>
           <p className="reference-line"><FlaskConical size={16}/>{t('authored')} {t('referenceVsRun')}</p>

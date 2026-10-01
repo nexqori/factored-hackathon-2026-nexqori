@@ -1,5 +1,7 @@
 # Panel visual y alternativas de voz para Nexqori
 
+Actualización de implementación: el [panel React Flow del LAB](lab-flujos-react-flow.md) ya permite ejecutar decisiones, editar preguntas y revisar trazas. La comparación siguiente se conserva como antecedente. Bryan aplazó explícitamente todas las pruebas de voz hasta el final; selección de voces, acentos y vocabulario local siguen pendientes.
+
 Comparación consultada el **1 de octubre de 2026**, para Bryan y el equipo. Complementa el [diseño de evidencia y escalamiento](flujo-evidencia-y-escalamiento.md) y el [mapa de pruebas](mapa-flujo-y-plan-pruebas.md). Las elecciones y pantallas descritas son propuestas: este trabajo no añade un editor, proveedor de audio ni captura de micrófono.
 
 Recomendación: construir el panel del dominio bancario en React con **React Flow**; considerar **Langfuse** para observar y evaluar los modelos. Para una primera llamada web, comparar **GPT-Live con delegación al backend existente** frente a **LiveKit + AssemblyAI + Jev/Luna + síntesis de voz**. La primera opción reduce componentes de voz; la segunda permite sustituirlos y optimizar costos por separado. No se propone Whisper.

@@ -4,6 +4,8 @@ Contratos de problemas v2: sólo las seis categorías de problemas cargan proced
 
 Abre **http://localhost:5190/**. El banco principal sigue en **http://localhost:5180/**. Este laboratorio no comparte sesiones, operaciones ni base de datos con el banco.
 
+La pestaña **[Flujos](http://localhost:5190/?view=flows&lang=es)** añade React Flow: clasificación Jev, ruta del servidor, extracción de contexto con Luna y preguntas por reglas. Incluye 24 categorías, edición versionada ES/EN/PT, casos e historial JSON y tiempos por turno. Este recorrido nuevo usa Luna también para contexto de consultas/servicios, sin activar contratos de problemas; el diálogo anterior conserva su comportamiento. Consulta la [guía para editar y probar tres resultados](../../docs/lab-flujos-react-flow.md). Voz aplazada; ninguna operación bancaria se ejecuta desde el panel.
+
 **Ruta y herramientas** muestra la propuesta de Jev para consulta o queja/problema, con referencias necesarias y acciones sujetas a confirmación. Antes de ejecutar muestra una referencia del caso. Cada turno recalcula la lista; los errores y aclaraciones dejan el plan vacío. Consulta la [guía de rutas y herramientas](../../docs/enrutamiento-jev-herramientas.md). El gateway de lectura del banco está preparado, pero el LAB no lo llama.
 
 ## Qué se puede hacer

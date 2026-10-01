@@ -18,12 +18,15 @@
     "test:api": "python -m pytest backend/tests -q",
     "test:cards": "node scripts/nexqori-cards.mjs",
     "test:cases": "node scripts/nexqori-cases.mjs",
-    "test:cases:prepare": "node scripts/nexqori-cases.mjs --prepare"
+    "test:cases:prepare": "node scripts/nexqori-cases.mjs --prepare",
+    "build:lab": "tsc -p experiments/intent-lab/tsconfig.json --noEmit && vite build --config experiments/intent-lab/vite.config.ts",
+    "test:lab:flows": "node experiments/intent-lab/check-flow-ui.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
   },
   "dependencies": {
+    "@xyflow/react": "12.12.0",
     "i18next": "26.4.2",
     "lucide-react": "1.48.0",
     "react": "19.3.0",
