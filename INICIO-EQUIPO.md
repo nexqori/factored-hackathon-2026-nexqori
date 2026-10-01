@@ -1,5 +1,7 @@
 # Empezar con Nexqori
 
+Pruebas repetibles: [tres casos con acciones y auditoría](docs/pruebas-tres-casos.md). `npm run test:cases` ejecuta bloqueo, devolución y derivación ES/EN/PT. `npm run test:cases:prepare` crea accesos privados nuevos para practicarlos manualmente.
+
 Recorridos nuevos: [segunda atención en el LAB](docs/evaluacion-segunda-atencion.md) y [aprobación, ID de operación y consulta del movimiento](docs/trazabilidad-solicitudes.md). Mis solicitudes distingue aprobación pendiente, abono y rechazo; en Movimientos puedes iniciar un chat contextual. Jev y Luna se mantienen en el LAB.
 
 Esta es la base de trabajo del equipo: React + TypeScript, FastAPI y PostgreSQL, en Docker local, con identidad Terracota suave y español, inglés y portugués. El repositorio es privado: [nexqori/nexqori](https://github.com/nexqori/nexqori).
@@ -11,7 +13,7 @@ Requisitos: acceso al repositorio, Git, Node.js 24 y Docker Desktop iniciado con
 ```sh
 git clone https://github.com/nexqori/nexqori.git
 cd nexqori
-git switch codex/catalogo-servicios-base
+git switch bryan
 npm ci
 npm run setup
 npm run docker:up

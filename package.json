@@ -16,7 +16,9 @@
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "test:api": "python -m pytest backend/tests -q",
-    "test:cards": "node scripts/nexqori-cards.mjs"
+    "test:cards": "node scripts/nexqori-cards.mjs",
+    "test:cases": "node scripts/nexqori-cases.mjs",
+    "test:cases:prepare": "node scripts/nexqori-cases.mjs --prepare"
   },
   "engines": {
     "node": ">=22.12.0"

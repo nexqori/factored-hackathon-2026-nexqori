@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "provenance": "Casos ficticios reconstruidos a partir de familias del EDA y contratos de Nexqori; no son transcripciones del dataset.",
+  "cases": [
+    {
+      "id": "bloqueo",
+      "title": "Cargo no reconocido → bloqueo de tarjeta",
+      "intent": "unrecognized-charge",
+      "amountMinor": 18500,
+      "transactionStatus": "completed",
+      "initialBalanceMinor": 150000,
+      "expected": "Tarjeta bloqueada, reclamo registrado y saldo intacto. El reclamo no se considera resuelto por bloquear la tarjeta.",
+      "messages": {
+        "es": "No reconozco esta compra de 185 pesos. La tarjeta está conmigo. Quiero reportar el cargo y proteger mi tarjeta.",
+        "en": "I do not recognize this 185 peso purchase. I still have my card. I want to report the charge and protect my card.",
+        "pt": "Não reconheço esta compra de 185 pesos. Estou com o cartão. Quero contestar a cobrança e proteger meu cartão."
+      }
+    },
+    {
+      "id": "devolucion",
+      "title": "Cobro incorrecto → revisión y abono aprobado",
+      "intent": "incorrect-charge",
+      "amountMinor": 45990,
+      "transactionStatus": "completed",
+      "initialBalanceMinor": 150000,
+      "expected": "RF pendiente sin abono; luego aprobación administrativa, un único CR por 459,90 MXN y saldo de 1.959,90 MXN. Devolución completa según la política local.",
+      "messages": {
+        "es": "El comercio confirmó que esta compra cancelada de 459,90 pesos no correspondía. Ya lo consulté antes y sigo sin solución. Solicito revisar el cargo completo para devolución.",
+        "en": "The merchant confirmed this cancelled purchase for 459.90 pesos should not have been charged. I already asked about it and it is still unresolved. Please review the full charge for a refund.",
+        "pt": "O estabelecimento confirmou que esta compra cancelada de 459,90 pesos não deveria ter sido cobrada. Já consultei antes e continuo sem solução. Solicito revisão da cobrança completa para devolução."
+      }
+    },
+    {
+      "id": "derivacion",
+      "title": "Pago pendiente → aclaración y atención humana",
+      "intent": "payment-status",
+      "amountMinor": 12990,
+      "transactionStatus": "pending",
+      "initialBalanceMinor": 150000,
+      "expected": "Bot informa pendiente; devolución no elegible; solicitud enviada a atención, sin RF, CR ni cambio de saldo. No implica asignación real de especialista.",
+      "messages": {
+        "es": "La aplicación se quedó esperando al pagar 129,90 pesos. No sé si el pago terminó. Necesito que revisen el estado antes de volver a intentarlo.",
+        "en": "The app kept waiting while I was paying 129.90 pesos. I do not know whether the payment went through. Please check its status before I try again.",
+        "pt": "O aplicativo ficou aguardando ao pagar 129,90 pesos. Não sei se o pagamento foi concluído. Preciso verificar o estado antes de tentar novamente."
+      }
+    }
+  ]
+}
