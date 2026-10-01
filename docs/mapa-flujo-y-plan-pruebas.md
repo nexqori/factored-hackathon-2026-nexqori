@@ -4,6 +4,8 @@ Revisión: 1 de octubre de 2026, America/Lima. Código inspeccionado en `bryan`,
 
 Ampliación posterior solicitada: la [guía de tres casos reproducibles](pruebas-tres-casos.md) añade un ejecutador de operaciones desde frontend y un paquete manual nuevo. Comprueba bloqueo, devolución aprobada y derivación en ES/EN/PT. La integración automática de Jev/Luna con esas operaciones continúa pendiente.
 
+El [diseño de evidencia y escalamiento](flujo-evidencia-y-escalamiento.md) desarrolla cómo consultar datos, preguntar, esperar, proponer o derivar según cada acción, y distingue ese módulo conversacional de los pipelines por lotes que podría coordinar Airflow.
+
 ## Decisión recomendada
 
 Podemos probar clasificación, respuestas por procedimiento y operaciones bancarias por separado. Para observar cómo el asistente resuelve un caso de principio a fin falta conectar la conversación con lecturas autorizadas, conservar el estado del procedimiento y verificar el resultado de cada acción. La confianza de Jev no sustituye esas comprobaciones.
