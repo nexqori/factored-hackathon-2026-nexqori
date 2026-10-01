@@ -152,6 +152,8 @@ Cada paso registra inicio, duración medida con reloj monotónico, estado, error
 
 Panel propuesto: conversación y estado del caso; línea de tiempo Jev → herramienta → Luna → confirmación → resultado; comparación esperado/obtenido; referencias NQ/RF/CR; llamadas/tiempos/errores; descarga JSON. No mostrar aprobaciones o lecturas como realizadas si sólo están propuestas.
 
+La [comparación de paneles visuales y voz](paneles-visuales-y-voz.md) desarrolla alternativas para editar estos pasos, versionar instrucciones y añadir una futura llamada con presupuesto y duración limitados. Es una propuesta complementaria, sin integración nueva de audio.
+
 Para repetir: fixtures nuevos por caso/ejecución o restauración de una base exclusiva de evaluación. Nunca revertir operaciones de las cuentas habituales para fabricar el siguiente resultado. El ejecutador puede representar un administrador de prueba identificado; debe seguir el mismo endpoint y dejar su actor, sin atribuir la aprobación al LLM.
 
 ## Cuándo empezar cada tipo de prueba
