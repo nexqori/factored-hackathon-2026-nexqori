@@ -77,7 +77,7 @@ def test_generated_reply_fits_the_next_conversation_turn():
     assert dialogue.validate_reply({'reply':'x'*2000,'next_step':'clarify','missing_information':[]})['status']=='ok'
 
 
-@pytest.mark.parametrize('intent,family', [('account-balance','query'),('my-cards','query'),('mobile-topup','service'),('needs-clarification','clarification')])
+@pytest.mark.parametrize('intent,family', [('account-balance','query'),('my-cards','query'),('request-status','query'),('mobile-topup','service'),('needs-clarification','clarification')])
 def test_non_problem_never_activates_contract_or_luna(private_config,monkeypatch,intent,family):
     # Use an existing bill label without changing the benchmark taxonomy.
     if intent=='mobile-topup':
@@ -94,6 +94,10 @@ def test_non_problem_never_activates_contract_or_luna(private_config,monkeypatch
     assert len(calls)==1 and result['contract'] is None and result['route_family']==family
     assert result['llm']['status']=='skipped' and result['executed_operations']==[]
     assert result['routing']['reply']
+    if intent == 'request-status':
+        assert result['routing']['proposal']['route'] == '/requests'
+        assert result['routing']['proposal']['kind'] == 'view'
+        assert result['routing']['proposal']['executes_operation'] is False
     client=TestClient(api.app)
     contracts=client.get('/lab-api/workflows').json()['contracts']
     assert len(contracts)==6 and intent not in {c['id'] for c in contracts}

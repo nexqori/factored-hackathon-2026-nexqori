@@ -1,0 +1,8 @@
+.request-progress.badge{white-space:normal;max-width:65%;line-height:1.45;text-align:left;flex-shrink:1}
+.operation-reference{display:flex;flex-direction:column;gap:3px;min-width:0;color:var(--nq-muted);font-size:.78rem}
+.operation-reference code,.refund-operation-id{overflow-wrap:anywhere;word-break:break-word;font-family:ui-monospace,monospace;color:var(--nq-text);font-size:.82rem}
+.request-search{display:flex;flex-direction:column;gap:8px;margin:20px 0;color:var(--nq-text);font-size:.85rem;max-width:580px}
+.request-search input{width:100%}
+.transaction-context{display:flex;flex-direction:column;gap:5px;margin:0 17px 12px;padding:12px;border:1px solid var(--nq-border);border-radius:10px;background:var(--nq-soft);font-size:.8rem}
+.transaction-context code{overflow-wrap:anywhere;font-size:.77rem}
+.transaction-context span{color:var(--nq-muted);font-size:.75rem;line-height:1.5}

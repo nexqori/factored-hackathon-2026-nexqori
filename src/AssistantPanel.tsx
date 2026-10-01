@@ -9,9 +9,10 @@ import type { Destination, NavigationCommand } from './navigation';
 import type { Conversation, ConversationList, ConversationPage, Message } from './types';
 
 export type ChatReply = { text: string; destination: string | null; navigation: NavigationCommand | null; conversation: Conversation; messages: Message[] };
+export type TransactionQuestion = { nonce: string; transactionId: string; merchant: string };
 export function Bot({ large = false }: { large?: boolean }) { return <img className={'bot-avatar' + (large ? ' bot-large' : '')} src="/nexqori-bot.png" alt="" aria-hidden="true" width={large ? 100 : 48} height={large ? 100 : 48} />; }
 
-export function AssistantPanel({ currentPage, onReply, guided = false }: { guided?: boolean; currentPage: Destination; onReply: (reply: ChatReply) => void }) {
+export function AssistantPanel({ currentPage, onReply, guided = false, transactionQuestion }: { guided?: boolean; currentPage: Destination; onReply: (reply: ChatReply) => void; transactionQuestion?: TransactionQuestion | null }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language as Locale;
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -30,18 +31,19 @@ export function AssistantPanel({ currentPage, onReply, guided = false }: { guide
   const page = useRef(currentPage); page.current = currentPage;
   const replyHandler = useRef(onReply); replyHandler.current = onReply;
   const log = useRef<HTMLDivElement>(null);
+  const handledTransaction = useRef<string | null>(null);
   function fail(e: unknown) { setError('error.' + (e instanceof ApiError ? e.code : 'generic')); }
   useEffect(() => () => request.current?.abort(), []);
   useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages.at(-1)?.id]);
 
-  async function send(message: string, signal?: AbortSignal, pastedText=''): Promise<string> {
+  async function send(message: string, signal?: AbortSignal, pastedText='', transactionId?: string): Promise<string> {
     if (busyRef.current || (!message.trim()&&!pastedText.trim())) throw new ApiError('conflict', 409);
     busyRef.current = true; setBusy(true); setError('');
     const controller = new AbortController(); request.current = controller;
     const abort = () => controller.abort(); signal?.addEventListener('abort', abort, { once: true });
     if (signal?.aborted) controller.abort();
     try {
-      const result = await api<ChatReply>('/assistant', 'POST', { message: message.trim(), pastedText, locale, currentPage: page.current, conversationId: conversationId.current }, controller.signal);
+      const result = await api<ChatReply>('/assistant', 'POST', { message: message.trim(), pastedText, locale, currentPage: page.current, conversationId: conversationId.current, ...(transactionId ? {transactionId} : {}) }, controller.signal);
       if (controller.signal.aborted) return '';
       conversationId.current = result.conversation.id; setConversation(result.conversation);
       setMessages(items => [...items, ...result.messages]);
@@ -58,6 +60,12 @@ export function AssistantPanel({ currentPage, onReply, guided = false }: { guide
   }
   const [composerKey,setComposerKey]=useState(0);
   function fresh() { conversationId.current = null; setConversation(null); setMessages([]); setBefore(null); setComposerKey(k=>k+1); setError(''); setHistory(false); }
+  useEffect(() => {
+    if (!transactionQuestion || busy || historyBusy || handledTransaction.current === transactionQuestion.nonce) return;
+    handledTransaction.current = transactionQuestion.nonce;
+    fresh();
+    void send(t('askTransactionQuestion', { id: transactionQuestion.transactionId, merchant: transactionQuestion.merchant }), undefined, '', transactionQuestion.transactionId).catch(fail);
+  }, [transactionQuestion, busy, historyBusy]);
   async function select(item: Conversation) {
     setHistoryBusy(true); setError('');
     try { const result = await api<ConversationPage>('/conversations/' + item.id); conversationId.current = result.conversation.id; setConversation(result.conversation); setMessages(result.messages); setBefore(result.before); setComposerKey(k=>k+1); setHistory(false); }
@@ -78,6 +86,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false }: { guide
     <button className="voice-entry" disabled={busy} onClick={()=>setVoice(true)}><Phone size={16}/>{t('startVoice')}</button>
     {voice&&<Dialog title={t('voiceTitle')} onClose={()=>setVoice(false)}><div className="voice-preview"><Bot large/><span className="round-icon"><Phone size={26}/></span><p>{t('voiceSoon')}</p><button className="button primary wide" onClick={()=>setVoice(false)}>{t('voiceContinue')}</button></div></Dialog>}
     {conversation && <div className="conversation-current" title={title}><MessageCircle size={13} /><span lang={conversation.title ? conversation.locale : locale}>{title}</span></div>}
+    {conversation?.transactionId && <p className="transaction-context"><strong>{t('linkedMovement')}</strong><code>{conversation.transactionId}</code><span>{t('transactionContextHint')}</span></p>}
     <div ref={log} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions">
       {!messages.length && <><div className="assistant-welcome"><Bot large /><h3>{t('assistantHello')}</h3><p>{t(guided ? 'guidedConversationWelcome' : 'conversationWelcome')}</p></div><div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={busy} onClick={() => submit(t(key))}>{t(key)}<ArrowUpRight size={15} /></button>)}</div></>}
       {before && <button className="text-link older-messages" disabled={busy} onClick={() => { void older(); }}>{t('olderMessages')}</button>}

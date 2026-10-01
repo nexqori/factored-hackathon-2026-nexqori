@@ -13,7 +13,7 @@ export function TransactionIcon({ category }: { category: string }) {
 }
 export function TransactionList({ rows, onSelect, compact = false }: { rows: Transaction[]; onSelect: (tx: Transaction) => void; compact?: boolean }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
-  return <div className={'transaction-list ' + (compact ? 'compact' : '')}>{rows.map(tx => <button className="transaction-row" key={tx.id} onClick={() => onSelect(tx)}>
+  return <div className={'transaction-list ' + (compact ? 'compact' : '')}>{rows.map(tx => <button className="transaction-row" data-transaction-id={tx.id} key={tx.id} onClick={() => onSelect(tx)}>
     <TransactionIcon category={tx.category} /><span className="transaction-name"><strong>{tx.merchant}</strong><small>{t(tx.category)} · {formatDate(tx.date, locale)}</small></span>
     {!compact && <Badge status={tx.status} />}<span className={'transaction-amount ' + (tx.amountMinor > 0 ? 'positive' : '')}>{tx.amountMinor > 0 ? '+' : ''}{formatMoney(tx.amountMinor, locale, tx.currency)}{compact && tx.status !== 'completed' && <small>{t(tx.status)}</small>}</span><ArrowUpRight size={16} aria-hidden="true" />
   </button>)}</div>;

@@ -56,6 +56,8 @@ Los bloqueos de fila y la unicidad en PostgreSQL evitan dobles abonos y actualiz
 
 ## Verificación y recorrido
 
+Mis solicitudes y Administración muestran el estado de devolución y su ID persistente; ver [trazabilidad, búsqueda y consulta del movimiento](trazabilidad-solicitudes.md). La conversación del banco puede leer registros del movimiento propio, pero no aprobar, bloquear ni devolver por instrucciones del chat.
+
 1. En **Tarjetas**, elegir **Bloquear tarjeta**, revisar la terminación, introducir contraseña y confirmar. Al recargar debe mantenerse bloqueada y la API debe rechazar revelar datos.
 2. En **Mis solicitudes**, abrir un reclamo de un cargo completado y elegir **Solicitar devolución**. Revisar importe/cuenta y confirmar. Debe quedar en revisión sin modificar saldo.
 3. Con el administrador, abrir ese folio. Revisar evidencia, elegir aprobar/rechazar, indicar motivo, contraseña y confirmar. El titular ve el desenlace; si se aprueba, ve un movimiento de abono y el saldo actualizado.

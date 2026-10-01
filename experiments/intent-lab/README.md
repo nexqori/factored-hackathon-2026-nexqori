@@ -1,6 +1,6 @@
 # Nexqori · Laboratorio de intención
 
-Contratos de problemas v2: sólo las seis categorías de problemas cargan procedimiento e instrucciones para Luna. Consultas y solicitudes de servicios se enrutan aparte; una consulta no activa el contrato de reclamos. El benchmark conserva las 23 etiquetas. Para cargos elegibles, el LAB muestra accesos a bloqueo y revisión de devolución dentro del banco autenticado; no ejecuta herramientas bancarias. Ver [acciones y controles](../../docs/acciones-problemas.md).
+Contratos de problemas v2: sólo las seis categorías de problemas cargan procedimiento e instrucciones para Luna. Consultas y solicitudes de servicios se enrutan aparte; una consulta no activa el contrato de reclamos. La clasificación interactiva incluye 24 etiquetas: `request-status` abre Mis solicitudes como consulta y no ofrece devolución. El benchmark NLP conserva sus 23 etiquetas y 345 ejemplos; no mide todavía esta nueva categoría. Para cargos elegibles, el LAB muestra accesos a bloqueo y revisión de devolución dentro del banco autenticado; no ejecuta herramientas bancarias. Ver [acciones y controles](../../docs/acciones-problemas.md) y [evaluación de segunda atención](../../docs/evaluacion-segunda-atencion.md).
 
 Abre **http://localhost:5190/**. El banco principal sigue en **http://localhost:5180/**. Este laboratorio no comparte sesiones, operaciones ni base de datos con el banco.
 

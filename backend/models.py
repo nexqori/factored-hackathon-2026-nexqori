@@ -151,9 +151,11 @@ class AuditEvent(Base):
     request_id: Mapped[str | None] = mapped_column(ForeignKey("requests.id"), nullable=True)
     conversation_id: Mapped[str | None] = mapped_column(ForeignKey("conversations.id"), nullable=True, index=True)
     product_id: Mapped[str | None] = mapped_column(ForeignKey("products.id"), nullable=True)
+    transaction_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     action: Mapped[str] = mapped_column(String(32))
     actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (ForeignKeyConstraint(["transaction_id", "user_id"], ["transactions.id", "transactions.user_id"], name="fk_audit_transaction_owner"),)
 
 class Conversation(Base):
     __tablename__ = "conversations"
@@ -161,9 +163,10 @@ class Conversation(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     title: Mapped[str | None] = mapped_column(String(100), nullable=True)
     locale: Mapped[str] = mapped_column(String(2))
+    transaction_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    __table_args__ = (UniqueConstraint("id", "user_id"), CheckConstraint("locale IN ('es','en','pt')"))
+    __table_args__ = (UniqueConstraint("id", "user_id"), CheckConstraint("locale IN ('es','en','pt')"), ForeignKeyConstraint(["transaction_id", "user_id"], ["transactions.id", "transactions.user_id"], name="fk_conversation_transaction_owner"))
 
 class Message(Base):
     __tablename__ = "messages"

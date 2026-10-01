@@ -8,6 +8,7 @@ export const copy = {
   dialogueTitle: ["Conversar con el contrato", "Talk with the contract", "Conversar com o contrato"],
   dialogueIntro: ["Jev identifica el problema y Luna responde con su contrato. Las consultas y los servicios siguen recorridos separados.", "Jev identifies the problem and Luna replies using its contract. Inquiries and services follow separate flows.", "Jev identifica o problema e Luna responde com seu contrato. Consultas e serviços seguem fluxos separados."],
   queryFlow: ['Flujo de consultas', 'Inquiry flow', 'Fluxo de consultas'],
+  openRequests: ['Abrir Mis solicitudes', 'Open My requests', 'Abrir Minhas solicitações'],
   serviceFlow: ['Flujo de servicios', 'Service flow', 'Fluxo de serviços'],
   clarificationFlow: ['Aclaración', 'Clarification', 'Esclarecimento'],
   noProblemContract: ['Sin activar contrato de problemas', 'No problem contract activated', 'Sem ativar contrato de problemas'],

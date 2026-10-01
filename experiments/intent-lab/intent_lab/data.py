@@ -21,9 +21,19 @@ FALLBACK_DESCRIPTIONS = {
 }
 
 
-def taxonomy():
+# This query is a regression discovered in dialogue evaluation, outside the frozen NLP corpus.
+LAB_QUERIES = [{"id": "request-status", "copy": {
+    "es": {"title": "Consultar el estado de una solicitud", "summary": "Consultar únicamente el seguimiento o estado de un folio o reclamo existente. No revisar de nuevo el importe de un cargo ni diagnosticar un pago."},
+    "en": {"title": "Check an existing request", "summary": "Only check the status or progress of an existing reference or complaint. Not a renewed dispute of a charge amount or a payment diagnosis."},
+    "pt": {"title": "Consultar uma solicitação existente", "summary": "Consultar apenas o andamento ou status de um protocolo ou reclamação existente. Não revisar novamente o valor de uma cobrança nem diagnosticar um pagamento."},
+}}]
+
+
+def taxonomy(*, include_lab_queries=True):
     items = json.loads(CATALOG.read_text(encoding="utf-8"))["items"]
     result = [{"id": item["id"], "copy": item["copy"]} for item in items]
+    if include_lab_queries:
+        result.extend(LAB_QUERIES)
     for label, titles in FALLBACKS.items():
         result.append({"id": label, "copy": {lang: {"title": titles[i], "summary": FALLBACK_DESCRIPTIONS[label][i]} for i, lang in enumerate(LANGUAGES)}})
     return result
@@ -42,7 +52,7 @@ def corpus():
             split = ("train", "validation", "test", "test")[idx]
             for lang, text in zip(LANGUAGES, translations, strict=True):
                 rows.append({"id": f"{label}-{idx}-{lang}", "family": f"{label}-{idx}", "text": text, "language": lang, "expected": label, "split": split, "source": source["provenance"], "review": "pending", "slice": "challenge" if idx == 3 else "standard"})
-    for item in taxonomy():
+    for item in taxonomy(include_lab_queries=False):
         for lang, copy in item["copy"].items():
             rows.append({"id": f"{item['id']}-definition-{lang}", "family": f"{item['id']}-definition", "text": f"{copy['title']}. {copy['summary']}", "language": lang, "expected": item["id"], "split": "train", "source": "catalog_definition", "review": "pending", "slice": "definition"})
     validate(rows)

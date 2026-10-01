@@ -69,12 +69,16 @@ function App() {
   const isFallback = !resultIntent || ['needs-clarification', 'multiple-intents', 'out-of-scope'].includes(resultIntent);
   const proposes = (shownRun?shownRun.jev.status==='ok':condition === 'agreement') && !isFallback;
   const action = resultIntent ? meta?.actions[resultIntent] : undefined;
-  const destination = resultIntent === 'account-balance' ? 'accounts' : resultIntent === 'account-activity' ? 'movements' : resultIntent === 'my-cards' ? 'cards' : 'services';
+  const destination = resultIntent === 'account-balance' ? 'accounts' : resultIntent === 'account-activity' ? 'movements' : resultIntent === 'my-cards' ? 'cards' : resultIntent === 'request-status' ? 'requests' : 'services';
   const bankRoute = action?.route ? safeNavigation({tool:'navigate_in_app',destination,route:action.route,...(destination==='services'?{serviceId:resultIntent}:{})}) : null;
   const selectedMethod = report?.methods.find(m => m.method === methodFilter);
   const mistakes = selectedMethod?.predictions.filter(p => !p.correct && (filter === 'all' || p.language === filter)) || [];
 
-  async function load() { setError(false); try { const [metadata, last, conversations,originalData] = await Promise.all([request<Meta>('meta'), request<Report | null>('results'), request<{conversations:Conversation[]}>('conversations'),request<{conversations:Original[]}>('originals')]); setMeta(metadata); setReport(last); setSavedConversations(conversations.conversations);setOriginals(originalData.conversations); } catch { setError(true); } }
+  async function load() { setError(false); try { const [metadata, last, conversations,originalData] = await Promise.all([request<Meta>('meta'), request<Report | null>('results'), request<{conversations:Conversation[]}>('conversations'),request<{conversations:Original[]}>('originals')]); setMeta(metadata); setReport(last); setSavedConversations(conversations.conversations);setOriginals(originalData.conversations);
+    const caseId = new URLSearchParams(window.location.search).get('case');
+    const selected = conversations.conversations.find(item => item.id === caseId);
+    if (selected) { setDraft(structuredClone(selected)); setPrompt(selected.instructions); setLanguage(selected.language); }
+  } catch { setError(true); } }
   useEffect(() => { void load(); }, []);
   useEffect(() => { document.documentElement.lang = language; document.title = 'Nexqori · ' + translate(language, 'lab'); try { localStorage.setItem('nexqori-lab-language', language); } catch { /* preference is optional */ } setEditedText(null); setPreview(null); }, [language]);
   function choose(id: CopyKey) { setScenarioId(id); setDraft(null); setEditedText(null); setPreview(null); setCondition('agreement'); setSavedNotice(false); }

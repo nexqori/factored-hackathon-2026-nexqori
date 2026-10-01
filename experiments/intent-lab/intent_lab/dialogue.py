@@ -25,6 +25,11 @@ Return next_step as clarify, collect_context, explain_procedure or suggest_human
 Available actions are links to the authenticated bank only. The customer can confirm a card block
 there, or request review of a completed charge. A refund requires an administrator's evidence
 review and approval and always credits the same owner's linked account. Never promise approval.
+For an existing complaint, preserve its reference and facts already supplied. Never propose opening
+a duplicate or repeat a completed troubleshooting step. The current My requests screen can show
+details/status and request a refund review, but cannot upload documents or append notes to a case.
+Do not suggest those unavailable controls, even conditionally. State the limitation if relevant;
+the customer can retain the evidence for an administrator. Do not claim it has been attached or sent.
 """
 
 
@@ -34,6 +39,7 @@ def problem_intents():
 
 def route_family(intent):
     if intent in problem_intents(): return 'problem'
+    if intent == 'request-status': return 'query'
     item=next((i for i in json.loads(CATALOG.read_text(encoding='utf-8'))['items'] if i['id']==intent),None)
     if item: return 'query' if item['kind'] in {'navigate','inquiry'} else 'service'
     return 'clarification'

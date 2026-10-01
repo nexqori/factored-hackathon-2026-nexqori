@@ -48,6 +48,7 @@ class RequestInput(ConfirmInput):
 
 class ChatInput(StrictModel):
     conversationId: str | None = Field(default=None, min_length=1, max_length=64)
+    transactionId: str | None = Field(default=None, min_length=1, max_length=64)
     currentPage: Destination = "home"
     message: str = Field(min_length=0, max_length=8000)
     pastedText: str = Field(default="", max_length=8000)

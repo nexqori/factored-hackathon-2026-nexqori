@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, delete, func, or_, and_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
-from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, now
+from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, Refund, now
 from .schemas import CardRevealInput, RegisterInput, ExperienceInput
 from .models import CustomerProfile
 from .customer_profile import adult_birth_date, experience_view
@@ -22,21 +22,27 @@ from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
 from .assistant import answer
 from .presentation import present_message
+from .transaction_context import transaction_evidence, transaction_reply
 
 def user_view(user):
     return {"id":user.id,"email":user.email,"name":user.name,"role":user.role,"locale":user.locale,"textSize":user.text_size,"experience":experience_view(user.profile)}
 
 def conversation_view(c):
-    return {"id":c.id,"title":c.title,"locale":c.locale,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
+    return {"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
 
 def message_view(m):
     return {"id":m.id,"role":m.role,"text":present_message(m.content,m.role),"locale":m.locale,"at":m.created_at.isoformat()}
 
-def request_view(r, name=None):
-    return {"id":r.id,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name}
+def request_view(r, name=None, refund=None):
+    operation = None
+    if refund is not None and refund.request_id == r.id and refund.user_id == r.user_id:
+        operation = {"id":refund.id,"status":refund.status,"amountMinor":refund.amount_minor,"currency":refund.currency,
+                     "createdAt":refund.created_at.isoformat(),"decidedAt":refund.decided_at.isoformat() if refund.decided_at else None,
+                     "creditTransactionId":refund.credit_transaction_id}
+    return {"id":r.id,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation}
 
 def audit_view(e, name):
-    return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"conversationId":e.conversation_id,"productId":e.product_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
+    return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"conversationId":e.conversation_id,"productId":e.product_id,"transactionId":e.transaction_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
 
 def add_audit(db, user_id, action, actor, request_id=None, conversation_id=None):
     db.add(AuditEvent(id=str(uuid4()),user_id=user_id,request_id=request_id,conversation_id=conversation_id,action=action,actor_id=actor))
@@ -208,11 +214,12 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         card_status={c.product_id:c.status for c in db.scalars(select(CardProfile).where(CardProfile.user_id==user.id))}
         txs=db.scalars(select(Transaction).where(Transaction.user_id==user.id).order_by(Transaction.occurred_at.desc())).all()
         cases=db.scalars(select(RequestCase).where(RequestCase.user_id==user.id).order_by(RequestCase.created_at.desc())).all()
+        refunds={r.request_id:r for r in db.scalars(select(Refund).where(Refund.user_id==user.id))}
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).where(AuditEvent.user_id==user.id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
         return {
             "products":[{"id":p.id,"type":p.type,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency,"status":card_status.get(p.id,"active")} for p in products],
             "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status} for t in txs],
-            "requests":[request_view(r) for r in cases],
+            "requests":[request_view(r,refund=refunds.get(r.id)) for r in cases],
             "audit":[audit_view(e,name) for e,name in events]
         }
     @app.patch("/api/profile/preferences")
@@ -345,12 +352,19 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         if payload.conversationId:
             conversation=db.scalar(select(Conversation).where(Conversation.id==payload.conversationId,Conversation.user_id==user.id).with_for_update())
             if not conversation: raise HTTPException(404,"not_found")
+            if payload.transactionId and payload.transactionId != conversation.transaction_id: raise HTTPException(409,"conversation_context_conflict")
         else:
-            conversation=Conversation(id=str(uuid4()),user_id=user.id,title=message[:100],locale=payload.locale)
+            if payload.transactionId: transaction_evidence(db,user.id,payload.transactionId)
+            conversation=Conversation(id=str(uuid4()),user_id=user.id,title=message[:100],locale=payload.locale,transaction_id=payload.transactionId)
             db.add(conversation); db.flush()
             add_audit(db,user.id,"conversation_started",user.id,conversation_id=conversation.id)
-        balance=db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id==user.id,Product.type.in_(["account","savings"]),Product.currency=="MXN"))
-        result=answer(instruction or payload.pastedText,payload.locale,balance,payload.currentPage)
+        if conversation.transaction_id:
+            evidence=transaction_evidence(db,user.id,conversation.transaction_id)
+            result=transaction_reply(evidence,payload.locale)
+            db.add(AuditEvent(id=str(uuid4()),user_id=user.id,actor_id=user.id,action="transaction_context_viewed",transaction_id=conversation.transaction_id,product_id=evidence['transaction']['productId'],request_id=evidence['request']['id'] if evidence['request'] else None,conversation_id=conversation.id))
+        else:
+            balance=db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id==user.id,Product.type.in_(["account","savings"]),Product.currency=="MXN"))
+            result=answer(instruction or payload.pastedText,payload.locale,balance,payload.currentPage)
         if result["navigation"]: add_audit(db,user.id,"navigate_"+result["navigation"]["destination"],user.id,conversation_id=conversation.id)
         user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale)
         db.add(user_message)
@@ -366,8 +380,9 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     @app.get("/api/admin/overview")
     def admin_overview(_user=Depends(admin),db=Depends(db_session)):
         cases=db.execute(select(RequestCase,User.name).join(User,User.id==RequestCase.user_id).order_by(RequestCase.created_at.desc())).all()
+        refunds={r.request_id:r for r in db.scalars(select(Refund))}
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
-        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name) for r,name in cases],"audit":[audit_view(e,name) for e,name in events]}
+        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name,refunds.get(r.id)) for r,name in cases],"audit":[audit_view(e,name) for e,name in events]}
 
     @app.get("/api/admin/audit")
     def audit_history(userId: str | None=None, action: str | None=Query(None,max_length=32), offset: int=Query(0,ge=0,le=100000), _user=Depends(admin),db=Depends(db_session)):

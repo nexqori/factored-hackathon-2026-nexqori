@@ -18,7 +18,7 @@ def test_splits_are_disjoint_and_multilingual():
     for split, expected in (("train", 138), ("validation", 69), ("test", 138)):
         subset = [row for row in rows if row["split"] == split]
         assert len(subset) == expected
-        assert {r["expected"] for r in subset} == LABELS
+        assert {r["expected"] for r in subset} == {item['id'] for item in taxonomy(include_lab_queries=False)}
         assert all(sum(r["language"] == lang for r in subset) == expected // 3 for lang in ("es", "en", "pt"))
 
 
@@ -124,7 +124,9 @@ def test_no_external_calls_and_no_fabricated_provider_measurements(monkeypatch):
 def test_evidence_aggregates_and_catalog_coverage():
     evidence = json.loads((ROOT / "evidence.json").read_text(encoding="utf-8"))
     assert evidence["transcripts"] == 171321 and evidence["distinct_texts"] == 42
-    assert len(taxonomy()) == 23
+    assert len(taxonomy()) == 24
+    assert len(taxonomy(include_lab_queries=False)) == 23
+    assert 'request-status' not in {row['expected'] for row in corpus()}
     assert all(set(item["copy"]) == {"es", "en", "pt"} for item in taxonomy())
     assert sum(p["records"] for p in evidence["problems"]) == 67095
     assert sum(p["records"] for p in evidence["contact_reasons"]) == 686296

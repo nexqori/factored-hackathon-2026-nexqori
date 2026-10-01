@@ -61,7 +61,7 @@ def proposed_action(intent):
         raise ValueError("Unknown intent")
     if intent in FALLBACKS:
         return {"intent": intent, "kind": "clarify" if intent != "out-of-scope" else "explain_scope", "route": None, "executes_operation": False}
-    routes = {"account-balance": "/products?kind=accounts", "account-activity": "/movements", "my-cards": "/products?kind=cards"}
+    routes = {"account-balance": "/products?kind=accounts", "account-activity": "/movements", "my-cards": "/products?kind=cards", "request-status": "/requests"}
     return {"intent": intent, "kind": "view" if intent in routes else "prepare_form", "route": routes.get(intent, f"/services/catalog/{intent}"), "executes_operation": False}
 
 

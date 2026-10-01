@@ -1,5 +1,7 @@
 # Empezar con Nexqori
 
+Recorridos nuevos: [segunda atención en el LAB](docs/evaluacion-segunda-atencion.md) y [aprobación, ID de operación y consulta del movimiento](docs/trazabilidad-solicitudes.md). Mis solicitudes distingue aprobación pendiente, abono y rechazo; en Movimientos puedes iniciar un chat contextual. Jev y Luna se mantienen en el LAB.
+
 Esta es la base de trabajo del equipo: React + TypeScript, FastAPI y PostgreSQL, en Docker local, con identidad Terracota suave y español, inglés y portugués. El repositorio es privado: [nexqori/nexqori](https://github.com/nexqori/nexqori).
 
 ## Arranque

@@ -1,0 +1,20 @@
+{
+  "captured_at": "2026-10-01T02:16:46.640615+00:00",
+  "source": "dataset/_eda_integral/integral.duckdb",
+  "query": "seleccion.sql",
+  "unit": "complaint row",
+  "result": {
+    "fee_cases": 12194,
+    "repeat_claimant_cases": 1865,
+    "active_repeat_claimant_cases": 1408,
+    "in_process_repeat_claims": 189,
+    "description_variants": 1,
+    "declared_interaction_links": 0,
+    "first_case": "2023-06-17 13:19:54",
+    "last_case": "2026-06-18 06:07:57"
+  },
+  "caveats": [
+    "Dataset sintético. Recurrencia del reclamante no equivale a falla de primera resolución del mismo incidente.",
+    "No hay enlaces a interacciones en este subconjunto. Descripciones genéricas; no se puede recuperar un diálogo de este problema."
+  ]
+}
