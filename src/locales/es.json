@@ -1,4 +1,11 @@
 {
+  "auditActions.tool_balances": "Saldos consultados por herramienta",
+  "auditActions.tool_transactions": "Movimientos consultados por herramienta",
+  "auditActions.tool_cards": "Tarjetas enmascaradas consultadas",
+  "auditActions.tool_request_status": "Seguimiento consultado por herramienta",
+  "auditActions.tool_transaction_evidence": "Registros del movimiento consultados",
+  "auditActions.tool_service_info": "Información del servicio consultada",
+  "auditActions.tool_problem_contract": "Procedimiento del problema consultado",
   "home": "Inicio",
   "movements": "Movimientos",
   "products": "Mis productos",

@@ -1,8 +1,10 @@
 # Agente de navegación
 
-La base ya interpreta pedidos de navegación en español, inglés y portugués. Usa reglas locales deterministas: **no hay un LLM conectado**. Los mensajes y el idioma se guardan por conversación y titular. El frontend envía sólo el identificador permitido de la pantalla actual como contexto; el historial se muestra, pero todavía no se usa para razonamiento conversacional libre.
+La base ya interpreta pedidos de navegación en español, inglés y portugués. Usa reglas locales deterministas: **no hay un LLM conectado al chat bancario**. Los mensajes y el idioma se guardan por conversación y titular. El frontend envía la pantalla permitida y, al elegir Preguntar por este movimiento, su ID; el servidor valida titularidad y conserva el movimiento en esa conversación. El historial se muestra, pero todavía no se usa para razonamiento conversacional libre.
 
 Este límite corresponde al chat del banco. El LAB separado implementa Jev → contrato → Luna y comparación independiente; no comparte conversaciones ni sesiones bancarias. El chat bancario admite texto pegado como tarjeta previa al envío y una presentación de llamada sin captura de audio. La consulta de conversaciones por administración deja un evento de auditoría. Véase [guía de registro y conversación](registro-auditoria-y-conversacion.md).
+
+El [enrutador compartido de consultas/problemas](enrutamiento-jev-herramientas.md) convierte la intención de Jev en un plan de herramientas. El LAB muestra propuestas sin ejecutarlas; el banco dispone de un gateway de siete lecturas propias con sesión, CSRF y auditoría. Las herramientas de preparación no son comandos financieros y el gateway las rechaza. Todavía no hay adaptador Jev en el chat autenticado.
 
 Ejemplos: “Llévame a transferencias”, “Show my cards”, “Abrir empréstimos”, “¿Cuál es mi saldo?”. Un pedido de revisión abre el formulario de solicitud. Una petición desconocida pide precisión; la navegación no crea solicitudes ni mueve dinero.
 

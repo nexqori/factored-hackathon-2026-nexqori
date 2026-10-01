@@ -9,6 +9,7 @@ import httpx
 
 from . import storage
 from .decision import LABELS, parse_jev, parse_llm, proposed_action, reconcile, request_preview
+from backend.agent_routing import route_plan
 
 
 def configuration():
@@ -123,6 +124,7 @@ def classify(messages, language, instructions):
     # The independent classification input deliberately excludes Jev's prediction.
     llm = openai_response({"criteria": preview["criteria"], **preview["input"]}, instructions, schema, "banking_intent", lambda value: parse_llm(value, len(messages)))
     result = {"id": str(uuid.uuid4()), "created_at": datetime.now(timezone.utc).isoformat(), "jev": answer, "llm": llm, "decision": reconcile(answer, llm), "instructions_sha256": hashlib.sha256(instructions.encode()).hexdigest(), "input_sha256": hashlib.sha256(json.dumps(request["state"], sort_keys=True, ensure_ascii=False).encode()).hexdigest()}
+    result['tool_plan'] = route_plan(answer)
     save_run({"request": request, "result": result, "kind": "classification", "actor": "local_operator"})
     return result
 

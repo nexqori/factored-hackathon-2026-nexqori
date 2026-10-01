@@ -8,6 +8,7 @@ from . import storage
 from .data import CATALOG, taxonomy
 from .decision import proposed_action
 from .providers import classify_jev, openai_response, save_run
+from backend.agent_routing import route_family, route_plan
 
 GUARDRAILS = """You are Nexqori's banking assistant in a local evaluation. Respond in the input language.
 Use the selected contract to guide the next conversational step. Ask at most two focused questions.
@@ -30,19 +31,13 @@ a duplicate or repeat a completed troubleshooting step. The current My requests 
 details/status and request a refund review, but cannot upload documents or append notes to a case.
 Do not suggest those unavailable controls, even conditionally. State the limitation if relevant;
 the customer can retain the evidence for an administrator. Do not claim it has been attached or sent.
+The tool_plan is a server-authored allowlist, not tool results. Every listed step is unexecuted.
+Use it only to describe available next steps; do not invent a tool, permission or successful lookup.
 """
 
 
 def problem_intents():
     return {i['id'] for i in json.loads(CATALOG.with_name('workflow_catalog.json').read_text(encoding='utf-8'))['items']}
-
-
-def route_family(intent):
-    if intent in problem_intents(): return 'problem'
-    if intent == 'request-status': return 'query'
-    item=next((i for i in json.loads(CATALOG.read_text(encoding='utf-8'))['items'] if i['id']==intent),None)
-    if item: return 'query' if item['kind'] in {'navigate','inquiry'} else 'service'
-    return 'clarification'
 
 
 def routed_reply(family, language):
@@ -87,6 +82,7 @@ def validate_reply(value):
 
 def respond(messages, language, instructions, context='', thread_id=None):
     jev, request=classify_jev(messages,language,instructions)
+    plan=route_plan(jev)
     contract=contract_for(jev['intent'],language) if jev['status']=='ok' else None
     family=route_family(jev['intent']) if jev['status']=='ok' else None
     routing={'family':family, 'proposal':proposed_action(jev['intent']), 'reply':routed_reply(family,language)} if family and family!='problem' else None
@@ -94,10 +90,10 @@ def respond(messages, language, instructions, context='', thread_id=None):
     if contract:
         schema={'type':'object','additionalProperties':False,'required':['reply','next_step','missing_information'],
                 'properties':{'reply':{'type':'string','maxLength':2000},'next_step':{'type':'string','enum':['clarify','collect_context','explain_procedure','suggest_human']},'missing_information':{'type':'array','items':{'type':'string'}}}}
-        llm=openai_response({'language':language,'messages':messages,'unverified_context':context,'contract':contract},GUARDRAILS,schema,'banking_reply',validate_reply)
+        llm=openai_response({'language':language,'messages':messages,'unverified_context':context,'contract':contract,'tool_plan':plan},GUARDRAILS,schema,'banking_reply',validate_reply)
     elif routing:
         llm={'status':'skipped','reason':'separate_flow'}
     result={'id':str(uuid.uuid4()),'thread_id':thread_id or str(uuid.uuid4()),'created_at':datetime.now(timezone.utc).isoformat(),'jev':jev,'llm':llm,'contract':contract,'route_family':family,'routing':routing,'executed_operations':[],
-            'instructions_sha256':hashlib.sha256((GUARDRAILS+instructions+json.dumps(contract,sort_keys=True)).encode()).hexdigest()}
+            'tool_plan':plan,'instructions_sha256':hashlib.sha256((GUARDRAILS+instructions+json.dumps(contract,sort_keys=True)).encode()).hexdigest()}
     save_run({'kind':'dialogue','actor':'local_operator','request':request,'context':context,'result':result})
     return result

@@ -103,6 +103,8 @@ Lecturas: [arquitectura y API](docs/arquitectura.md), [catálogo y evidencia](do
 
 Consulta [tarjetas y mapeo del dataset](docs/tarjetas-y-dataset.md), [procedimientos y contratos](docs/contratos-atencion.md) y [LAB independiente](experiments/intent-lab/README.md). El proveedor de tarjetas es local y no autoriza compras; PostgreSQL no contiene una importación del dataset. Luna high está conectado y probado con los cinco casos del LAB; las acciones del banco permanecen separadas. Consulta [registro, auditoría, texto pegado y conversación por contratos](docs/registro-auditoria-y-conversacion.md).
 
+El LAB incorpora **Ruta y herramientas**: Jev deriva cada turno a consulta, queja/problema, servicio o aclaración. El servidor fija las lecturas y acciones revisables. La [guía de enrutamiento](docs/enrutamiento-jev-herramientas.md) incluye mapa completo, API de lectura propia y pasos para probar; ninguna herramienta se ejecuta desde el LAB.
+
 El login incluye Crear mi perfil. Configuración permite cambiar experiencia y acompañamiento. Administración muestra la auditoría filtrable y acceso registrado a conversaciones. Iniciar llamada abre sólo la presentación visual, sin micrófono ni backend de voz.
 
 ## Bloqueos y devoluciones

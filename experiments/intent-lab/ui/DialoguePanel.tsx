@@ -3,9 +3,10 @@ import { Play, Save } from 'lucide-react';
 import { PasteComposer } from '../../../src/PasteComposer';
 import { translate, type Language, type CopyKey } from './locales';
 import type { Message } from './scenarios';
+import { ToolPlanPanel, type ToolPlan } from './ToolPlanPanel';
 
 type Contract={id:string;version:string;kind:string;title:string;steps:string[];custom_instructions:string;available_actions?:{id:string;route:string}[]};
-type Result={id:string;thread_id:string;contract:Contract|null;route_family?:string;routing?:{family:string;reply:string;proposal:{route:string|null}}|null;jev:{status:string;intent?:string};llm:{status:string;reply?:string;error?:string;next_step?:string;missing_information?:string[]};executed_operations:unknown[]};
+type Result={id:string;thread_id:string;contract:Contract|null;tool_plan?:ToolPlan;route_family?:string;routing?:{family:string;reply:string;proposal:{route:string|null}}|null;jev:{status:string;intent?:string};llm:{status:string;reply?:string;error?:string;next_step?:string;missing_information?:string[]};executed_operations:unknown[]};
 type Run={id:string;created_at:string;kind:string;intent?:string;llm_status:string};
 async function request<T>(path:string,body?:unknown,method='POST'):Promise<T>{const r=await fetch('/lab-api/'+path,body===undefined?undefined:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error('request_failed');return r.json();}
 export function DialoguePanel({language,messages,instructions}:{language:Language;messages:Message[];instructions:string}){
@@ -23,6 +24,7 @@ export function DialoguePanel({language,messages,instructions}:{language:Languag
     <div><button className="primary" disabled={busy||dirty||messages.at(-1)?.role!=='user'||messages.some(m=>!m.content.trim())} onClick={()=>{void respond(messages,true).catch(()=>setError(old=>old||t('loadError')));}}><Play size={16}/>{t(history.length?'restartDialogue':'startDialogue')}</button>{dirty&&<p className="small-note">{t('saveInstructionsFirst')}</p>}{busy&&<p role="status">{t('executing')}</p>}{error&&<p className="error" role="alert">{error}</p>}
     {result?.contract&&<p className="contract-selected">Jev → {result.contract.title} · v{result.contract.version} → Luna</p>}
     {result?.routing&&<p className="contract-selected" role="status">{t(result.routing.family==='query'?'queryFlow':result.routing.family==='service'?'serviceFlow':'clarificationFlow')} · {t('noProblemContract')}</p>}
+    {result?.tool_plan && <ToolPlanPanel plan={result.tool_plan} language={language}/>}
     {result?.routing?.family==='query'&&result.routing.proposal.route==='/requests'&&<a className="button secondary" href="http://localhost:5180/requests" target="_blank" rel="noopener noreferrer">{t('openRequests')}</a>}
     {result?.contract?.available_actions?.length ? <div className="problem-actions"><strong>{t('bankActions')}</strong><p className="small-note">{t('bankActionsHint')}</p>{result.contract.available_actions.map(a => <a className="button secondary" key={a.id} href={'http://localhost:5180'+(a.id==='block-card'?'/cards':'/requests')} target="_blank" rel="noopener noreferrer">{t(a.id==='block-card'?'openCardBlock':'openRefundReview')}</a>)}</div> : null}
     <div className="dialogue-chat" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite">{history.map((m,i)=><div className={'message '+m.role} key={i}><strong>{t(m.role==='user'?'client':'assistant')}</strong><p>{m.content}</p></div>)}</div>

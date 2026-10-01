@@ -4,6 +4,8 @@ Contratos de problemas v2: sólo las seis categorías de problemas cargan proced
 
 Abre **http://localhost:5190/**. El banco principal sigue en **http://localhost:5180/**. Este laboratorio no comparte sesiones, operaciones ni base de datos con el banco.
 
+**Ruta y herramientas** muestra la propuesta de Jev para consulta o queja/problema, con referencias necesarias y acciones sujetas a confirmación. Antes de ejecutar muestra una referencia del caso. Cada turno recalcula la lista; los errores y aclaraciones dejan el plan vacío. Consulta la [guía de rutas y herramientas](../../docs/enrutamiento-jev-herramientas.md). El gateway de lectura del banco está preparado, pero el LAB no lo llama.
+
 ## Qué se puede hacer
 
 - Elegir cinco conversaciones representativas: cargo no reconocido, cobro indebido, problema con la app, atención en sucursal y calidad de servicio. Los diálogos están diseñados para evaluar; las categorías y sus frecuencias vienen del censo del dataset sintético.

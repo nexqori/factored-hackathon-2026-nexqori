@@ -17,6 +17,7 @@ from .customer_profile import adult_birth_date, experience_view
 from .workflows import workflow_view
 from .cards import reveal_local_card
 from .operations import operations_router
+from .agent_tools import agent_tools_router
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
@@ -416,4 +417,5 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         elif case.status!="in_review": raise HTTPException(409,"invalid_transition")
         return {"ok":True}
     app.include_router(operations_router())
+    app.include_router(agent_tools_router())
     return app

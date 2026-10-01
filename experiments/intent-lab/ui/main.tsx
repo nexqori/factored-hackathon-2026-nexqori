@@ -1,4 +1,5 @@
 import { DialoguePanel } from './DialoguePanel';
+import { ToolPlanPanel, type ToolPlan } from './ToolPlanPanel';
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Activity, ArrowRight, Bot, Check, ChevronDown, Download, FlaskConical, GitBranch, Globe2, MessageCircle, Play, Plus, Save, Settings2, ShieldCheck } from 'lucide-react';
@@ -12,10 +13,10 @@ import { safeNavigation } from '../../../src/navigation';
 type Label = { id: string; copy: Record<Language, { title: string; summary: string }> };
 type Action = { intent: string; kind: string; route: string | null; executes_operation: boolean };
 type Problem = { source_label: string; intent: string; records: number; denominator: number };
-type Meta = { providers: {jev:string;llm:string}; taxonomy: Label[]; actions: Record<string, Action>; splits: Record<string, number>; corpus_sha256: string; evidence: { transcripts: number; distinct_texts: number; text_families: number; problems: Problem[]; contact_reasons: {source_label:string;records:number;unresolved:number}[]; digital_errors: {action:string;events:number;errors:number}[] } };
+type Meta = { providers: {jev:string;llm:string}; taxonomy: Label[]; actions: Record<string, Action>; tool_plans: Record<string, ToolPlan>; splits: Record<string, number>; corpus_sha256: string; evidence: { transcripts: number; distinct_texts: number; text_families: number; problems: Problem[]; contact_reasons: {source_label:string;records:number;unresolved:number}[]; digital_errors: {action:string;events:number;errors:number}[] } };
 type Conversation = { id?: string; title: string; language: Language; messages: Message[]; expected: string | null; instructions: string };
 type ProviderResult = {status:string;intent?:string;error?:string;provider_confidence?:number|null;probabilities?:Record<string,number>;latency_ms?:number;proposal?:Action;model?:string};
-type LiveRun = {id:string;jev:ProviderResult;llm:ProviderResult;decision:{status:string;reason?:string};signature?:string};
+type LiveRun = {id:string;jev:ProviderResult;llm:ProviderResult;decision:{status:string;reason?:string};tool_plan?:ToolPlan;signature?:string};
 type Original = {id:string;language:Language;occurrences:number;messages:Message[]};
 type Measurement = { n: number; accuracy: number; macro_f1: number; p50_ms: number; p95_ms: number };
 type Prediction = { id: string; text: string; language: Language; expected: string; intent: string; correct: boolean; slice: string };
@@ -69,6 +70,7 @@ function App() {
   const isFallback = !resultIntent || ['needs-clarification', 'multiple-intents', 'out-of-scope'].includes(resultIntent);
   const proposes = (shownRun?shownRun.jev.status==='ok':condition === 'agreement') && !isFallback;
   const action = resultIntent ? meta?.actions[resultIntent] : undefined;
+  const toolPlan = shownRun ? shownRun.tool_plan : meta?.tool_plans?.[condition === 'agreement' && resultIntent ? resultIntent : 'needs-clarification'];
   const destination = resultIntent === 'account-balance' ? 'accounts' : resultIntent === 'account-activity' ? 'movements' : resultIntent === 'my-cards' ? 'cards' : resultIntent === 'request-status' ? 'requests' : 'services';
   const bankRoute = action?.route ? safeNavigation({tool:'navigate_in_app',destination,route:action.route,...(destination==='services'?{serviceId:resultIntent}:{})}) : null;
   const selectedMethod = report?.methods.find(m => m.method === methodFilter);
@@ -131,6 +133,7 @@ function App() {
             })}</div></section>
               <section className="decision-panel compact-decision"><h2>{t('routing')}</h2>{shownRun?<button className="text-button" onClick={()=>setLiveRun(null)}>{t('expectedView')}</button>:<div className="condition-tabs" role="group" aria-label={t('exploreState')}>{(['agreement','disagreement','unavailable','uncertainty'] as const).map(c=><button key={c} aria-pressed={condition===c} className={condition===c?'selected':''} onClick={()=>setCondition(c)}>{t(c)}</button>)}</div>}<p>{shownRun?(shownRun.jev.status==='ok'&&shownRun.llm.status==='ok'?t(shownRun.jev.intent===shownRun.llm.intent?'comparisonAgreement':'disagreementText'):shownRun.jev.status==='ok'?t('singleReading'):providerError(shownRun.jev.error)):t(condition==='agreement'&&!isFallback?'agreementText':condition==='disagreement'?'disagreementText':condition==='unavailable'?'unavailableText':'uncertainText')}</p>
                 <div className="next-action"><div><span className="step-label">{t('flow')}</span><h3>{proposes&&resultIntent?title(resultIntent):t('noAction')}</h3><p>{t('action')}: {proposes?t(action?.kind==='view'?'view':'prepare'):t('followup')}</p>{proposes&&<><code>{action?.route}</code>{bankRoute&&<a className="button secondary" href={'http://localhost:5180'+bankRoute} target="_blank" rel="noopener noreferrer">{t('openBankFlow')}<ArrowRight size={16}/></a>}<p className="small-note">{t('bankFlowHint')}</p></>}</div><GitBranch size={25} aria-hidden="true"/></div>
+                {toolPlan && <ToolPlanPanel plan={toolPlan} language={language}/>}
                 <details className="next-details"><summary>{t('formPreview')}</summary><div className="form-preview">{(proposes?(resultIntent==='unrecognized-charge'||resultIntent==='incorrect-charge'?['movement','details','proof','review']:['details','review']):['followup']).map((field,i)=><span key={field}><b>{i+1}</b>{t(field as CopyKey)}</span>)}</div></details><p className="small-note"><ShieldCheck size={15}/>{t('noExecute')}</p>
               </section><p className="small-note">{t('pendingText')}</p>
             </div>

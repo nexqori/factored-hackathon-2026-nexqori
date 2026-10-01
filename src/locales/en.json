@@ -1,4 +1,11 @@
 {
+  "auditActions.tool_balances": "Balances read by tool",
+  "auditActions.tool_transactions": "Transactions read by tool",
+  "auditActions.tool_cards": "Masked cards read",
+  "auditActions.tool_request_status": "Request status read by tool",
+  "auditActions.tool_transaction_evidence": "Transaction records read",
+  "auditActions.tool_service_info": "Service information read",
+  "auditActions.tool_problem_contract": "Problem procedure read",
   "home": "Overview",
   "movements": "Transactions",
   "products": "My products",

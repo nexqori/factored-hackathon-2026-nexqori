@@ -359,6 +359,20 @@
 - [x] Añadir Preguntar por este movimiento, contexto de conversación persistente y lectura actualizada de registros propios con auditoría `transaction_context_viewed`. FK por titular; un chat no permite cambiar de movimiento ni ejecutar operaciones. Bot bancario guiado; Jev/Luna permanecen en LAB, sin logs de procesadores externos.
 - [x] Desplegar migración b429e013cd55 en Docker saludable, con respaldo privado y hashes iguales de nueve tablas antes/después (incluidos 23 movimientos, 23 solicitudes y 180 mensajes previos). Alembic check sin diferencias.
 - [x] Validar 110 pruebas API, 42 LAB y 10 frontend; compilaciones correctas. Recorrido cliente/admin, búsquedas e historial contextual ES/EN/PT: 16 axe sin infracciones. Regresión bancaria serial: 56 vistas/6 comandos, experiencia, servicios 17 vistas y tarjetas; 25 axe sin infracciones. LAB general/diálogo/enlace directo: 16 axe sin infracciones, sin ejecución automática de modelos. Cuaderno inspeccionado; datos fuente, claves y resultados de proveedores permanecen privados.
-- [ ] Publicar estos cambios en bryan y actualizar PR #3 sin fusionar.
-- Último avance: implementado, desplegado localmente y validado; documentación y evaluación preparadas para compartir.
-- Siguiente paso: publicar rama/PR y comprobar CI. Límites documentados: modelo bancario integrado y adjuntos al reclamo siguen fuera de esta implementación.
+- [x] Publicar 2b3eb7f en bryan, actualizar y adjuntar [PR #3](https://github.com/nexqori/nexqori/pull/3), sin fusionar. [CI de la implementación exitosa](https://github.com/nexqori/nexqori/actions/runs/36807839645).
+- Último avance: implementado, desplegado localmente, validado y publicado; guías de inicio y evaluación compartidas. Límites documentados: modelo bancario integrado y adjuntos al reclamo fuera de esta implementación.
+- Siguiente paso: frente de enrutamiento Jev solicitado a continuación; no se reabre lo entregado.
+
+## Frente: Nexqori — Jev y herramientas de consultas/problemas
+- Fecha: 2026-09-30 22:19 -05:00, America/Lima. E:/factoredai; rama bryan.
+- Pedido vigente: crear el flujo que deriva desde Jev a consulta o queja/problema y a las herramientas de cada ruta. Se conserva el alcance de evaluación en LAB y se prepara una base reutilizable para el banco.
+- [x] Enrutador compartido desde la intención de Jev: consulta, problema, servicio o aclaración. Cada turno recalcula la lista; consultas sin contratos/acciones, fallo de proveedor sin herramientas. Política del servidor, independiente de instrucciones personalizadas.
+- [x] Panel Ruta y herramientas ES/EN/PT con referencia antes de ejecutar y propuesta de Jev después; lectura, referencias requeridas y preparación diferenciadas. JSON e historial conservan versión y plan; ninguna herramienta ejecutada desde LAB.
+- [x] Gateway bancario de siete lecturas, sesión cliente/CSRF/origen/titular y auditoría por herramienta. Sin PAN/CVV, SQL libre ni ejecución de prepare-*; no permite referencia o conversación ajena ni cambiar movimiento fijado. Banco guiado y modelos separados en LAB.
+- [x] Validar 116 pruebas API, 45 LAB y 10 frontend, ambas compilaciones. PostgreSQL: siete lecturas auditadas, productos/movimientos/solicitudes iguales antes/después y comando financiero rechazado. Docker saludable sin nueva migración ni borrado de volumen.
+- [x] UI del LAB: cambio consulta → problema → consulta ES/EN/PT, error de proveedor, seis axe nuevos más 16 de regresión sin infracciones ni errores JavaScript. Regresión bancaria serial: 56 vistas/6 comandos, experiencia y 17 vistas de servicios, 19 axe sin infracciones. Inspección visual de paneles ES y móvil PT satisfactoria.
+- [x] Proveedores reales con cinco turnos ficticios: consulta de folio → cobro incorrecto → saldo, más seguimiento EN/PT. Jev coincide con lo esperado; Luna responde sólo al problema, conserva folio y no afirma operaciones/consultas ejecutadas. Registro privado .local/intent-lab/routing-evaluation.json; comprobación acotada, no benchmark de precisión.
+- [x] Compartir [mapa, contrato API y pasos de prueba](docs/enrutamiento-jev-herramientas.md); actualizar inicio, agente y arquitectura. Solicitar apertura del LAB en Codex (respuesta queued).
+- [ ] Publicar en bryan y actualizar el PR #3 sin fusionar.
+- Último avance: implementado, desplegado localmente y validado. Los planes no autorizan operaciones. El adaptador de Jev al chat bancario autenticado queda fuera del alcance acordado; no se enviaron registros bancarios a proveedores.
+- Siguiente paso: publicar el cambio y verificar CI del PR.

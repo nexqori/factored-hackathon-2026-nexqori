@@ -50,6 +50,7 @@ Contrato completo en `/api/openapi.json`.
 | POST /api/requests | Cliente, confirmación, idempotencia y movimiento propio si existe. |
 | POST /api/requests/{id}/handoff | Cliente titular y confirmación; derivación simulada idempotente. |
 | POST /api/assistant | Cliente, mensaje ES/EN/PT, página permitida; respuesta guiada y navegación opcional. |
+| POST /api/assistant/tools/read | Cliente y CSRF; herramienta de lectura de lista cerrada, referencias propias y auditoría. Rechaza operaciones financieras. |
 | GET /api/admin/overview | Administrador: usuarios sin hashes, solicitudes y auditoría. |
 | POST /api/admin/requests/{id}/review | Administrador y confirmación; recibida → en revisión. |
 | POST /api/cards/{id}/block | Titular, contraseña, confirmación e idempotencia; bloqueo persistente local y auditoría. |

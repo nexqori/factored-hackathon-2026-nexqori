@@ -20,6 +20,7 @@ from .storage import read_conversations, save_conversation
 from . import storage
 from .providers import classify, provider_status
 from .dialogue import respond, overrides, save_instructions, contract_for, problem_intents
+from backend.agent_routing import route_plan
 
 app = FastAPI(title="Nexqori · Intent Lab", docs_url="/lab-api/docs", redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
@@ -149,12 +150,17 @@ def update_conversation(conversation_id: str, body: Conversation):
 def meta():
     rows = corpus()
     evidence = json.loads((ROOT / "evidence.json").read_text(encoding="utf-8"))
-    return {"network_enabled": True, "providers": provider_status(), "taxonomy": taxonomy(), "actions": {item["id"]: proposed_action(item["id"]) for item in taxonomy()}, "splits": {split: sum(row["split"] == split for row in rows) for split in ("train", "validation", "test")}, "corpus_sha256": digest(), "evidence": evidence}
+    return {"network_enabled": True, "providers": provider_status(), "taxonomy": taxonomy(), "actions": {item["id"]: proposed_action(item["id"]) for item in taxonomy()}, "tool_plans": tool_routes()['plans'], "splits": {split: sum(row["split"] == split for row in rows) for split in ("train", "validation", "test")}, "corpus_sha256": digest(), "evidence": evidence}
 
 
 @app.get("/lab-api/cases")
 def cases():
     return corpus()
+
+
+@app.get('/lab-api/tool-routes')
+def tool_routes():
+    return {'plans': {item['id']: route_plan({'status': 'ok', 'intent': item['id']}, source='reference') for item in taxonomy()}}
 
 
 @app.post("/lab-api/preview")
