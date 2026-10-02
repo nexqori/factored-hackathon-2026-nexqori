@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:ui": "node scripts/nexqori-smoke.mjs",
     "test:experience": "node scripts/nexqori-experience.mjs",
+    "test:claims": "node scripts/nexqori-claims.mjs",
     "test:services": "node scripts/nexqori-services.mjs",
     "setup": "node scripts/setup-local.mjs",
     "docker:up": "docker compose up --build -d",

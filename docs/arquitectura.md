@@ -52,6 +52,8 @@ Contrato completo en `/api/openapi.json`.
 | POST /api/assistant | Cliente, mensaje ES/EN/PT, página permitida; respuesta guiada y navegación opcional. |
 | POST /api/assistant/tools/read | Cliente y CSRF; herramienta de lectura de lista cerrada, referencias propias y auditoría. Rechaza operaciones financieras. |
 | GET /api/admin/overview | Administrador: usuarios sin hashes, solicitudes y auditoría. |
+| GET /api/requests/{id}/trace | Cliente titular: detalle, registros actuales, conversación vinculada y actividad paginada; lectura auditada. |
+| GET /api/admin/users/{userId}/requests/{id}/trace | Administrador: mismo detalle comprobando la relación folio/titular; lectura auditada. |
 | POST /api/admin/requests/{id}/review | Administrador y confirmación; recibida → en revisión. |
 | POST /api/cards/{id}/block | Titular, contraseña, confirmación e idempotencia; bloqueo persistente local y auditoría. |
 | GET /api/requests/{id}/refund | Titular: elegibilidad, importe, cuenta enmascarada y revisión de devolución. |

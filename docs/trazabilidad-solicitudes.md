@@ -1,5 +1,7 @@
 # Solicitudes, operación de devolución y consulta del movimiento
 
+Administración permite consultar el [panel de reclamos por usuario](panel-reclamos.md): estado explicado, registros vinculados, motivo de decisión, conversaciones y eventos con sus referencias. El cliente consulta el mismo tipo de detalle, limitado a sus propias solicitudes.
+
 Una solicitud registrada no equivale a una devolución. Mis solicitudes y Administración muestran el estado de la operación vinculada cuando existe:
 
 | Vista | Significado comprobable |
