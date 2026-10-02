@@ -1,6 +1,6 @@
 # Flujos de atención en el LAB
 
-Abre [Flujos](http://localhost:5190/?view=flows&lang=es). El panel usa **React Flow 12.12.0**, FastAPI, Jev y Luna high. No requiere PostgreSQL para evaluar conversaciones ni utiliza la sesión del banco.
+Esta guía corresponde a **[Recorridos anteriores](http://localhost:5190/?view=flows&mode=inspector&lang=es)**. Para agregar y conectar bloques, consulta el **[editor de flujos e incidencias](editor-flujos-lab.md)**, ahora vista inicial de Flujos. El visor usa **React Flow 12.12.0**, FastAPI, Jev y Luna high. No requiere PostgreSQL para evaluar conversaciones ni utiliza la sesión del banco.
 
 ## Decisiones del recorrido
 

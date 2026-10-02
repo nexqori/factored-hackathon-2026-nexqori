@@ -22,6 +22,8 @@ from .providers import classify, provider_status
 from .dialogue import respond, overrides, save_instructions, contract_for, problem_intents
 from backend.agent_routing import route_plan
 from . import flow_engine
+from . import workflow_editor as editor
+from . import app_diagnostics
 
 app = FastAPI(title="Nexqori · Intent Lab", docs_url="/lab-api/docs", redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
@@ -36,7 +38,8 @@ async def local_only(request: Request, call_next):
         if request.headers.get("origin") not in (None, "http://localhost:5190", "http://127.0.0.1:5190", "http://localhost:5191", "http://127.0.0.1:5191"):
             return JSONResponse({"error": "origin_not_allowed"}, status_code=403)
         # Provider inputs are saved only in private local run records.
-        if len(await request.body()) > 24000:
+        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith('/run') else 24000
+        if len(await request.body()) > limit:
             return JSONResponse({"error": "input_too_long"}, status_code=413)
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -88,6 +91,64 @@ class WorkflowInstructions(BaseModel):
     model_config=ConfigDict(extra="forbid")
     language: Literal["es","en","pt"]
     instructions: str=Field(max_length=2000)
+
+class EditorSave(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    graph: editor.Graph
+    revision: int | None=Field(default=None,ge=1)
+
+class EditorRun(Dialogue):
+    revision: int=Field(ge=1)
+    incident_id: UUID | None=None
+
+@app.get('/lab-api/editor/template')
+def editor_template(kind: Literal['banking','app']='banking'):
+    return {'graph':editor.template(kind),'fields':list(flow_engine.QUESTIONS),'taxonomy':taxonomy()}
+
+@app.post('/lab-api/editor/app-check')
+def editor_app_check():
+    with lock: return app_diagnostics.reproduce()
+
+@app.get('/lab-api/editor/notifications')
+def editor_notifications():
+    return {'notifications':list(reversed(app_diagnostics.notifications()))[:30]}
+
+@app.get('/lab-api/editor/workflows')
+def editor_list():
+    return {'workflows':editor.list_workflows()}
+
+@app.post('/lab-api/editor/validate')
+def editor_validate(body: EditorSave):
+    return editor.validate_graph(body.graph.model_dump()) | {'graph':body.graph.model_dump()}
+
+@app.post('/lab-api/editor/workflows',status_code=201)
+def editor_create(body: EditorSave):
+    with lock:
+        try: return editor.save_workflow(body.graph.model_dump())
+        except RuntimeError: raise HTTPException(409,'workflow_limit') from None
+
+@app.get('/lab-api/editor/workflows/{workflow_id}')
+def editor_read(workflow_id: UUID):
+    try: return editor.read_workflow(workflow_id)
+    except FileNotFoundError: raise HTTPException(404,'not_found') from None
+
+@app.put('/lab-api/editor/workflows/{workflow_id}')
+def editor_save(workflow_id: UUID,body: EditorSave):
+    with lock:
+        try: return editor.save_workflow(body.graph.model_dump(),workflow_id,body.revision)
+        except FileNotFoundError: raise HTTPException(404,'not_found') from None
+        except RuntimeError: raise HTTPException(409,'revision_conflict') from None
+
+@app.post('/lab-api/editor/workflows/{workflow_id}/run')
+def editor_run(workflow_id: UUID,body: EditorRun):
+    if body.context: raise HTTPException(422,'configure_context_in_node')
+    try: record=editor.read_workflow(workflow_id)
+    except FileNotFoundError: raise HTTPException(404,'not_found') from None
+    if record['revision']!=body.revision: raise HTTPException(409,'revision_conflict')
+    if not editor.validate_graph(record['graph'])['valid']: raise HTTPException(422,'invalid_graph')
+    if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
+    try: return editor.run_workflow(record,[m.model_dump() for m in body.messages],body.language,str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None)
+    finally: provider_lock.release()
 
 class FlowEdit(BaseModel):
     model_config = ConfigDict(extra='forbid')

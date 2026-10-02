@@ -1,6 +1,6 @@
 # Empezar con Nexqori
 
-Panel de evaluación: [Flujos con React Flow](docs/lab-flujos-react-flow.md). En `http://localhost:5190/?view=flows&lang=es` puedes ejecutar Jev/Luna, editar preguntas ES/EN/PT y reabrir trazas JSON. `npm run test:lab:flows` verifica la interfaz sin consumir proveedores. Voz aplazada.
+Panel de evaluación: [editor de flujos e incidencias](docs/editor-flujos-lab.md). En `http://localhost:5190/?view=flows&mode=editor&lang=es` puedes crear y conectar bloques, configurar contexto ES/EN/PT y ejecutar el grafo guardado. La plantilla Incidencia de la app genera logs y avisos locales sin modelos. `npm run test:lab:editor` verifica ese recorrido; `npm run test:lab:flows` conserva el [visor anterior](docs/lab-flujos-react-flow.md). Voz aplazada.
 
 Pruebas repetibles: [tres casos con acciones y auditoría](docs/pruebas-tres-casos.md). `npm run test:cases` ejecuta bloqueo, devolución y derivación ES/EN/PT. `npm run test:cases:prepare` crea accesos privados nuevos para practicarlos manualmente.
 

@@ -34,7 +34,7 @@ try {
   for (const [i,lang] of ['es','en','pt'].entries()) {
     await page.addInitScript(value=>localStorage.setItem('nexqori-lab-language',value),lang);
     await page.setViewportSize({width:i===2?390:1440,height:1100});
-    await page.goto(base+'/?view=flows');
+    await page.goto(base+'/?view=flows&mode=inspector');
     await page.locator('#flow-case').waitFor();
     assert.equal(await page.locator('#flow-intent option').count(),24);
     assert.equal(await page.locator('[data-flow-node]').count(),12);

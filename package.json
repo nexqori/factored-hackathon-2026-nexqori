@@ -20,7 +20,8 @@
     "test:cases": "node scripts/nexqori-cases.mjs",
     "test:cases:prepare": "node scripts/nexqori-cases.mjs --prepare",
     "build:lab": "tsc -p experiments/intent-lab/tsconfig.json --noEmit && vite build --config experiments/intent-lab/vite.config.ts",
-    "test:lab:flows": "node experiments/intent-lab/check-flow-ui.mjs"
+    "test:lab:flows": "node experiments/intent-lab/check-flow-ui.mjs",
+    "test:lab:editor": "node experiments/intent-lab/check-editor-ui.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

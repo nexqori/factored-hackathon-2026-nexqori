@@ -11,7 +11,7 @@ import './style.css';
 import './simple.css';
 import { safeNavigation } from '../../../src/navigation';
 
-const FlowLabPanel=lazy(()=>import('./FlowLabPanel').then(module=>({default:module.FlowLabPanel})));
+const FlowWorkspace=lazy(()=>import('./FlowWorkspace').then(module=>({default:module.FlowWorkspace})));
 
 type Label = { id: string; copy: Record<Language, { title: string; summary: string }> };
 type Action = { intent: string; kind: string; route: string | null; executes_operation: boolean };
@@ -108,7 +108,7 @@ function App() {
     <main>
       {error && <div role="alert" className="error">{t('loadError')} <button onClick={() => void load()}>{t('retry')}</button></div>}
       {!meta ? <p role="status">{t('loading')}</p> : <>
-        {page === 'flows' && <Suspense fallback={<p role="status">{t('loading')}</p>}><FlowLabPanel key={language} language={language}/></Suspense>}
+        {page === 'flows' && <Suspense fallback={<p role="status">{t('loading')}</p>}><FlowWorkspace language={language}/></Suspense>}
         {page === 'walkthrough' && <>
           <div className="simple-heading"><div><h1>{t('simpleTitle')}</h1><p>{t('simpleIntro')}</p></div><div className="button-row"><button className="primary" onClick={() => startConversation()}><Plus size={17}/>{t('newConversation')}</button><button className="secondary" onClick={exportConversations}><Download size={16}/>{t('downloadConversations')}</button></div></div>
           <p className="reference-line"><FlaskConical size={16}/>{t('authored')} {t('referenceVsRun')}</p>
