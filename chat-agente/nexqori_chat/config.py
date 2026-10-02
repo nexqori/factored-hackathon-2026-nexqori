@@ -2,12 +2,47 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import json
 import os
+import re
+from urllib.parse import quote
 
 from jsonschema import Draft202012Validator
+from dotenv import dotenv_values
 from .contratos import require, digest
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / 'config'
+
+
+def read_environment():
+    """Root .env < chat-agente/.env < entorno del proceso; sin modificar os.environ.
+
+    Valores vacíos no borran una configuración anterior. Sin interpolación para
+    conservar literalmente contraseñas que contengan ${...}.
+    """
+    values = {}
+    for path in (ROOT.parent / '.env', ROOT / '.env'):
+        if path.is_file():
+            values.update({k: v for k, v in dotenv_values(path, interpolate=False).items() if v not in (None, '')})
+    values.update({k: v for k, v in os.environ.items() if v != ''})
+    return values
+
+
+def resolve_database_url(values, explicit=None):
+    """Mismo rol/base/host que Compose, sin crear engine ni abrir conexiones."""
+    if explicit is not None:
+        require(isinstance(explicit, str) and bool(explicit.strip()), 'INVALID_DATABASE_URL', 'database_url explícita está vacía.')
+        return explicit
+    if values.get('DATABASE_URL'):
+        return values['DATABASE_URL']
+    password = values.get('APP_DATABASE_PASSWORD')
+    require(bool(password), 'MISSING_DATABASE_URL', 'Configurar DATABASE_URL o APP_DATABASE_PASSWORD para construir la conexión.')
+    host = values.get('PGHOST', 'db')
+    port = values.get('PGPORT', '5432')
+    require(bool(re.fullmatch(r'[A-Za-z0-9._-]+', host)), 'INVALID_DATABASE_HOST', 'PGHOST debe ser un nombre de host TCP o IPv4.')
+    require(port.isdecimal() and 1 <= int(port) <= 65535, 'INVALID_DATABASE_PORT', 'PGPORT inválido.')
+    user = quote(values.get('PGUSER', 'nexqori_app'), safe='')
+    database = quote(values.get('PGDATABASE', 'nexqori'), safe='')
+    return f'postgresql://{user}:{quote(password, safe="")}@{host}:{port}/{database}'
 
 
 @dataclass(frozen=True)
@@ -28,9 +63,9 @@ class Settings:
 
     @classmethod
     def from_env(cls, *, allow_api=False, allow_external_data=False, database_url=None):
-        # No carga .env ni abre conexiones implícitamente. CLI carga .env explícitamente.
-        return cls(openai_key=os.getenv('OPENAI_API_KEY', ''), typesafe_key=os.getenv('TYPESAFE_API_KEY', ''),
-                   database_url=database_url or os.getenv('DATABASE_URL', ''),
+        values = read_environment()
+        return cls(openai_key=values.get('OPENAI_API_KEY', ''), typesafe_key=values.get('TYPESAFE_API_KEY', ''),
+                   database_url=resolve_database_url(values, database_url),
                    allow_api=allow_api, allow_external_data=allow_external_data)
 
 

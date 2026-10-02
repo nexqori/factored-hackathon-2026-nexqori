@@ -1,8 +1,7 @@
 """Entrada manual; nunca se ejecuta al importar el paquete."""
 import argparse
 import getpass
-from dotenv import load_dotenv
-from .config import ROOT, Settings
+from .config import Settings
 from .postgres import PostgresRepository
 from .codigo1_orquestador import ChatAgent, solicitud_predeterminada
 
@@ -17,7 +16,6 @@ def main():
     args = parser.parse_args()
     if not (args.enable_api and args.allow_external_data):
         parser.error('Se requieren --enable-api y --allow-external-data; no se inició ninguna consulta.')
-    load_dotenv(ROOT.parent / '.env', override=False)
     settings = Settings.from_env(allow_api=args.enable_api, allow_external_data=args.allow_external_data)
     token = getpass.getpass('Cookie nexqori_session del cliente (oculta): ')
     service = ChatAgent(settings, PostgresRepository(settings))

@@ -48,13 +48,18 @@ Las reglas originales y los notebooks no se modifican. `fresh_data` y titularida
 | --- | --- |
 | `OPENAI_API_KEY` | Ya existe en `.env.example` raíz; preguntas, extracción y GPT-6 Luna |
 | `TYPESAFE_API_KEY` | Ya existe en `.env.example` raíz; Jev `jev-1.13.0` |
-| `DATABASE_URL` | Ya consumida por `backend/db.py` e inyectada por Compose; falta declararla en el entorno independiente o `.env` raíz |
-| `APP_DATABASE_PASSWORD` | Compose la usa para formar DATABASE_URL del rol `nexqori_app`; este paquete no lee ni usa la contraseña del administrador |
+| `DATABASE_URL` | URL completa opcional; si falta, `Settings.from_env()` la construye con la contraseña de aplicación y los valores de conexión |
+| `APP_DATABASE_PASSWORD` | Se reutiliza desde `.env` raíz para construir la URL del rol `nexqori_app`; no se usa la contraseña del administrador |
+| `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE` | Opcionales: defaults `db`, `5432`, `nexqori_app`, `nexqori`; ajustar host/puerto fuera de la red Docker |
 | `session_token` | Argumento privado desde la cookie `nexqori_session`; no va en mensajes, trazas, prompts ni persistencia |
 | `Settings.allow_api` | Por defecto `False`; habilitación explícita de llamadas |
 | `Settings.allow_external_data` | Por defecto `False`; habilitación explícita del envío de contexto y datos propios a TypeSafe/OpenAI |
 
-El `.env.example` de esta carpeta documenta sólo las variables consumidas. No se modificó el archivo raíz ni se inventó una sesión. El CLI carga `.env` de la raíz; para uso como función, el servidor proporciona las variables o las carga explícitamente. Cambiar claves no activa automáticamente ninguna ruta.
+El `.env.example` de esta carpeta documenta las variables consumidas. No se modificó el archivo raíz ni se inventó una sesión. Tanto CLI como chatbot usan `Settings.from_env()`: lee `.env` raíz, luego `chat-agente/.env` si existe y finalmente el entorno del proceso, en ese orden de prioridad creciente. Los valores vacíos no borran valores previos. No modifica `os.environ`, no imprime ni guarda la URL resultante y no conecta al cargar configuración. Cambiar claves no activa llamadas a modelos.
+
+La precedencia de conexión es: argumento `database_url=...` → `DATABASE_URL` resuelta de esos orígenes → construcción con `APP_DATABASE_PASSWORD` y `PG*`. Si existe una URL completa, los campos `PG*` no la reemplazan. La contraseña y los componentes de usuario/base se codifican para URL; se conservan literalmente caracteres como `@`, `#`, `$` o `${...}`. No se realiza interpolación entre variables de los archivos `.env`: escribir una URL completa literal o dejarla vacía para usar la construcción automática.
+
+`backend/db.py` consume `DATABASE_URL`, pero no la crea ni la exporta como variable Python. La solución independiente reutiliza los valores de Compose sin importar SQLAlchemy ni crear el engine del backend. Con el `.env` raíz generado por el setup, no hace falta copiar de nuevo la contraseña para ejecutar dentro de la red Docker. Para ajustes independientes, copiar `chat-agente/.env.example` a `chat-agente/.env` y editar sólo lo necesario; el archivo local está excluido de Git.
 
 Compose usa `postgresql+psycopg://nexqori_app:<password>@db:5432/nexqori`; el adaptador acepta esa forma o `postgresql://...`. Codificar los caracteres especiales de la contraseña en la URI. El host `db` sólo resuelve dentro de la red Docker y PostgreSQL no publica puerto al host. Para ejecución independiente proporcionar una conexión accesible con rol de lectura mínimo; no se alteraron puertos/Compose. Claves y conexión nunca se imprimen.
 
@@ -155,6 +160,44 @@ Cada llamada conserva `trace_id`, etapa, tipo, archivo/función/línea y código
 | `INVALID_CITATION`, `CITATION_MISMATCH`, `FORBIDDEN_OPERATION` | Salida LLM incompatible; no mostrarla como respuesta válida |
 | `IDEMPOTENCY_CONFLICT`, `PERSISTENCE_*` | Reuso de ID, orden/versión o permisos de persistencia; detener y revisar |
 
-`tests/test_orquestador.py` contiene pruebas con dobles locales para reclamos, aclaración, tres respuestas no entendidas, placeholders, idempotencia y autenticación. **No se ejecutaron.** Sólo se revisan archivos con AST/JSON/esquema; no se ejecutan los programas para validar la entrega. Las verificaciones de citas/esquema no demuestran que toda afirmación natural sea correcta; evaluar calidad y seguridad offline y luego en shadow antes de integrar.
+## Ejecutar test_config y test_orquestador
+
+Ambos archivos utilizan `unittest`, incluido en Python. Son pruebas locales: **no requieren Docker, PostgreSQL, cookies, `.env` ni claves de API**. No llaman a Jev/OpenAI ni validan conectividad real. Necesitan las dependencias del paquete para resolver sus importaciones.
+
+En PowerShell, preparar el entorno una vez:
+
+```powershell
+Set-Location "C:\Users\santi\Documents\Projects\nexqori\chat-agente"
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Si ya existe un entorno preparado, utilizar su intérprete; no hace falta recrearlo. Los comandos siguientes usan directamente el Python de `.venv`, sin activar scripts de PowerShell. Ejecutarlos desde `chat-agente` para que se encuentre `nexqori_chat`.
+
+**Sólo configuración (`test_config.py`):**
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_config.py" -v
+```
+
+Comprueba prioridad de URL explícita, URL existente frente a componentes, defaults de Compose, codificación de contraseñas, host/puerto independiente y errores de configuración. No comprueba que el puerto esté abierto ni que la contraseña real sea correcta.
+
+**Sólo coordinador (`test_orquestador.py`):**
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_orquestador.py" -v
+```
+
+Usa `FakeRepository` y `FakeProviders` para comprobar bloqueo de reclamos, aclaraciones, tres respuestas no entendidas, placeholders, idempotencia y autenticación. No verifica la calidad de clasificación ni respuestas de modelos reales.
+
+**Ambos archivos:**
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -v
+```
+
+`-v` muestra cada caso. El resumen `OK` indica que las comprobaciones pasaron; `FAIL` señala una aserción incumplida y `ERROR` una excepción inesperada. La prueba de sesión inválida puede imprimir una traza JSON de error deliberada: evaluar el resultado final de `unittest`, no sólo esa línea. Si aparece `ModuleNotFoundError`, verificar el directorio actual y que las dependencias se instalaron con el mismo intérprete utilizado para probar.
+
+**Estas pruebas no se ejecutaron durante esta edición.** La validación de autoría fue estática. Las verificaciones de citas/esquema no demuestran que toda afirmación natural sea correcta; evaluar calidad y seguridad offline y luego en shadow antes de integrar.
 
 Fuentes: [skill TypeSafe](C:/Users/santi/.codex/skills/typesafe-ai/SKILL.md), [API TypeSafe](https://docs.typesafe.ai/api), [Choice](https://docs.typesafe.ai/primitives/choice), [clasificación jerárquica](https://docs.typesafe.ai/cookbooks/hierarchical_classification), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna). Disponibilidad de modelos/credenciales y ejecución real pendientes de validación autorizada.
