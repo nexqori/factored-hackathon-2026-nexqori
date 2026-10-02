@@ -29,10 +29,11 @@ def provider_status():
     return {name: "configured" if settings.get(key) else "pending_connection" for name, key in [("jev", "TYPESAFE_API_KEY"), ("llm", "LLM_API_KEY")]}
 
 
-def classify_jev(messages, language, instructions):
+def classify_jev(messages, language, instructions, *, criteria=None):
     settings = configuration()
     key = settings.get("TYPESAFE_API_KEY")
     request = request_preview(messages, language, instructions)["jev"]
+    if criteria is not None: request['questions']['intent']['criteria'] = criteria
     request["model"] = settings.get("JEV_MODEL") or "jev-1.13.0"
     start = time.perf_counter()
     answer = {"status": "error", "error": "missing_key"}
@@ -43,14 +44,14 @@ def classify_jev(messages, language, instructions):
                 response = client.post("https://api.typesafe.ai/v1/systemone", headers={"Authorization": f"Bearer {key}"}, json=request)
             if response.status_code == 200:
                 raw = response.json()
-                answer = parse_jev(raw)
+                answer = parse_jev(raw, criteria)
                 usage = raw.get("usage", {})
                 if any(type(usage.get(name)) is not int or usage[name] < 0 for name in ("input_tokens", "output_tokens")):
                     raise ValueError("Invalid usage")
                 answer["usage"] = {name: usage[name] for name in ("input_tokens", "output_tokens")}
                 answer["estimated_api_cost_usd"] = usage["input_tokens"] * 0.042 / 1_000_000
                 answer["price_basis"] = "USD 0.042/M input tokens, official model docs checked 2026-09-29; estimate, not invoice"
-                answer["proposal"] = proposed_action(answer["intent"])
+                if answer['intent'] in LABELS: answer["proposal"] = proposed_action(answer["intent"])
             else:
                 answer = {"status": "error", "error": {401: "auth_error", 403: "auth_error", 429: "rate_limited", 529: "rate_limited"}.get(response.status_code, "provider_error")}
         except httpx.TimeoutException:

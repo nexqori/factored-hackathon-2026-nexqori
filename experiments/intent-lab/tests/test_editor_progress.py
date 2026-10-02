@@ -5,7 +5,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from intent_lab import api, workflow_editor as editor
+from intent_lab import api, workflow_editor as editor, workflow_execution as execution
 from test_providers import private_config
 from test_luna_dialogue import enable
 from test_workflow_editor import create, mock_models
@@ -27,7 +27,7 @@ def test_case_catalog_and_templates(private_config, monkeypatch, language):
     assert all(r['title'] and r['example'] and r['example_source'] == 'authored_category_example' for r in rows)
     for row in rows:
         graph = client.get('/lab-api/editor/case-template/' + row['intent']).json()
-        assert graph['name'][language] == row['title']
+        assert graph == editor.template()  # Cases never change the graph or preset its classification.
         assert editor.validate_graph(graph)['valid']
     assert client.get('/lab-api/editor/case-template/invented').status_code == 404
 
@@ -95,9 +95,12 @@ def test_stream_preconditions_and_error_release_lock(private_config, monkeypatch
     assert client.post(url, content='x'*24001).status_code == 413
     with monkeypatch.context() as patch:
         def broken(*args): raise RuntimeError('private-provider-detail')
-        patch.setattr(editor, 'run_workflow', broken)
+        patch.setattr(execution, '_one', broken)
         events = streamed(client, record)
-        assert events == [{'event': 'error', 'code': 'execution_failed'}]
+        assert events[-1] == {'event': 'error', 'code': 'execution_failed'}
+        assert events[0]['event'] == 'execution_created'
+        state = client.get('/lab-api/editor/executions/' + events[0]['result']['execution']['id']).json()
+        assert state['execution']['phase'] == 'interrupted'
         assert not api.provider_lock.locked()
     events = streamed(client, record)
     assert events[-1]['result']['state'] == 'missing_incident'

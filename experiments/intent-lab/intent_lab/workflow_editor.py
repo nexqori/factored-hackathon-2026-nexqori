@@ -1,18 +1,17 @@
 """Bounded graph editor and interpreter for the local LAB. No executable code or bank tools."""
-import hashlib
 import json
-import time
 import uuid
 from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from backend.agent_routing import route_family, route_plan
-from . import flow_engine as flow, storage, app_diagnostics
-from .decision import INSTRUCTIONS, LABELS
-from .providers import classify_jev, openai_response, save_run
+from . import flow_engine as flow, storage
+from .decision import LABELS
+from .providers import classify_jev, openai_response
+from .workflow_routing import classify_triage, case_criteria
 
-KINDS = ('start', 'jev', 'context', 'condition', 'question', 'response', 'escalate', 'diagnostic', 'notify')
+PROBLEM_PORTS = ('unrecognized-charge', 'incorrect-charge', 'payment-status', 'app-support', 'branch-support', 'service-feedback')
+KINDS = ('start', 'triage', 'jev', 'case_router', 'contract', 'preview', 'context', 'condition', 'question', 'response', 'escalate', 'diagnostic', 'notify')
 TERMINALS = {'question', 'response', 'escalate'}
 
 
@@ -31,11 +30,15 @@ class Position(Strict):
     y: float = Field(ge=-10000, le=10000, allow_inf_nan=False)
 
 
-class JevConfig(Strict):
+class ModelConfig(Strict):
     instructions: Text = Field(default_factory=Text)
 
 
-class ContextConfig(JevConfig):
+class JevConfig(ModelConfig):
+    scope: Literal['all', 'problem', 'query'] = 'all'
+
+
+class ContextConfig(ModelConfig):
     mode: Literal['case', 'selected'] = 'case'
     fields: list[str] = Field(default_factory=list, max_length=12)
     notes: Text = Field(default_factory=Text)
@@ -49,12 +52,12 @@ class ContextConfig(JevConfig):
 
 
 class ConditionConfig(Strict):
-    predicate: Literal['intent_is', 'family_is', 'has_missing', 'field_missing', 'needs_human', 'diagnostic_failed'] = 'has_missing'
+    predicate: Literal['triage_is', 'intent_is', 'family_is', 'has_missing', 'field_missing', 'needs_human', 'diagnostic_failed'] = 'has_missing'
     value: str = Field(default='', max_length=80)
 
     @model_validator(mode='after')
     def allowed_value(self):
-        allowed = {'intent_is': LABELS, 'family_is': {'query','problem','service','clarification'},
+        allowed = {'triage_is': {'query','problem','clarification'}, 'intent_is': LABELS, 'family_is': {'query','problem','service','clarification'},
                    'field_missing': set(flow.QUESTIONS), 'has_missing': {''}, 'needs_human': {''}, 'diagnostic_failed': {''}}
         if self.value not in allowed[self.predicate]: raise ValueError('invalid_condition')
         return self
@@ -72,7 +75,7 @@ class QuestionConfig(Strict):
 
 
 class ResponseConfig(Strict):
-    outcome: Literal['information', 'review_in_bank'] = 'review_in_bank'
+    outcome: Literal['information', 'review_in_bank', 'current'] = 'review_in_bank'
     text: Text = Field(default_factory=Text)
 
     @model_validator(mode='after')
@@ -86,13 +89,21 @@ class EscalateConfig(Strict):
     text: Text = Field(default_factory=Text)
 
 
-CONFIGS = {'start': Strict, 'diagnostic': Strict, 'notify': Strict, 'jev': JevConfig, 'context': ContextConfig, 'condition': ConditionConfig,
+class ContractConfig(Strict):
+    intent: Literal['', 'unrecognized-charge', 'incorrect-charge', 'payment-status', 'app-support', 'branch-support', 'service-feedback'] = ''
+
+
+class PreviewConfig(Strict):
+    stage: Literal['query', 'action', 'handoff', 'delivery', 'closure'] = 'action'
+
+
+CONFIGS = {'start': Strict, 'case_router': Strict, 'contract': ContractConfig, 'preview': PreviewConfig, 'diagnostic': Strict, 'notify': Strict, 'triage': ModelConfig, 'jev': JevConfig, 'context': ContextConfig, 'condition': ConditionConfig,
            'question': QuestionConfig, 'response': ResponseConfig, 'escalate': EscalateConfig}
 
 
 class Node(Strict):
     id: str = Field(pattern=r'^[a-zA-Z][a-zA-Z0-9_-]{0,49}$')
-    kind: Literal['start','jev','context','condition','question','response','escalate','diagnostic','notify']
+    kind: Literal['start','triage','jev','case_router','contract','preview','context','condition','question','response','escalate','diagnostic','notify']
     label: Text
     position: Position
     config: dict = Field(default_factory=dict)
@@ -108,14 +119,14 @@ class Edge(Strict):
     id: str = Field(pattern=r'^[a-zA-Z][a-zA-Z0-9_-]{0,99}$')
     source: str = Field(max_length=50)
     target: str = Field(max_length=50)
-    port: Literal['next', 'yes', 'no'] = 'next'
+    port: Literal['next', 'yes', 'no', 'reply', 'unrecognized-charge', 'incorrect-charge', 'payment-status', 'app-support', 'branch-support', 'service-feedback', 'otherwise'] = 'next'
 
 
 class Graph(Strict):
     schema_version: Literal[1] = 1
     name: Text
-    nodes: list[Node] = Field(min_length=1, max_length=24)
-    edges: list[Edge] = Field(default_factory=list, max_length=36)
+    nodes: list[Node] = Field(min_length=1, max_length=40)
+    edges: list[Edge] = Field(default_factory=list, max_length=64)
 
     @model_validator(mode='after')
     def bounded_name(self):
@@ -126,7 +137,7 @@ class Graph(Strict):
 def text(es, en, pt): return dict(zip(flow.LANGS, (es, en, pt)))
 
 
-def template(kind='banking'):
+def legacy_template(kind='banking'):
     def node(id, kind, label, x, y, config=None):
         return {'id':id,'kind':kind,'label':text(*label),'position':{'x':x,'y':y},'config':config or {}}
     if kind=='app':
@@ -160,53 +171,156 @@ def template(kind='banking'):
                                  'edges':[{'id':f'e{i}','source':a,'target':b,'port':p} for i,(a,b,p) in enumerate(links)]}).model_dump()
 
 
+def with_initial_route(graph):
+    """Create a new draft with routing and a customer-controlled feedback connection."""
+    import copy
+    graph=copy.deepcopy(graph)
+    def node(id,kind,labels,x,y,config=None):
+        return {'id':id,'kind':kind,'label':text(*labels),'position':{'x':x,'y':y},'config':config or {}}
+    for n in graph['nodes']:
+        if n['kind']!='start': n['position']['x']+=780
+        if n['kind']=='jev': n['config']['scope']='problem'
+    graph['nodes'] += [
+        node('triage','triage',('¿Consulta o queja?','Inquiry or complaint?','Consulta ou reclamação?'),260,100),
+        node('complaint_route','condition',('¿Es una queja o problema?','Is it a complaint or problem?','É uma reclamação ou problema?'),520,100,{'predicate':'triage_is','value':'problem'}),
+        node('query_route','condition',('¿Es una consulta o gestión?','Is it an inquiry or request?','É uma consulta ou solicitação?'),520,450,{'predicate':'triage_is','value':'query'}),
+        node('query_case','jev',('Identificar la consulta','Identify the inquiry','Identificar a consulta'),780,450,{'scope':'query'}),
+        node('query_result','response',('Orientar la consulta','Guide the inquiry','Orientar a consulta'),1040,450,{'outcome':'information','text':text('La consulta tiene su propia ruta. Revisa las herramientas propuestas y los datos que necesitan antes de consultar el banco.','The inquiry has its own route. Review the proposed tools and their required information before checking bank records.','A consulta tem seu próprio percurso. Confira as ferramentas propostas e os dados necessários antes de consultar o banco.')}),
+        node('clarify','question',('Precisar la necesidad','Clarify the need','Esclarecer a necessidade'),780,680,{'mode':'custom','text':text('¿Quieres consultar información o reportar un problema? Cuéntame qué necesitas revisar primero.','Would you like information or to report a problem? Tell me what you need to review first.','Quer consultar informações ou relatar um problema? Conte o que precisa revisar primeiro.')}),
+    ]
+    first=next(n['id'] for n in graph['nodes'] if n['kind']=='start')
+    initial=next(e for e in graph['edges'] if e['source']==first)
+    previous=initial['target'];initial['target']='triage'
+    links=[('triage','complaint_route','next'),('complaint_route',previous,'yes'),('complaint_route','query_route','no'),
+           ('query_route','query_case','yes'),('query_route','clarify','no'),('query_case','query_result','next')]
+    context=next(n['id'] for n in graph['nodes'] if n['kind']=='context')
+    question=next(n['id'] for n in graph['nodes'] if n['kind']=='question' and n['config'].get('mode')=='missing')
+    links.append((question,context,'reply'))
+    graph['edges'] += [{'id':'routing_'+str(i),'source':a,'target':b,'port':port} for i,(a,b,port) in enumerate(links)]
+    return Graph.model_validate(graph).model_dump()
+
+
+def legacy_master_template(kind='banking'):
+    if kind=='app': return legacy_template('app')
+    graph=legacy_template()
+    def node(id,kind,labels,x,y,config=None):
+        return {'id':id,'kind':kind,'label':text(*labels),'position':{'x':x,'y':y},'config':config or {}}
+    # One graph: the classified intent selects the contract and its requirements at runtime.
+    graph['name']=text('Flujo de atención','Support workflow','Fluxo de atendimento')
+    graph['nodes'] += [
+        node('contract','contract',('Cargar contrato del caso','Load case procedure','Carregar procedimento do caso'),630,100),
+        node('app_case','condition',('¿Problema de la app?','App issue?','Problema no app?'),890,100,{'predicate':'intent_is','value':'app-support'}),
+        node('logs','diagnostic',('Recoger logs de la incidencia','Read incident logs','Ler logs da incidência'),1150,-160),
+        node('failed','condition',('¿Se confirmó el error?','Was an error recorded?','O erro foi registrado?'),1410,-160,{'predicate':'diagnostic_failed'}),
+        node('notify','notify',('Registrar aviso de incidencia','Register incident notification','Registrar aviso de incidência'),1670,-160),
+    ]
+    scope=next(n for n in graph['nodes'] if n['id']=='scope')
+    scope.update(label=text('¿Problema identificado?','Problem identified?','Problema identificado?'),config={'predicate':'family_is','value':'problem'})
+    for n in graph['nodes']:
+        if n['id'] in ('context','human','escalate','missing','ask','review'):n['position']['x']+=1300
+    for e in graph['edges']:
+        if e['source']=='scope':
+            e['port']='no' if e['target']=='outside' else 'yes'
+            if e['target']=='context':e['target']='contract'
+    links=[('contract','app_case','next'),('app_case','logs','yes'),('app_case','context','no'),
+           ('logs','failed','next'),('failed','notify','yes'),('failed','context','no'),('notify','context','next')]
+    graph['edges'] += [{'id':'case_'+str(i),'source':a,'target':b,'port':p} for i,(a,b,p) in enumerate(links)]
+    return with_initial_route(Graph.model_validate(graph).model_dump())
+
+
+def template(kind='banking'):
+    if kind == 'app': return legacy_template('app')
+    from .workflow_templates import support_workflow
+    return support_workflow()
+
+
+def master_workflow():
+    """Keep one saved default graph, preserving user edits and other saved workflows."""
+    path=storage.DATA_DIR/'master-workflow.json'
+    if path.exists():
+        try:
+            pointer = json.loads(path.read_text(encoding='utf-8'))
+            record = read_workflow(pointer['id'])
+            # Only upgrade the untouched generated graph. Preserve custom edits and
+            # the original snapshot for old execution links and local recovery.
+            if pointer.get('template_version', 1) < 2 and Graph.model_validate(record['graph']).model_dump() == legacy_master_template():
+                archive = storage.DATA_DIR/'workflow-revisions'/f"{record['id']}-v{record['revision']}.json"
+                archive.parent.mkdir(parents=True, exist_ok=True)
+                archive.write_text(json.dumps(record, ensure_ascii=False), encoding='utf-8')
+                record = save_workflow(template(), record['id'], record['revision'])
+                temp=path.with_suffix('.tmp');temp.write_text(json.dumps({'id':record['id'], 'template_version':2}),encoding='utf-8');temp.replace(path)
+            return record
+        except FileNotFoundError:pass
+    record=save_workflow(template())
+    path.parent.mkdir(parents=True,exist_ok=True)
+    temp=path.with_suffix('.tmp');temp.write_text(json.dumps({'id':record['id'], 'template_version':2}),encoding='utf-8');temp.replace(path)
+    return record
+
+
 def validate_graph(graph):
-    """Validate ports, reachability, acyclicity and required predecessors on every path."""
-    graph = Graph.model_validate(graph).model_dump()
-    nodes = {n['id']:n for n in graph['nodes']}
-    errors=[]
-    def error(code, node=None, port=None): errors.append({'code':code,'node_id':node,'port':port})
+    """Automatic paths are acyclic. Feedback must wait for new customer input."""
+    graph=Graph.model_validate(graph).model_dump()
+    nodes={n['id']:n for n in graph['nodes']};errors=[]
+    def error(code,node=None,port=None): errors.append({'code':code,'node_id':node,'port':port})
     if len(nodes)!=len(graph['nodes']): error('duplicate_node')
     if len({e['id'] for e in graph['edges']})!=len(graph['edges']): error('duplicate_edge')
     starts=[n['id'] for n in graph['nodes'] if n['kind']=='start']
     if len(starts)!=1: error('one_start')
-    for kind in ('jev','context','diagnostic'):
-        if sum(n['kind']==kind for n in graph['nodes'])>1: error('one_provider_node',kind)
-    outgoing={id:{} for id in nodes}; incoming={id:[] for id in nodes}
+    for kind,limit in [('jev',2),('triage',1),('case_router',1),('contract',6),('context',1),('diagnostic',1)]:
+        if sum(n['kind']==kind for n in graph['nodes'])>limit: error('one_provider_node',kind)
+    outgoing={id:{} for id in nodes};incoming={id:[] for id in nodes};feedback=[]
     for edge in graph['edges']:
-        a,b,p=edge['source'],edge['target'],edge['port']
-        if a not in nodes or b not in nodes: error('missing_node'); continue
-        ports=() if nodes[a]['kind'] in TERMINALS else ('yes','no') if nodes[a]['kind']=='condition' else ('next',)
-        if p not in ports: error('invalid_port',a,p)
-        if p in outgoing[a]: error('duplicate_port',a,p)
+        a,b,port=edge['source'],edge['target'],edge['port']
+        if a not in nodes or b not in nodes: error('missing_node');continue
+        kind=nodes[a]['kind']
+        ports=('reply',) if kind=='question' else () if kind in TERMINALS else (*PROBLEM_PORTS,'otherwise') if kind=='case_router' else ('yes','no') if kind=='condition' else ('next',)
+        if port not in ports: error('invalid_port',a,port)
+        if port in outgoing[a]: error('duplicate_port',a,port)
         if nodes[b]['kind']=='start': error('start_has_input',b)
-        outgoing[a][p]=b;incoming[b].append(a)
+        outgoing[a][port]=b
+        if port=='reply':
+            feedback.append(edge)
+            if kind!='question' or nodes[b]['kind']!='context': error('invalid_feedback',a,port)
+        else: incoming[b].append(a)
     for id,node in nodes.items():
-        ports=() if node['kind'] in TERMINALS else ('yes','no') if node['kind']=='condition' else ('next',)
+        ports=() if node['kind'] in TERMINALS else (*PROBLEM_PORTS,'otherwise') if node['kind']=='case_router' else ('yes','no') if node['kind']=='condition' else ('next',)
         for port in ports:
             if port not in outgoing[id]: error('unconnected_port',id,port)
-    if errors: return {'valid':False,'errors':errors}
+    if errors:return {'valid':False,'errors':errors}
     seen=set();active=set();order=[]
     def visit(id):
-        if id in active: error('cycle',id); return
-        if id in seen: return
+        if id in active:error('cycle',id);return
+        if id in seen:return
         seen.add(id);active.add(id)
-        for target in outgoing[id].values(): visit(target)
+        for port,target in outgoing[id].items():
+            if port!='reply':visit(target)
         active.remove(id);order.append(id)
     visit(starts[0])
-    for id in nodes.keys()-seen: error('unreachable',id)
-    if errors: return {'valid':False,'errors':errors}
-    known={}
+    for id in nodes.keys()-seen:error('unreachable',id)
+    if errors:return {'valid':False,'errors':errors}
+    known={};ancestors={};any_provider={}
     for id in reversed(order):
-        node=nodes[id]; parents=incoming[id]
+        node=nodes[id];parents=incoming[id]
         before=set.intersection(*(known[p] for p in parents)) if parents else set()
+        ancestors[id]=set.intersection(*(ancestors[p]|{p} for p in parents)) if parents else set()
+        prior=set.union(*(any_provider[p] for p in parents)) if parents else set()
+        if node['kind']=='jev' and 'jev' in prior:error('one_provider_node',id)
+        if node['kind']=='contract' and 'contract' in prior:error('one_provider_node',id)
         needs=None
-        if node['kind']=='context' and node['config']['mode']=='case': needs='jev'
-        if node['kind']=='condition': needs='diagnostic' if node['config']['predicate']=='diagnostic_failed' else 'jev' if node['config']['predicate'] in ('intent_is','family_is') else 'context'
-        if node['kind']=='question' and node['config']['mode']=='missing': needs='context'
-        if node['kind']=='notify': needs='diagnostic'
-        if needs and needs not in before: error('requires_'+needs,id)
-        known[id]=before|{node['kind']}
+        if node['kind']=='jev' and node['config']['scope']!='all':needs='triage'
+        if node['kind'] in ('contract','case_router'):needs='jev'
+        if node['kind']=='preview' and node['config']['stage'] in ('action','handoff'):needs='context'
+        if node['kind']=='preview' and node['config']['stage']=='query':needs='jev'
+        if node['kind']=='context' and node['config']['mode']=='case':needs='jev'
+        if node['kind']=='condition':
+            pred=node['config']['predicate']
+            needs='triage' if pred=='triage_is' else 'diagnostic' if pred=='diagnostic_failed' else 'jev' if pred in ('intent_is','family_is') else 'context'
+        if node['kind']=='question' and node['config']['mode']=='missing':needs='context'
+        if node['kind']=='notify':needs='diagnostic'
+        if needs and needs not in before:error('requires_'+needs,id)
+        known[id]=before|{node['kind']};any_provider[id]=prior|{node['kind']}
+    for edge in feedback:
+        if edge['target'] not in ancestors[edge['source']]:error('invalid_feedback',edge['source'],'reply')
     return {'valid':not errors,'errors':errors}
 
 
@@ -254,71 +368,6 @@ def extract(messages,language,fields,instructions,notes,intent,incident=None):
 
 
 def run_workflow(record,messages,language,thread_id=None,incident_id=None,on_event=None):
-    graph=Graph.model_validate(record['graph']).model_dump()
-    validation=validate_graph(graph)
-    if not validation['valid']: raise ValueError('invalid_graph')
-    started=time.perf_counter();nodes={n['id']:n for n in graph['nodes']}
-    outgoing={(e['source'],e['port']):e for e in graph['edges']}
-    current=next(n['id'] for n in graph['nodes'] if n['kind']=='start')
-    jev={'status':'skipped'};llm={'status':'skipped'};missing=[];observations=[];questions=[];intent=None
-    traces=[];edges=[];state='information';reply='';request=None;fields=[];incident=None;notice=None
-    for _ in range(24):
-        node=nodes[current];kind=node['kind'];cfg=node['config'];port='next';tick=time.perf_counter();output={};status='ok'
-        if on_event: on_event({'event':'node_started','node_id':current,'kind':kind})
-        if kind=='start': output={'message_count':len(messages),'language':language}
-        elif kind=='diagnostic':
-            try:
-                if not incident_id: raise FileNotFoundError()
-                incident=app_diagnostics.read(incident_id);output=incident
-            except FileNotFoundError:
-                status='missing_incident';output={'error':'missing_incident'}
-        elif kind=='notify':
-            notice=app_diagnostics.notify(incident['id'],record['id'],current);output=notice
-        elif kind=='jev':
-            jev,request=classify_jev(messages,language,INSTRUCTIONS+'\n'+cfg['instructions'][language])
-            output=jev;intent=jev.get('intent');status=jev['status']
-        elif kind=='context':
-            fields=flow.REQUIREMENTS[intent] if cfg['mode']=='case' else cfg['fields']
-            llm=extract(messages,language,fields,cfg['instructions'][language],cfg['notes'][language],intent,incident)
-            status=llm['status'];output=llm
-            if status=='ok':
-                observations=[{**o,'status':'declared','source':'customer_message'} for o in llm['observations']]
-                missing=[f for f in fields if f not in {o['field'] for o in observations}]
-                output={**llm,'missing_fields':missing,'verified_facts':[]}
-        elif kind=='condition':
-            checks={'intent_is':intent==cfg['value'],'family_is':route_family(intent)==cfg['value'] if intent else False,
-                    'has_missing':bool(missing),'field_missing':cfg['value'] in missing,'needs_human':llm.get('assessment') in ('conflicting','human_review'),
-                    'diagnostic_failed': bool(incident and incident['state']=='failed')}
-            passed=checks[cfg['predicate']];port='yes' if passed else 'no';output={'predicate':cfg['predicate'],'value':cfg['value'],'matched':passed,'port':port}
-        elif kind=='question':
-            if cfg['mode']=='missing':
-                questions=[{'field':f,'text':flow.QUESTIONS[f][flow.LANGS.index(language)]} for f in missing[:2]]
-                state='ask_customer' if questions else 'review_in_bank'
-                reply=' '.join([flow.COPY[state][flow.LANGS.index(language)]]+[q['text'] for q in questions])
-            else:
-                reply=cfg['text'][language];questions=[{'field':None,'text':reply}];state='ask_customer'
-            output={'state':state,'reply':reply,'questions':questions}
-        elif kind=='response':
-            state=cfg['outcome'];reply=cfg['text'][language] or flow.COPY['review_in_bank'][flow.LANGS.index(language)]
-            output={'state':state,'reply':reply,'authorizes_execution':False}
-        elif kind=='escalate':
-            state='human_review';reply=cfg['text'][language] or flow.COPY['human_review'][flow.LANGS.index(language)]
-            output={'state':state,'reply':reply,'handoff_sent':False}
-        traces.append({'node_id':current,'kind':kind,'label':node['label'],'status':status,'output':output,'latency_ms':round((time.perf_counter()-tick)*1000,1)})
-        if on_event: on_event({'event':'node_finished','trace':traces[-1]})
-        if status!='ok':
-            state='missing_incident' if status=='missing_incident' else 'provider_unavailable'
-            reply=text('Primero ejecuta la comprobación de acceso y vincula su incidencia.', 'Run the access check first and link its incident.', 'Primeiro execute a verificação de acesso e vincule sua incidência.')[language] if state=='missing_incident' else flow.COPY[state][flow.LANGS.index(language)]
-            break
-        if kind in TERMINALS: break
-        edge=outgoing[(current,port)];edges.append(edge['id']);current=edge['target']
-        if on_event: on_event({'event':'edge_taken','edge_id':edge['id'],'port':port})
-    result={'id':str(uuid.uuid4()),'thread_id':thread_id or str(uuid.uuid4()),'created_at':datetime.now(timezone.utc).isoformat(),
-            'language':language,'workflow_id':record['id'],'workflow_revision':record['revision'],'workflow':graph,
-            'graph_sha256':hashlib.sha256(json.dumps(graph,sort_keys=True).encode()).hexdigest(),
-            'extraction_prompt_sha256':hashlib.sha256(flow.EXTRACT_INSTRUCTIONS.encode()).hexdigest(),
-            'jev':jev,'llm':llm,'state':state,'reply':reply,'questions':questions,'missing_fields':missing,'observations':observations,
-            'trace':traces,'visited_edges':edges,'latency_ms':round((time.perf_counter()-started)*1000,1),
-            'tool_plan':route_plan(jev),'incident':incident,'notification':notice,'executed_operations':[],'executed_tools':[],'authorizes_execution':False,'verified_facts':[]}
-    save_run({'kind':'workflow','actor':'local_operator','messages':messages,'request':request,'result':result})
-    return result
+    from . import workflow_execution as execution
+    state=execution.create(record,messages,language,thread_id,incident_id)
+    return execution.advance(state,mode='full',on_event=on_event)

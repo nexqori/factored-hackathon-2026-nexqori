@@ -14,7 +14,8 @@ from test_luna_dialogue import enable, envelope
 
 
 def create(client, kind='banking'):
-    result = client.post('/lab-api/editor/workflows', json={'graph': editor.template(kind)})
+    # Preserve coverage for already-saved drafts without initial routing/feedback.
+    result = client.post('/lab-api/editor/workflows', json={'graph': editor.legacy_template(kind)})
     assert result.status_code == 201
     return result.json()
 
@@ -79,7 +80,7 @@ def test_revision_conflicts_invalid_drafts_and_independent_copies(private_config
     ('duplicate_port', 'duplicate_port'), ('wrong_port', 'invalid_port'), ('bypass_context', 'requires_context'),
 ])
 def test_graph_validation_checks_every_path(private_config, mutation, expected):
-    graph = editor.template()
+    graph = editor.legacy_template()
     if mutation == 'cycle':
         next(e for e in graph['edges'] if e['source'] == 'missing' and e['port'] == 'yes')['target'] = 'context'
     elif mutation == 'unreachable':

@@ -26,6 +26,7 @@ from backend.agent_routing import route_plan
 from . import flow_engine
 from . import workflow_editor as editor
 from . import app_diagnostics
+from . import workflow_execution as execution
 
 app = FastAPI(title="Nexqori · Intent Lab", docs_url="/lab-api/docs", redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
@@ -40,7 +41,7 @@ async def local_only(request: Request, call_next):
         if request.headers.get("origin") not in (None, "http://localhost:5190", "http://127.0.0.1:5190", "http://localhost:5191", "http://127.0.0.1:5191"):
             return JSONResponse({"error": "origin_not_allowed"}, status_code=403)
         # Provider inputs are saved only in private local run records.
-        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith(('/run','/run-stream')) else 24000
+        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith(('/run','/run-stream','/advance')) else 24000
         if len(await request.body()) > limit:
             return JSONResponse({"error": "input_too_long"}, status_code=413)
     response = await call_next(request)
@@ -102,10 +103,24 @@ class EditorSave(BaseModel):
 class EditorRun(Dialogue):
     revision: int=Field(ge=1)
     incident_id: UUID | None=None
+    mode: Literal['step','full']='full'
+
+class EditorAdvance(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    version: int=Field(ge=0)
+    node_id: str=Field(min_length=1,max_length=50)
+    mode: Literal['step','full']='step'
+    reply: str | None=Field(default=None,min_length=1,max_length=2000)
 
 @app.get('/lab-api/editor/template')
 def editor_template(kind: Literal['banking','app']='banking'):
     return {'graph':editor.template(kind),'fields':list(flow_engine.QUESTIONS),'taxonomy':taxonomy()}
+
+@app.post('/lab-api/editor/master-workflow')
+def editor_master():
+    with lock:
+        try:return editor.master_workflow()
+        except RuntimeError:raise HTTPException(409,'workflow_limit') from None
 
 @app.post('/lab-api/editor/app-check')
 def editor_app_check():
@@ -149,7 +164,9 @@ def editor_run(workflow_id: UUID,body: EditorRun):
     if record['revision']!=body.revision: raise HTTPException(409,'revision_conflict')
     if not editor.validate_graph(record['graph'])['valid']: raise HTTPException(422,'invalid_graph')
     if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
-    try: return editor.run_workflow(record,[m.model_dump() for m in body.messages],body.language,str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None)
+    try:
+        state=execution.create(record,[m.model_dump() for m in body.messages],body.language,str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None)
+        return execution.advance(state,body.mode)
     finally: provider_lock.release()
 
 @app.post('/lab-api/editor/workflows/{workflow_id}/run-stream')
@@ -160,12 +177,41 @@ def editor_run_stream(workflow_id: UUID,body: EditorRun):
     if record['revision']!=body.revision: raise HTTPException(409,'revision_conflict')
     if not editor.validate_graph(record['graph'])['valid']: raise HTTPException(422,'invalid_graph')
     if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
+    try:state=execution.create(record,[m.model_dump() for m in body.messages],body.language,
+                str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None)
+    except Exception:
+        provider_lock.release()
+        raise
+    return execution_stream(state,body.mode)
+
+@app.get('/lab-api/editor/executions/{execution_id}')
+def editor_execution(execution_id: UUID):
+    try:return execution.view(execution.read(execution_id))
+    except FileNotFoundError:raise HTTPException(404,'not_found') from None
+
+@app.post('/lab-api/editor/executions/{execution_id}/advance')
+def editor_advance(execution_id: UUID,body: EditorAdvance):
+    if not provider_lock.acquire(blocking=False):raise HTTPException(409,'classification_running')
+    try:
+        state=execution.read(execution_id)
+        execution.preflight(state,body.version,body.node_id,body.reply)
+    except (FileNotFoundError,RuntimeError,ValueError) as error:
+        provider_lock.release()
+        if isinstance(error,FileNotFoundError):raise HTTPException(404,'not_found') from None
+        raise HTTPException(409 if isinstance(error,RuntimeError) else 422,str(error)) from None
+    except Exception:
+        provider_lock.release()
+        raise
+    return execution_stream(state,body.mode,body.reply)
+
+def execution_stream(state,mode,reply=None):
     events=queue.Queue()
+    events.put({'event':'execution_created','result':execution.view(state)})
     def execute():
         try:
-            result=editor.run_workflow(record,[m.model_dump() for m in body.messages],body.language,
-                str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None,events.put)
-            events.put({'event':'complete','result':result})
+            result=execution.advance(state,mode,reply,events.put)
+            phase=result['execution']['phase']
+            events.put({'event':'complete' if phase=='completed' else phase,'result':result})
         except Exception:
             events.put({'event':'error','code':'execution_failed'})
         finally:
@@ -201,14 +247,7 @@ def editor_cases(language: Literal['es','en','pt']='es'):
 @app.get('/lab-api/editor/case-template/{intent}')
 def editor_case_template(intent: str):
     if intent not in LABELS: raise HTTPException(404,'not_found')
-    graph=json.loads((ROOT/'examples/app-context-workflow.json').read_text(encoding='utf-8')) if intent=='app-support' else editor.template()
-    item=next(i for i in taxonomy() if i['id']==intent)
-    graph['name']={lang:item['copy'][lang]['title'] for lang in ('es','en','pt')}
-    context=next(n for n in graph['nodes'] if n['kind']=='context')
-    for lang in ('es','en','pt'):
-        definition=flow_engine.definition(intent,lang)
-        context['config']['notes'][lang]='\n'.join((definition['contract'] or {}).get('steps',[]))
-    return graph
+    return editor.template()
 
 class FlowEdit(BaseModel):
     model_config = ConfigDict(extra='forbid')

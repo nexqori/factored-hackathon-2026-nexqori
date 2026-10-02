@@ -24,18 +24,19 @@ def request_preview(messages, language, instructions=INSTRUCTIONS):
     }
 
 
-def parse_jev(payload):
+def parse_jev(payload, labels=None):
     """Validate the provider envelope; preserve confidence separately from p(top)."""
+    labels = LABELS if labels is None else set(labels)
     answer = payload["answers"]["intent"]
     probs = answer["probabilities"]
-    if answer.get("type") != "choice" or set(probs) != LABELS:
+    if answer.get("type") != "choice" or set(probs) != labels:
         raise ValueError("Incomplete probability distribution")
     if any(type(p) not in (float, int) or not math.isfinite(p) or not 0 <= p <= 1 for p in probs.values()):
         raise ValueError("Invalid probability")
     if not math.isclose(sum(probs.values()), 1, abs_tol=1e-4):
         raise ValueError("Distribution must sum to one")
     intent = answer["choice"]
-    if intent not in LABELS or probs[intent] != max(probs.values()):
+    if intent not in labels or probs[intent] != max(probs.values()):
         raise ValueError("Invalid choice")
     confidence = answer["confidence"]
     if type(confidence) not in (float, int) or not math.isfinite(confidence) or not 0 <= confidence <= 1:

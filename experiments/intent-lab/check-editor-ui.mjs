@@ -25,11 +25,11 @@ let runs=0,blocked=0;
 page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
 await page.route('**/lab-api/editor/workflows/*/run-stream',async route=>{
  const id=new URL(route.request().url()).pathname.split('/').at(-2),{graph}=await api('workflows/'+id);
- if(graph.nodes.some(n=>['jev','context'].includes(n.kind))){blocked++;await route.abort();return;}
+ if(graph.nodes.some(n=>['triage','jev','context'].includes(n.kind))){blocked++;await route.abort();return;}
  runs++;await route.continue();
 });
 const labels={
- fit:['Ajustar vista','Fit view','Ajustar vista'],play:['Probar flujo','Test flow','Testar fluxo'],
+ fit:['Ajustar vista','Fit view','Ajustar vista'],play:['Flujo completo','Full workflow','Fluxo completo'],
  save:['Guardar borrador','Save draft','Salvar rascunho'],close:['Cerrar','Close','Fechar'],
  files:['Mis flujos','My flows','Meus fluxos'],add:['Agregar bloque','Add block','Adicionar bloco'],
  nodeName:['Nombre del bloque','Block name','Nome do bloco'],message:['Texto de respuesta','Response text','Texto de resposta'],
@@ -74,6 +74,7 @@ try{
   await button('play',editor.locator('.editor-config')).click();
   await expect(editor.locator('[data-editor-state="missing_incident"]')).toBeVisible();
   await select('start');await button('reproduce').click();
+  await editor.locator('#editor-message').fill('Verificación de acceso');
   const reference=await editor.locator('.editor-incident code').innerText();assert.match(reference,/^APP-[A-F0-9]{8}$/);
   await button('play',editor.locator('.editor-toolbar')).click();
   await expect(editor.locator('[data-editor-state="information"]')).toBeVisible();
@@ -132,12 +133,17 @@ try{
   await page.reload();await expect(editor.getByLabel(labels.name[i],{exact:true})).toHaveValue(saved.graph.name[lang]);
   assert.equal(runs,(i+1)*3,'Reload must not call providers or execute');
   await page.setViewportSize({width:1500,height:1000});
-  // Existing problem categories load authored conversation context and their procedure.
+  // Choosing a case changes conversation/parameters, preserving every saved block and edge.
+  const beforeCase=await exportGraph();
   await editor.locator('[data-case-intent="unrecognized-charge"]').click();
   await expect(editor.locator('.editor-prior')).toBeVisible();
   await expect(editor.locator('#editor-message')).not.toHaveValue('');
   await editor.locator('.editor-case-detail summary').click();
   await expect(editor.locator('.editor-case-detail ol li')).not.toHaveCount(0);
+  assert.deepEqual(await exportGraph(),beforeCase);
+  // Open the shared master for model instructions; merely reading it does not run providers.
+  await page.goto(base+'/?view=flows&mode=editor&lang='+lang);
+  await expect(editor.locator('[data-block-kind]')).toHaveCount(26);
   await closeSide();await fit();await select('context');
   await editor.getByLabel(['Instrucciones adicionales','Additional instructions','Instruções adicionais'][i],{exact:true}).fill('Verificación de instrucciones '+lang);
   await editor.getByLabel(['Contexto de referencia','Reference context','Contexto de referência'][i],{exact:true}).fill('Verificación de contexto '+lang);

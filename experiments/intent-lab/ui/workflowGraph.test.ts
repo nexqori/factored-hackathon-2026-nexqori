@@ -34,4 +34,15 @@ describe('visual graph edits preserve the intended route',()=>{
   expect(ordered.nodes.map(({position,...rest})=>rest)).toEqual(graph.nodes.map(({position,...rest})=>rest));
   expect(new Set(ordered.nodes.map(n=>JSON.stringify(n.position))).size).toBe(4);
  });
+ it('lays out the reply loop without treating it as an automatic cycle or inserting into it',()=>{
+  const graph:Graph={schema_version:1,name:text,nodes:[
+   {id:'start',kind:'start',label:text,position:{x:0,y:0},config:{}},
+   {id:'context',kind:'context',label:text,position:{x:0,y:0},config:{}},
+   {id:'ask',kind:'question',label:text,position:{x:0,y:0},config:{}},
+  ],edges:[{id:'a',source:'start',target:'context',port:'next'},{id:'b',source:'context',target:'ask',port:'next'},{id:'c',source:'ask',target:'context',port:'reply'}]};
+  const arranged=arrangeGraph(graph);
+  expect(arranged.nodes.map(n=>n.position.x)).toEqual([0,260,520]);
+  expect(arranged.edges).toEqual(graph.edges);
+  expect(insertBlock(graph,'notify',{x:0,y:0},{source:'ask',port:'reply'})).toBeNull();
+ });
 });
