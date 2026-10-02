@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import threading
+import asyncio
+import queue
 from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request, Query
 from uuid import UUID
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -38,7 +40,7 @@ async def local_only(request: Request, call_next):
         if request.headers.get("origin") not in (None, "http://localhost:5190", "http://127.0.0.1:5190", "http://localhost:5191", "http://127.0.0.1:5191"):
             return JSONResponse({"error": "origin_not_allowed"}, status_code=403)
         # Provider inputs are saved only in private local run records.
-        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith('/run') else 24000
+        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith(('/run','/run-stream')) else 24000
         if len(await request.body()) > limit:
             return JSONResponse({"error": "input_too_long"}, status_code=413)
     response = await call_next(request)
@@ -149,6 +151,64 @@ def editor_run(workflow_id: UUID,body: EditorRun):
     if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
     try: return editor.run_workflow(record,[m.model_dump() for m in body.messages],body.language,str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None)
     finally: provider_lock.release()
+
+@app.post('/lab-api/editor/workflows/{workflow_id}/run-stream')
+def editor_run_stream(workflow_id: UUID,body: EditorRun):
+    if body.context: raise HTTPException(422,'configure_context_in_node')
+    try: record=editor.read_workflow(workflow_id)
+    except FileNotFoundError: raise HTTPException(404,'not_found') from None
+    if record['revision']!=body.revision: raise HTTPException(409,'revision_conflict')
+    if not editor.validate_graph(record['graph'])['valid']: raise HTTPException(422,'invalid_graph')
+    if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
+    events=queue.Queue()
+    def execute():
+        try:
+            result=editor.run_workflow(record,[m.model_dump() for m in body.messages],body.language,
+                str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None,events.put)
+            events.put({'event':'complete','result':result})
+        except Exception:
+            events.put({'event':'error','code':'execution_failed'})
+        finally:
+            provider_lock.release()
+            events.put(None)
+    # A disconnected browser cannot trigger a second execution. The bounded run finishes,
+    # persists its trace and releases the lock even if its progress is no longer viewed.
+    threading.Thread(target=execute,daemon=True).start()
+    async def stream():
+        while True:
+            try: event=await asyncio.to_thread(events.get,True,1)
+            except queue.Empty:
+                yield json.dumps({'event':'heartbeat'})+'\n'
+                continue
+            if event is None: break
+            yield json.dumps(event,ensure_ascii=False)+'\n'
+    return StreamingResponse(stream(),media_type='application/x-ndjson',headers={'X-Accel-Buffering':'no'})
+
+@app.get('/lab-api/editor/cases')
+def editor_cases(language: Literal['es','en','pt']='es'):
+    evidence=json.loads((ROOT/'evidence.json').read_text(encoding='utf-8'))
+    examples={}
+    for row in corpus():
+        if row['language']==language and row['slice']=='standard': examples.setdefault(row['expected'],row['text'])
+    examples['request-status']={'es':'Quiero saber cómo va mi solicitud con folio NQ-123456.','en':'I want to check my request with reference NQ-123456.','pt':'Quero consultar minha solicitação com protocolo NQ-123456.'}[language]
+    rows=flow_engine.flow_map(language)['definitions']
+    for row in rows:
+        row['evidence']=next((p for p in evidence['problems'] if p['intent']==row['intent']),None)
+        row['example']=examples[row['intent']]
+        row['example_source']='authored_category_example'
+    return {'cases':rows}
+
+@app.get('/lab-api/editor/case-template/{intent}')
+def editor_case_template(intent: str):
+    if intent not in LABELS: raise HTTPException(404,'not_found')
+    graph=json.loads((ROOT/'examples/app-context-workflow.json').read_text(encoding='utf-8')) if intent=='app-support' else editor.template()
+    item=next(i for i in taxonomy() if i['id']==intent)
+    graph['name']={lang:item['copy'][lang]['title'] for lang in ('es','en','pt')}
+    context=next(n for n in graph['nodes'] if n['kind']=='context')
+    for lang in ('es','en','pt'):
+        definition=flow_engine.definition(intent,lang)
+        context['config']['notes'][lang]='\n'.join((definition['contract'] or {}).get('steps',[]))
+    return graph
 
 class FlowEdit(BaseModel):
     model_config = ConfigDict(extra='forbid')

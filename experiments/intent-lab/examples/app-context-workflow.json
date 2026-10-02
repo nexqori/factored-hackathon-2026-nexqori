@@ -92,9 +92,9 @@
       },
       "config": {
         "instructions": {
-          "es": "Conserva los intentos que el cliente ya hizo. La incidencia del LAB es una comprobación local controlada, no un hecho bancario real.",
-          "en": "Keep the steps the customer has already tried. The LAB incident is a controlled local check, not a real banking fact.",
-          "pt": "Preserve os passos que o cliente já tentou. A incidência do LAB é uma verificação local controlada, não um fato bancário real."
+          "es": "Conserva los intentos que el cliente ya hizo. La incidencia vinculada es una comprobación local controlada, no un hecho bancario real.",
+          "en": "Keep the steps the customer has already tried. The linked incident is a controlled local check, not a real banking fact.",
+          "pt": "Preserve os passos que o cliente já tentou. A incidência vinculada é uma verificação local controlada, não um fato bancário real."
         },
         "mode": "case",
         "fields": [],
@@ -253,9 +253,9 @@
       "id": "notify",
       "kind": "notify",
       "label": {
-        "es": "Registrar aviso en el LAB",
-        "en": "Register LAB notification",
-        "pt": "Registrar aviso no LAB"
+        "es": "Registrar aviso de incidencia",
+        "en": "Register incident notification",
+        "pt": "Registrar aviso de incidência"
       },
       "position": {
         "x": 1050.0,

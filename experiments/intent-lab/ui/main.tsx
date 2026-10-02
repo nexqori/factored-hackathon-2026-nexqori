@@ -101,7 +101,7 @@ function App() {
   const canSave = !!draft?.title.trim() && validInput && messages.at(-1)?.role==='user';
 
   return <>
-    <header className="topbar"><a className="brand" href="#" onClick={e => { e.preventDefault(); setPage('walkthrough'); }}><span className="brand-mark">n</span>nexqori<span className="lab-tag">LAB</span></a>
+    <header className="topbar"><a className="brand" href="#" onClick={e => { e.preventDefault(); setPage('walkthrough'); }}><span className="brand-mark">n</span>nexqori{page!=='flows'&&<span className="lab-tag">LAB</span>}</a>
       <nav aria-label={t('lab')}>{(['walkthrough', 'flows', 'benchmark', 'evidence'] as const).map(tab => <button key={tab} className={page === tab ? 'nav-active' : ''} aria-current={page === tab ? 'page' : undefined} onClick={() => setPage(tab)}>{tab==='flows'?ft(language,'flows'):t(tab)}</button>)}</nav>
       <div className="header-tools"><span className="local-badge"><span />{t('local')}</span><details className="language"><summary><Globe2 size={17} />{languageNames[language]}<ChevronDown size={15} /></summary><div>{(Object.keys(languageNames) as Language[]).map(lang => <button key={lang} lang={lang} aria-pressed={lang === language} onClick={e => { setLanguage(lang); e.currentTarget.closest('details')!.open = false; }}>{languageNames[lang]}{lang === language && <Check size={15} />}</button>)}</div></details></div>
     </header>
@@ -162,7 +162,7 @@ function App() {
           <details className="panel evidence-section protocol"><summary>{t('protocol')}</summary><p>{t('coverage')}</p><p>{num(meta.evidence.transcripts)} · {t('transcripts')} / {num(meta.evidence.distinct_texts)} · {t('distinct')} / {num(meta.evidence.text_families)} · {t('families')}</p><ol>{(['rule1','rule2','rule3','rule4'] as const).map(key=><li key={key}>{t(key)}</li>)}</ol><p>{t('seedWarning')}</p><code>SHA-256 {meta.corpus_sha256}</code><p><a href="https://docs.typesafe.ai/models" target="_blank" rel="noreferrer">{t('source')} ↗</a></p></details>
         </>}
       </>}
-    </main><footer>nexqori <span>·</span> {t('lab')} <span>·</span> ES / EN / PT</footer>
+    </main>{page!=='flows'&&<footer>nexqori <span>·</span> {t('lab')} <span>·</span> ES / EN / PT</footer>}
   </>;
 }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);

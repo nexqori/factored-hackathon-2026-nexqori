@@ -133,7 +133,7 @@ def template(kind='banking'):
         nodes=[node('start','start',('Inicio','Start','Início'),0,100),
                node('logs','diagnostic',('Recoger logs de la incidencia','Read incident logs','Ler logs da incidência'),230,100),
                node('failed','condition',('¿Se confirmó el error?','Was an error recorded?','O erro foi registrado?'),460,100,{'predicate':'diagnostic_failed'}),
-               node('notify','notify',('Registrar aviso en el LAB','Register LAB notification','Registrar aviso no LAB'),690,0),
+               node('notify','notify',('Registrar aviso de incidencia','Register incident notification','Registrar aviso de incidência'),690,0),
                node('result','response',('Confirmar el aviso','Confirm notification','Confirmar o aviso'),920,0,
                     {'outcome':'information','text':text('El flujo terminó. Revisa el aviso local y su referencia en la traza.', 'The flow finished. Review the local notification and its reference in the trace.', 'O fluxo terminou. Confira o aviso local e sua referência no rastro.')}),
                node('noerror','response',('Revisar el resultado','Review result','Revisar o resultado'),690,220,
@@ -253,7 +253,7 @@ def extract(messages,language,fields,instructions,notes,intent,incident=None):
                            flow.EXTRACT_INSTRUCTIONS,schema,'workflow_context',lambda value:flow.validate_observations(value,fields,messages))
 
 
-def run_workflow(record,messages,language,thread_id=None,incident_id=None):
+def run_workflow(record,messages,language,thread_id=None,incident_id=None,on_event=None):
     graph=Graph.model_validate(record['graph']).model_dump()
     validation=validate_graph(graph)
     if not validation['valid']: raise ValueError('invalid_graph')
@@ -264,6 +264,7 @@ def run_workflow(record,messages,language,thread_id=None,incident_id=None):
     traces=[];edges=[];state='information';reply='';request=None;fields=[];incident=None;notice=None
     for _ in range(24):
         node=nodes[current];kind=node['kind'];cfg=node['config'];port='next';tick=time.perf_counter();output={};status='ok'
+        if on_event: on_event({'event':'node_started','node_id':current,'kind':kind})
         if kind=='start': output={'message_count':len(messages),'language':language}
         elif kind=='diagnostic':
             try:
@@ -304,12 +305,14 @@ def run_workflow(record,messages,language,thread_id=None,incident_id=None):
             state='human_review';reply=cfg['text'][language] or flow.COPY['human_review'][flow.LANGS.index(language)]
             output={'state':state,'reply':reply,'handoff_sent':False}
         traces.append({'node_id':current,'kind':kind,'label':node['label'],'status':status,'output':output,'latency_ms':round((time.perf_counter()-tick)*1000,1)})
+        if on_event: on_event({'event':'node_finished','trace':traces[-1]})
         if status!='ok':
             state='missing_incident' if status=='missing_incident' else 'provider_unavailable'
             reply=text('Primero ejecuta la comprobación de acceso y vincula su incidencia.', 'Run the access check first and link its incident.', 'Primeiro execute a verificação de acesso e vincule sua incidência.')[language] if state=='missing_incident' else flow.COPY[state][flow.LANGS.index(language)]
             break
         if kind in TERMINALS: break
         edge=outgoing[(current,port)];edges.append(edge['id']);current=edge['target']
+        if on_event: on_event({'event':'edge_taken','edge_id':edge['id'],'port':port})
     result={'id':str(uuid.uuid4()),'thread_id':thread_id or str(uuid.uuid4()),'created_at':datetime.now(timezone.utc).isoformat(),
             'language':language,'workflow_id':record['id'],'workflow_revision':record['revision'],'workflow':graph,
             'graph_sha256':hashlib.sha256(json.dumps(graph,sort_keys=True).encode()).hexdigest(),
