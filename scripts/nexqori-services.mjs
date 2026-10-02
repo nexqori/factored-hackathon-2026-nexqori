@@ -10,7 +10,9 @@ const origin = process.env.NEXQORI_URL || 'http://localhost:5180';
 const output = '.local/verification'; mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 1512, height: 1050 }, locale: 'es-MX' });
-const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+const page = await context.newPage();
+// Exercise the guided navigation fallback without spending provider credits.
+await page.route('**/api/assistant/capabilities',route=>route.fulfill({json:{connected:false,providers:{}}})); const errors = []; page.on('pageerror', e => errors.push(e.message));
 const result = { checks: [], accessibility: [], pages: [] };
 async function ready() { await page.locator('[data-catalog-ready="true"]').waitFor(); }
 async function search(value) { await page.locator('.catalog-search input').fill(value); await page.waitForTimeout(250); await ready(); }
@@ -38,8 +40,8 @@ try {
   await expect(page.locator('.catalog-card')).toHaveCount(20);
   await page.locator('.catalog-categories button').filter({ hasText: 'Préstamos' }).click(); await ready();
   await expect(page.locator('.catalog-card')).toHaveCount(2);
-  await page.goto(origin + '/services/catalog/phone-bill');
-  await page.getByLabel('Número de celular o teléfono', { exact: true }).fill('5512345678');
+  await page.goto(origin + '/services/catalog/internet-bill');
+  await page.getByLabel('Número de cliente o contrato', { exact: true }).fill('5512345678');
   await page.getByRole('textbox', { name: 'Importe MXN', exact: true }).fill('459,90');
   await page.getByLabel('Nota adicional (opcional)').fill('UI verification: catálogo de telefonía ' + Date.now());
   await page.getByRole('button', { name: 'Revisar datos', exact: true }).click();
@@ -47,7 +49,7 @@ try {
   assert.match(await page.locator('.service-review-amount').textContent(), /459[.,]90/);
   await axe('service-review'); await snapshot('service-phone-review');
   await page.getByRole('button', { name: 'Editar datos' }).click();
-  assert.equal(await page.getByLabel('Número de celular o teléfono', { exact: true }).inputValue(), '5512345678');
+  assert.equal(await page.getByLabel('Número de cliente o contrato', { exact: true }).inputValue(), '5512345678');
   await page.getByRole('button', { name: 'Revisar datos', exact: true }).click();
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Confirmar solicitud', exact: true }).click();
@@ -57,13 +59,13 @@ try {
   await page.goto(origin + '/requests');
   await page.locator('.case-card').filter({ hasText: id }).click();
   await page.locator('dialog').waitFor();
-  assert.match(await page.locator('dialog').textContent(), /Empresa Telefónica/);
+  assert.match(await page.locator('dialog').textContent(), /Internet Plus/);
   assert.match(await page.locator('dialog').textContent(), /5512345678/);
   await axe('service-request-history'); await snapshot('service-history-details');
   assert.deepEqual((await (await page.request.get(origin + '/api/bootstrap')).json()).products, before);
   await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
   result.checks.push('natural and provider search, empty state, category filter, review/edit/confirm, persisted details, no debit');
-  for (const [locale, query, heading] of [['es', 'pagar celular', 'Pagar celular o teléfono'], ['en', 'pay phone bill', 'Pay a phone bill'], ['pt', 'pagar celular', 'Pagar celular ou telefone']]) {
+  for (const [locale, query, heading] of [['es', 'pagar celular', 'Pagar teléfono'], ['en', 'pay phone bill', 'Pay phone bill'], ['pt', 'pagar celular', 'Pagar telefone']]) {
     await choose(locale); await page.goto(origin + '/services'); await ready(); await search(query);
     assert.equal(await page.locator('.catalog-card').count(), 1);
     await page.locator('[data-service-id="phone-bill"]').click(); await page.getByRole('heading', { name: heading, exact: true }).waitFor();
@@ -83,12 +85,12 @@ try {
   }
   await page.goto(origin); await page.locator('.paste-composer textarea').fill('quiero pagar celular'); await page.locator('.paste-entry button').click();
   await page.waitForURL(origin + '/services/catalog/phone-bill');
-  await page.getByRole('heading', { name: 'Pagar celular o teléfono', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Pagar teléfono', exact: true }).waitFor();
   result.checks.push('specific service navigation from assistant; ES/EN/PT and responsive forms');
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
   await login('admin@nexqori.com', credentials.ADMIN_PASSWORD);
   await page.locator('.case-card').filter({ hasText: id }).click();
-  await page.locator('dialog').waitFor(); assert.match(await page.locator('dialog').textContent(), /Empresa Telefónica/);
+  await page.locator('dialog').waitFor(); assert.match(await page.locator('dialog').textContent(), /Internet Plus/);
   result.checks.push('admin receives the selected service and structured details');
   assert.deepEqual(errors, []);
   assert.ok(result.accessibility.every(check => !check.violations.length), JSON.stringify(result.accessibility));

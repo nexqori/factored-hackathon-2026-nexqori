@@ -19,6 +19,10 @@ from .cards import reveal_local_card
 from .operations import operations_router
 from .agent_tools import agent_tools_router
 from .claim_trace import trace_router
+from .payments import payment_router
+from .models import BillPayment
+from .workflow_chat import chat_router, flow_view
+from .models import ConversationFlow
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
@@ -41,7 +45,8 @@ def request_view(r, name=None, refund=None):
         operation = {"id":refund.id,"status":refund.status,"amountMinor":refund.amount_minor,"currency":refund.currency,
                      "createdAt":refund.created_at.isoformat(),"decidedAt":refund.decided_at.isoformat() if refund.decided_at else None,
                      "creditTransactionId":refund.credit_transaction_id}
-    return {"id":r.id,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation}
+    kind = 'claim' if not r.catalog_service_id or SERVICES.get(r.catalog_service_id, {}).get('kind') == 'claim' else 'application'
+    return {"id":r.id,"kind":kind,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation}
 
 def audit_view(e, name):
     return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"conversationId":e.conversation_id,"productId":e.product_id,"transactionId":e.transaction_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
@@ -215,12 +220,13 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         products=db.scalars(select(Product).where(Product.user_id==user.id).order_by(Product.id)).all()
         card_status={c.product_id:c.status for c in db.scalars(select(CardProfile).where(CardProfile.user_id==user.id))}
         txs=db.scalars(select(Transaction).where(Transaction.user_id==user.id).order_by(Transaction.occurred_at.desc())).all()
+        payments={p.transaction_id:p.id for p in db.scalars(select(BillPayment).where(BillPayment.user_id==user.id))}
         cases=db.scalars(select(RequestCase).where(RequestCase.user_id==user.id).order_by(RequestCase.created_at.desc())).all()
         refunds={r.request_id:r for r in db.scalars(select(Refund).where(Refund.user_id==user.id))}
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).where(AuditEvent.user_id==user.id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
         return {
             "products":[{"id":p.id,"type":p.type,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency,"status":card_status.get(p.id,"active")} for p in products],
-            "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status} for t in txs],
+            "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status,"paymentId":payments.get(t.id)} for t in txs],
             "requests":[request_view(r,refund=refunds.get(r.id)) for r in cases],
             "audit":[audit_view(e,name) for e,name in events]
         }
@@ -244,7 +250,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             if not cursor: raise HTTPException(404,"not_found")
             query=query.where(or_(Message.created_at<cursor.created_at,and_(Message.created_at==cursor.created_at,Message.id<cursor.id)))
         rows=db.scalars(query.order_by(Message.created_at.desc(),Message.id.desc()).limit(51)).all()
-        return {"conversation":conversation_view(conversation),"messages":[message_view(m) for m in reversed(rows[:50])],"before":rows[49].id if len(rows)>50 else None}
+        return {"flow":flow_view(db.get(ConversationFlow,conversation.id)),"conversation":conversation_view(conversation),"messages":[message_view(m) for m in reversed(rows[:50])],"before":rows[49].id if len(rows)>50 else None}
     @app.get("/api/services")
     def list_services(q: str=Query("", max_length=120),category: str | None=None,locale: Locale="es",user=Depends(customer_read)):
         if category and category not in CATEGORIES: raise HTTPException(422,"validation")
@@ -261,6 +267,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def request_service(service_id: str,payload: ServiceRequestInput,user=Depends(customer),db=Depends(db_session)):
         item=SERVICES.get(service_id)
         if not item: raise HTTPException(404,"not_found")
+        if service_id == 'phone-bill': raise HTTPException(409, 'use_bill_payment')
         if item["kind"]=="navigate": raise HTTPException(422,"validation")
         reference=payload.reference.strip(); beneficiary=payload.beneficiary.strip(); notes=payload.notes.strip()
         account=None
@@ -407,7 +414,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         rows=db.scalars(query.order_by(Message.created_at.desc(),Message.id.desc()).limit(51)).all()
         page=rows[:50]
         add_audit(db,conversation.user_id,"conversation_viewed",user.id,conversation_id=conversation.id);db.commit()
-        return {"conversation":conversation_view(conversation),"customerName":db.get(User,conversation.user_id).name,"messages":[message_view(m) for m in reversed(page)],"before":page[-1].id if len(rows)>50 else None}
+        return {"flow":flow_view(db.get(ConversationFlow,conversation.id)),"conversation":conversation_view(conversation),"customerName":db.get(User,conversation.user_id).name,"messages":[message_view(m) for m in reversed(page)],"before":page[-1].id if len(rows)>50 else None}
     @app.post("/api/admin/requests/{request_id}/review")
     def review(request_id: str,payload: ConfirmInput,user=Depends(admin_write),db=Depends(db_session)):
         case=db.scalar(select(RequestCase).where(RequestCase.id==request_id).with_for_update())
@@ -418,6 +425,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         elif case.status!="in_review": raise HTTPException(409,"invalid_transition")
         return {"ok":True}
     app.include_router(operations_router())
+    app.include_router(payment_router())
+    app.include_router(chat_router(conversation_view, message_view))
     app.include_router(agent_tools_router())
     app.include_router(trace_router(request_view, audit_view, conversation_view))
     return app

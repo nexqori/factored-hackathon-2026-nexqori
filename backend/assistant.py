@@ -37,7 +37,7 @@ def classify(text):
         ("settings",r"configurac|settings|preferences|preferencias|tamano de letra|tamanho da letra|text size|font size"),
         ("human",r"humano|human|persona|person|pessoa|agente|asesor|atendente"),
         ("report",r"no reconozco|nao reconheco|don.t recognize|unrecognized|cobro|cobranca|charge|reclamar|reportar|report a"),
-        ("requests",r"seguimiento|solicitud|solicitac|reclamo|reclamac|acompanhar|request|track|case"),
+        ("requests",r"seguimiento|solicitud|solicitac|reclamo|reclamac|acompanhar|request|track|case|complaint"),
         ("balance",r"saldo|balance"),
         ("movements",r"movimientos|movimentacoes|transactions|historial|historico|history"),
         ("transfers",r"transferenc|transfer"),
@@ -58,9 +58,9 @@ def classify(text):
     return "unknown"
 
 NAV_LABELS = {
-"es":{"settings":"Configuración","home":"Inicio","products":"Mis productos","movements":"Movimientos","requests":"Mis solicitudes","services":"Servicios","help":"Centro de ayuda","accounts":"Cuentas","cards":"Tarjetas","transfers":"Transferencias","payments":"Pagos de servicios","loans":"Préstamos","investments":"Inversiones","insurance":"Seguros","cash":"Retiros y depósitos"},
-"en":{"settings":"Settings","home":"Overview","products":"My products","movements":"Transactions","requests":"My requests","services":"Services","help":"Help center","accounts":"Accounts","cards":"Cards","transfers":"Transfers","payments":"Bill payments","loans":"Loans","investments":"Investments","insurance":"Insurance","cash":"Withdrawals and deposits"},
-"pt":{"settings":"Configurações","home":"Início","products":"Meus produtos","movements":"Movimentações","requests":"Minhas solicitações","services":"Serviços","help":"Central de ajuda","accounts":"Contas","cards":"Cartões","transfers":"Transferências","payments":"Pagamento de serviços","loans":"Empréstimos","investments":"Investimentos","insurance":"Seguros","cash":"Saques e depósitos"}}
+"es":{"settings":"Configuración","home":"Inicio","products":"Mis productos","movements":"Movimientos","requests":"Mis solicitudes","complaints":"Mis reclamos","services":"Servicios","help":"Centro de ayuda","accounts":"Cuentas","cards":"Tarjetas","transfers":"Transferencias","payments":"Pagos de servicios","loans":"Préstamos","investments":"Inversiones","insurance":"Seguros","cash":"Retiros y depósitos"},
+"en":{"settings":"Settings","home":"Overview","products":"My products","movements":"Transactions","requests":"My requests","complaints":"My complaints","services":"Services","help":"Help center","accounts":"Accounts","cards":"Cards","transfers":"Transfers","payments":"Bill payments","loans":"Loans","investments":"Investments","insurance":"Insurance","cash":"Withdrawals and deposits"},
+"pt":{"settings":"Configurações","home":"Início","products":"Meus produtos","movements":"Movimentações","requests":"Minhas solicitações","complaints":"Minhas reclamações","services":"Serviços","help":"Central de ajuda","accounts":"Contas","cards":"Cartões","transfers":"Transferências","payments":"Pagamento de serviços","loans":"Empréstimos","investments":"Investimentos","insurance":"Seguros","cash":"Saques e depósitos"}}
 
 def answer(text,locale,balance_minor,current_page="home"):
     intent=classify(text)
@@ -72,8 +72,13 @@ def answer(text,locale,balance_minor,current_page="home"):
             response={"es":"Encontré {title}, con {provider}. Completa los datos y revísalos antes de confirmar la solicitud.",
                       "en":"I found {title}, with {provider}. Enter the details and review them before confirming your request.",
                       "pt":"Encontrei {title}, com {provider}. Preencha os dados e revise antes de confirmar a solicitação."}[locale]
+            if item['id'] == 'phone-bill':
+                response = {'es':'Encontré tu servicio de teléfono. Revisa el recibo mensual y la cuenta antes de confirmar el pago.',
+                            'en':'I found your phone service. Review the monthly bill and account before confirming payment.',
+                            'pt':'Encontrei seu serviço de telefone. Confira a conta mensal e a conta bancária antes de confirmar o pagamento.'}[locale]
             return {"text":response.format(title=item["copy"][locale]["title"],provider=item["provider"]),"destination":"services","intent":"service","navigation":navigate_in_app("services","customer",item["id"])}
     if normalized in ("ahi","alli","there","la","aqui") and current_page in NAV_LABELS[locale]: intent=current_page
+    if intent == "requests" and re.search(r"reclamo|reclamac|complaint", normalized): intent="complaints"
     amount=f"{balance_minor/100:,.2f}"
     if locale=="pt": amount=amount.translate(str.maketrans({",":".",".":","}))
     destination={"balance":"products","movements":"movements","report":"new-request","requests":"requests","human":"new-request","unknown":None,"restricted":None}.get(intent,intent)

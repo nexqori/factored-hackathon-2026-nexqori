@@ -9,7 +9,9 @@ const origin = process.env.NEXQORI_URL || 'http://localhost:5180';
 const output = '.local/verification'; mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 1512, height: 1050 }, locale: 'es-MX' });
-const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+const page = await context.newPage();
+// Exercise the guided navigation fallback without spending provider credits.
+await page.route('**/api/assistant/capabilities',route=>route.fulfill({json:{connected:false,providers:{}}})); const errors = []; page.on('pageerror', e => errors.push(e.message));
 const result = { accessibility: [], checks: [] };
 const shot = name => page.screenshot({ path: output + '/' + name + '.png', fullPage: true });
 async function axe(name) { const r = await new AxeBuilder({ page }).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze(); result.accessibility.push({ name, violations: r.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) })) }); }

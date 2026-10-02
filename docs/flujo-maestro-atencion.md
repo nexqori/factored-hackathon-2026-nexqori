@@ -1,5 +1,7 @@
 # Flujo maestro de atención de Nexqori
 
+El [chat del banco](chat-bancario-y-pagos.md) reutiliza este motor desde el 2 de octubre. El editor conserva sólo propuestas; la app añade confirmación explícita para registrar el reclamo y un pago local separado del flujo.
+
 Referencia acordada con Bryan el 1 de octubre de 2026 (America/Lima): diagrama compartido en esta conversación y sus correcciones posteriores. Este documento conserva el recorrido funcional; es la referencia para las siguientes ediciones del editor.
 
 ```mermaid

@@ -17,6 +17,7 @@ from backend.db import make_engine, make_sessions
 from backend.models import (AuditEvent, CardProfile, Conversation, Message,
                             Product, Refund, RequestCase, Transaction, User, now)
 from backend.security import hasher
+from backend.models import PhoneBill, BillPayment
 
 url = make_url(os.environ["DATABASE_URL"])
 if (os.getenv("NEXQORI_LOCAL_VERIFY") != "1" or url.host != "db"
@@ -30,7 +31,7 @@ sessions = make_sessions(engine)
 def untouched(db, exclude):
     """Exclude only this run's owners; financial and case rows must stay intact."""
     digest = hashlib.sha256()
-    for model in (Product, CardProfile, Transaction, RequestCase, Refund):
+    for model in (Product, CardProfile, Transaction, RequestCase, Refund, PhoneBill, BillPayment):
         table = model.__table__
         digest.update(table.name.encode())
         query = select(table).where(table.c.user_id.not_in(exclude)).order_by(*table.primary_key.columns)
@@ -68,6 +69,10 @@ def prepare():
                         name=case["name"], password_hash=hasher.hash(case["password"]),
                         role="customer", locale=case["locale"]))
             db.flush()
+            if payload.get('phoneBills'):
+                case['billId'] = 'verify-bill-' + case['userId'].removeprefix('verify-user-')
+                db.add(PhoneBill(id=case['billId'], user_id=case['userId'], reference='550000000' + str(index + 1),
+                                 period='2026-10', due_date='2026-10-15', amount_minor=29900, currency='MXN'))
             db.add_all([
                 Product(id=case["accountId"], user_id=case["userId"], type="account", last4="9001",
                         balance_minor=case["initialBalanceMinor"], currency="MXN"),

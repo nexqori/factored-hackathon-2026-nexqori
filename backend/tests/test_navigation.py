@@ -4,9 +4,9 @@ from backend.assistant import answer
 from backend.navigation import NavigateInput, navigate_in_app, ROUTES
 
 @pytest.mark.parametrize('locale,messages', [
-    ('es', ['Abre inicio','Ver productos','Ver movimientos','Mis solicitudes','Servicios','Ayuda','Mis cuentas','Tarjetas','Llévame a transferencias','Pagos','Préstamos','Inversiones','Seguros','Retiros','Configuración']),
-    ('en', ['Open home','My products','Transactions','My requests','Services','Help','Accounts','Cards','Transfer money','Bill payments','Loans','Investments','Insurance','Withdrawals','Settings']),
-    ('pt', ['Abrir início','Meus produtos','Movimentações','Minhas solicitações','Serviços','Ajuda','Contas','Cartões','Transferências','Pagamentos','Empréstimos','Investimentos','Seguros','Saques','Configurações']),
+    ('es', ['Abre inicio','Ver productos','Ver movimientos','Mis solicitudes','Mis reclamos','Servicios','Ayuda','Mis cuentas','Tarjetas','Llévame a transferencias','Pagos','Préstamos','Inversiones','Seguros','Retiros','Configuración']),
+    ('en', ['Open home','My products','Transactions','My requests','My complaints','Services','Help','Accounts','Cards','Transfer money','Bill payments','Loans','Investments','Insurance','Withdrawals','Settings']),
+    ('pt', ['Abrir início','Meus produtos','Movimentações','Minhas solicitações','Minhas reclamações','Serviços','Ajuda','Contas','Cartões','Transferências','Pagamentos','Empréstimos','Investimentos','Seguros','Saques','Configurações']),
 ])
 def test_all_destinations_in_three_languages(locale,messages):
     for destination,message in zip(ROUTES,messages,strict=True):

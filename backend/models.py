@@ -178,3 +178,42 @@ class Message(Base):
     locale: Mapped[str] = mapped_column(String(2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (ForeignKeyConstraint(["conversation_id", "user_id"], ["conversations.id", "conversations.user_id"]), CheckConstraint("role IN ('user','assistant')"), CheckConstraint("locale IN ('es','en','pt')"))
+
+class PhoneBill(Base):
+    __tablename__ = "phone_bills"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    reference: Mapped[str] = mapped_column(String(24))
+    period: Mapped[str] = mapped_column(String(7))
+    due_date: Mapped[str] = mapped_column(String(10))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), default="MXN")
+    __table_args__ = (UniqueConstraint("id", "user_id"), UniqueConstraint("user_id", "reference", "period"), CheckConstraint("amount_minor > 0 AND currency = 'MXN'"))
+
+class BillPayment(Base):
+    __tablename__ = "bill_payments"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    bill_id: Mapped[str] = mapped_column(String(64), unique=True)
+    account_id: Mapped[str] = mapped_column(String(64))
+    transaction_id: Mapped[str] = mapped_column(String(64), unique=True)
+    request_key: Mapped[str] = mapped_column(String(64))
+    # Immutable receipt, independent of later changes to the bill or account.
+    receipt: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (ForeignKeyConstraint(["bill_id", "user_id"], ["phone_bills.id", "phone_bills.user_id"]), ForeignKeyConstraint(["account_id", "user_id"], ["products.id", "products.user_id"]), ForeignKeyConstraint(["transaction_id", "user_id"], ["transactions.id", "transactions.user_id"]), UniqueConstraint("user_id", "request_key"))
+
+class ConversationFlow(Base):
+    __tablename__ = "conversation_flows"
+    conversation_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    state: Mapped[dict] = mapped_column(JSON)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    __table_args__ = (ForeignKeyConstraint(["conversation_id", "user_id"], ["conversations.id", "conversations.user_id"]), ForeignKeyConstraint(["request_id", "user_id"], ["requests.id", "requests.user_id"]))
+
+class AssistantTurn(Base):
+    __tablename__ = "assistant_turns"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    request_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    response: Mapped[dict] = mapped_column(JSON)

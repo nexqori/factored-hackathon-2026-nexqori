@@ -3,6 +3,7 @@ import hashlib
 import json
 import time
 import uuid
+import re
 from datetime import datetime, timezone
 
 from backend.agent_routing import route_family, route_plan
@@ -18,7 +19,7 @@ QUESTIONS = {
     'movement': ('¿Qué movimiento quieres revisar? Indica comercio o referencia, sin números de tarjeta.', 'Which transaction would you like to review? Give the merchant or reference, without card numbers.', 'Qual movimentação deseja revisar? Informe o estabelecimento ou a referência, sem números de cartão.'),
     'date': ('¿En qué fecha ocurrió?', 'On what date did it happen?', 'Em que data aconteceu?'),
     'amount': ('¿Qué importe y moneda aparecen?', 'What amount and currency are shown?', 'Qual valor e moeda aparecem?'),
-    'difference': ('¿Qué importe esperabas y qué diferencia encuentras?', 'What amount did you expect, and what difference do you see?', 'Qual valor esperava e qual diferença encontrou?'),
+    'difference': ('¿Qué importe esperabas? Escríbelo en números y cuéntame qué diferencia encuentras.', 'What amount did you expect? Write it in digits and describe the difference.', 'Qual valor esperava? Escreva em números e descreva a diferença.'),
     'status': ('¿Qué estado aparece en el movimiento: pendiente, completado o rechazado?', 'What transaction status is shown: pending, completed or rejected?', 'Qual status aparece na movimentação: pendente, concluída ou rejeitada?'),
     'reference': ('¿Cuál es el folio de la solicitud que quieres consultar?', 'What is the reference of the request you want to check?', 'Qual é o protocolo da solicitação que deseja consultar?'),
     'symptom': ('¿Qué sucede y en qué paso ocurre?', 'What happens, and at which step?', 'O que acontece e em qual etapa?'),
@@ -114,6 +115,7 @@ def validate_observations(value, fields, messages):
     if not isinstance(rows, list) or len(rows) > len(fields):
         raise ValueError('invalid_observations')
     seen = set()
+    accepted = []
     for row in rows:
         if not isinstance(row, dict) or set(row) != {'field', 'message_index', 'quote'}:
             raise ValueError('invalid_observation')
@@ -123,7 +125,12 @@ def validate_observations(value, fields, messages):
         if type(quote) is not str or not 1 <= len(quote.strip()) <= 240 or messages[index]['role'] != 'user' or quote not in messages[index]['content']:
             raise ValueError('ungrounded_quote')
         seen.add(field)
-    return {'status': 'ok', **value}
+        # A generic complaint such as "charged too much" cannot satisfy the
+        # amount comparison. The customer must supply an amount in digits.
+        if field == 'difference' and not re.search(r'\d', quote):
+            continue
+        accepted.append(row)
+    return {'status': 'ok', **value, 'observations': accepted}
 
 
 def evaluate(messages, language, instructions, thread_id=None):

@@ -1,5 +1,7 @@
 # Catálogo de servicios Nexqori
 
+Actualización del 2 de octubre: [chat conectado al banco, pago de teléfono con comprobante y sección Mis reclamos](chat-bancario-y-pagos.md). Esta ampliación sustituye las limitaciones anteriores que indicaban que el chat sólo navegaba y que teléfono sólo registraba solicitudes. Los demás servicios conservan su alcance.
+
 Servicios permite buscar lo que se quiere hacer, el nombre de una empresa o una categoría. El catálogo contiene 20 entradas, con títulos, descripciones y sinónimos ES/EN/PT. No depende de descargar el dataset al ejecutar la app.
 
 ## Evidencia y decisiones

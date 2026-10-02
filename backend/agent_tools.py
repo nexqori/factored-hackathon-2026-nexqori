@@ -23,7 +23,7 @@ class ReadToolInput(BaseModel):
     locale: Locale = 'es'
 
 
-def read_tool(db, owner_id, payload):
+def read_tool(db, owner_id, payload, *, commit=True):
     """Caller supplies a session-derived owner, never a model-derived identity."""
     definition = TOOLS.get(payload.tool)
     if not definition or definition['kind'] != 'read' or payload.tool not in tools_for(payload.intent):
@@ -42,7 +42,8 @@ def read_tool(db, owner_id, payload):
                       action=payload.tool.replace('read-', 'tool_').replace('-', '_'),
                       conversation_id=payload.conversationId, **references))
     # No response leaves the gateway without its audit record committed.
-    db.commit()
+    if commit: db.commit()
+    else: db.flush()  # Embedded chat commits the audited reads with its complete turn.
     return {'tool': payload.tool, 'intent': payload.intent, 'status': 'executed',
             'source': result.get('source', 'nexqori_records'), 'data': result, 'auditEventId': audit_id,
             'executed_operations': []}

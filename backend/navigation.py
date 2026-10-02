@@ -2,9 +2,9 @@
 from typing import Literal
 from pydantic import BaseModel, ConfigDict
 from .catalog import SERVICES
-Destination = Literal["home","products","movements","requests","services","help","accounts","cards","transfers","payments","loans","investments","insurance","cash","settings"]
+Destination = Literal["home","products","movements","requests","complaints","services","help","accounts","cards","transfers","payments","loans","investments","insurance","cash","settings"]
 ROUTES = {
-    "home":"/", "products":"/products", "movements":"/movements", "requests":"/requests",
+    "home":"/", "products":"/products", "movements":"/movements", "requests":"/requests", "complaints":"/complaints",
     "services":"/services", "help":"/help", "accounts":"/products?kind=accounts", "cards":"/products?kind=cards",
     "transfers":"/services/transfers", "payments":"/services/payments", "loans":"/services/loans",
     "investments":"/services/investments", "insurance":"/services/insurance", "cash":"/services/cash", "settings":"/settings"

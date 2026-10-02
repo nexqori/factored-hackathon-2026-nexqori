@@ -10,6 +10,8 @@ mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 1512, height: 1050 }, locale: 'es-MX' });
 const page = await context.newPage();
+// Exercise the guided navigation fallback without spending provider credits.
+await page.route('**/api/assistant/capabilities',route=>route.fulfill({json:{connected:false,providers:{}}}));
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
 const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], securityHeaders: false };
@@ -93,7 +95,7 @@ try {
   await snapshot('request-handoff');
   await page.getByRole('button', {name:'Cerrar',exact:true}).click();
   await page.reload();
-  await page.getByRole('heading',{name:'Mis solicitudes',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'Mis reclamos',exact:true}).waitFor();
   assert.ok(await page.getByText(results.createdRequest,{exact:true}).count()>0,'Request persisted');
   await page.getByRole('textbox', {name:'Mensaje para Nexqori'}).fill('¿Cuál es mi saldo?');
   await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();

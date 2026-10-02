@@ -52,9 +52,9 @@ def tools_for(intent):
     if family == 'query':
         return {
             'account-balance': ['read-balances'],
-            'account-activity': ['read-transactions'],
+            'account-activity': ['read-transactions', 'read-transaction-evidence'],
             'my-cards': ['read-cards'],
-            'request-status': ['read-request-status'],
+            'request-status': ['read-request-status', 'read-transaction-evidence'],
         }.get(intent, ['read-service-info'])
     if family == 'problem':
         ids = ['read-problem-contract', 'read-request-status']

@@ -1,5 +1,7 @@
 # Empezar con Nexqori
 
+Actualización del 2 de octubre: [chat conectado al banco, pago de teléfono con comprobante y sección Mis reclamos](docs/chat-bancario-y-pagos.md). Esta ampliación sustituye las limitaciones anteriores que indicaban que el chat sólo navegaba y que teléfono sólo registraba solicitudes. Los demás servicios conservan su alcance.
+
 Administración: [panel de reclamos por usuario](docs/panel-reclamos.md). Desde Usuarios → Ver reclamos puedes revisar contexto, conversaciones, lecturas y decisiones con sus referencias. El cliente ve el detalle propio en Mis solicitudes. `npm run test:claims` deja tres casos persistentes y accesos privados para revisarlos.
 
 Panel de evaluación: [editor de flujos e incidencias](docs/editor-flujos-lab.md). En `http://localhost:5190/?view=flows&mode=editor&lang=es` puedes crear y conectar bloques, configurar contexto ES/EN/PT y ejecutar el grafo guardado. La plantilla Incidencia de la app genera logs y avisos locales sin modelos. `npm run test:lab:editor` verifica ese recorrido; `npm run test:lab:flows` conserva el [visor anterior](docs/lab-flujos-react-flow.md). Voz aplazada.

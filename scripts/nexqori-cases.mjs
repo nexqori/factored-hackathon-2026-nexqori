@@ -101,6 +101,7 @@ const contextOptions = { viewport: { width: 1512, height: 1050 }, locale: 'es-MX
 async function createPage() {
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
+  await page.route('**/api/assistant/capabilities', route => route.fulfill({json:{connected:false,providers:{}}}));
   page.setDefaultTimeout(15000);
   page.on('pageerror', error => report.consoleErrors.push(redact(error.message)));
   return page;
@@ -168,8 +169,9 @@ async function createClaim(page, fixture) {
   return requestId;
 }
 async function openClaim(page, id, admin = false) {
-  await page.goto(origin + (admin ? '/admin' : '/requests'));
-  await page.locator('.case-card').filter({ hasText: id }).click();
+  await page.goto(origin + (admin ? '/admin' : '/complaints'));
+  await page.locator(admin ? '.case-card' : '.claim-choice').filter({ hasText: id }).click();
+  if (!admin) await page.locator('.claims-detail-header button').click();
   await expect(page.getByRole('dialog')).toContainText(id);
 }
 async function closeDialog(page, locale) {
@@ -281,9 +283,9 @@ try {
         await snapshot(page, `devolucion-${locale}-aprobada`);
         await money(page, fixture, fixture.initialBalanceMinor + fixture.amountMinor, 1);
         await closeDialog(page, locale);
-        await page.locator('.request-search input').fill(currentCase.operationId);
-        await expect(page.locator('.case-card')).toHaveCount(1);
-        await expect(page.locator('.case-card')).toContainText(requestId);
+        await page.locator('.claims-filters input').fill(currentCase.operationId);
+        await expect(page.locator('.claim-choice')).toHaveCount(1);
+        await expect(page.locator('.claim-choice')).toContainText(requestId);
       });
     } else {
       await step('pago pendiente sin devolución disponible', async () => {

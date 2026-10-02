@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Nexqori â€” una forma mÃ¡s cercana de vivir tu banca",
+  "description": "Nexqori \u00e2\u20ac\u201d una forma m\u00c3\u00a1s cercana de vivir tu banca",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
@@ -25,7 +25,9 @@
     "test:lab:editor": "node experiments/intent-lab/check-editor-ui.mjs",
     "test:lab:steps": "node experiments/intent-lab/check-step-ui.mjs",
     "test:lab:master": "node experiments/intent-lab/check-master-ui.mjs",
-    "test:lab:bank": "node experiments/intent-lab/check-bank-context-ui.mjs"
+    "test:lab:bank": "node experiments/intent-lab/check-bank-context-ui.mjs",
+    "test:payments": "node scripts/nexqori-payments.mjs",
+    "test:chat:flow": "npm run build && node scripts/nexqori-chat-flow.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

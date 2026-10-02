@@ -3,6 +3,7 @@ import hashlib
 import json
 import time
 import uuid
+import os
 from datetime import datetime, timezone
 
 import httpx
@@ -21,6 +22,8 @@ def configuration():
                 key, value = line.split("=", 1)
                 if key.strip() in {"TYPESAFE_API_KEY", "JEV_MODEL", "LLM_API_KEY", "LLM_MODEL", "LLM_REASONING_EFFORT"}:
                     values[key.strip()] = value.strip().strip("\"'")
+    for key in ('TYPESAFE_API_KEY', 'JEV_MODEL', 'LLM_API_KEY', 'LLM_MODEL', 'LLM_REASONING_EFFORT'):
+        if os.environ.get(key): values[key] = os.environ[key]
     return values
 
 

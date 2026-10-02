@@ -1,5 +1,7 @@
 # Panel de reclamos y trazabilidad por usuario
 
+Actualización del 2 de octubre: [chat conectado al banco, pago de teléfono con comprobante y sección Mis reclamos](chat-bancario-y-pagos.md). Esta ampliación sustituye las limitaciones anteriores que indicaban que el chat sólo navegaba y que teléfono sólo registraba solicitudes. Los demás servicios conservan su alcance.
+
 Banco local: [Panel de reclamos](http://localhost:5180/admin/complaints). El editor sigue disponible en [Flujos de atención](http://localhost:5190/?view=flows&mode=editor&lang=es).
 
 ## Cómo revisar un caso

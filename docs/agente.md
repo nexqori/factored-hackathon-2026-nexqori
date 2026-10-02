@@ -1,5 +1,7 @@
 # Agente de navegación
 
+Actualización del 2 de octubre: [chat conectado al banco, pago de teléfono con comprobante y sección Mis reclamos](chat-bancario-y-pagos.md). Esta ampliación sustituye las limitaciones anteriores que indicaban que el chat sólo navegaba y que teléfono sólo registraba solicitudes. Los demás servicios conservan su alcance.
+
 La base ya interpreta pedidos de navegación en español, inglés y portugués. Usa reglas locales deterministas: **no hay un LLM conectado al chat bancario**. Los mensajes y el idioma se guardan por conversación y titular. El frontend envía la pantalla permitida y, al elegir Preguntar por este movimiento, su ID; el servidor valida titularidad y conserva el movimiento en esa conversación. El historial se muestra, pero todavía no se usa para razonamiento conversacional libre.
 
 Este límite corresponde al chat del banco. El LAB separado implementa Jev → contrato → Luna y comparación independiente; mantiene sus conversaciones separadas. El editor de flujos puede usar la sesión bancaria del mismo navegador para lecturas del titular mediante un adaptador limitado; los tokens y respuestas bancarias no se envían a modelos. El chat bancario admite texto pegado como tarjeta previa al envío y una presentación de llamada sin captura de audio. La consulta de conversaciones por administración deja un evento de auditoría. Véase [guía de registro y conversación](registro-auditoria-y-conversacion.md).

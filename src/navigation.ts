@@ -1,7 +1,7 @@
 // Keep this allowlist aligned with backend/navigation.py. Never execute a URL from chat.
 import { catalogIds, serviceCategory } from './catalog';
 export const destinations = {
-  home: '/', products: '/products', movements: '/movements', requests: '/requests',
+  home: '/', products: '/products', movements: '/movements', requests: '/requests', complaints: '/complaints',
   services: '/services', help: '/help', accounts: '/products?kind=accounts', cards: '/products?kind=cards',
   transfers: '/services/transfers', payments: '/services/payments', loans: '/services/loans',
   investments: '/services/investments', insurance: '/services/insurance', cash: '/services/cash', settings: '/settings',

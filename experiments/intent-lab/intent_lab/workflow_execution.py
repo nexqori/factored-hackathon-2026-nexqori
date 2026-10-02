@@ -49,7 +49,7 @@ def read(id):
     return state
 
 
-def create(record, messages, language, thread_id=None, incident_id=None, bank_binding=None):
+def create(record, messages, language, thread_id=None, incident_id=None, bank_binding=None, *, persist=None):
     if not editor.validate_graph(record['graph'])['valid']: raise ValueError('invalid_graph')
     state = {'id': str(uuid.uuid4()), 'run_id': str(uuid.uuid4()), 'record': copy.deepcopy(record),
              'messages': copy.deepcopy(messages), 'language': language, 'thread_id': thread_id or str(uuid.uuid4()),
@@ -63,7 +63,7 @@ def create(record, messages, language, thread_id=None, incident_id=None, bank_bi
                          'llm': {'status': 'skipped'}, 'missing': [], 'observations': [],
                          'questions': [], 'intent': None, 'fields': [], 'incident': None,
                          'notice': None, 'contract': None, 'case_definition': None, 'activation_plan': [], 'state': 'information', 'reply': ''}}
-    write(state)
+    (persist or write)(state)
     return state
 
 
@@ -142,7 +142,8 @@ def replay(state, version, node_id):
     return child, False
 
 
-def advance(state, mode='step', reply=None, on_event=None, bank_reader=None, bank_selection=None):
+def advance(state, mode='step', reply=None, on_event=None, bank_reader=None, bank_selection=None, *, persist=None, record_run=True):
+    checkpoint = persist or write
     def emit(event):
         if on_event: on_event(event)
     if state.get('bank_binding') and (bank_reader is None or bank_reader.user['id']!=state['bank_binding']['owner_id']):
@@ -162,28 +163,28 @@ def advance(state, mode='step', reply=None, on_event=None, bank_reader=None, ban
     if bank_selection is not None:
         state['bank_binding'].update(bank_selection)
     state.update(phase='running', worker=BOOT_ID)
-    write(state)  # A process crash cannot silently retry a provider or notification.
+    checkpoint(state)  # Hosts choose file checkpoints or an atomic database turn.
     try:
         for _ in range(1 if mode == 'step' else 40):
-            _one(state, emit,bank_reader)
+            _one(state, emit,bank_reader,checkpoint)
             state['version'] += 1
-            write(state)
+            checkpoint(state)
             if state['phase'] in ('completed', 'waiting_reply'): break
         if state['phase'] == 'running': state['phase'] = 'paused'
-        write(state)
+        checkpoint(state)
         result = view(state)
-        if state['phase'] in ('completed', 'waiting_reply'):
+        if record_run and state['phase'] in ('completed', 'waiting_reply'):
             save_run({'kind': 'workflow', 'actor': 'local_operator', 'messages': state['messages'],
                       'request': state['requests'][-1] if state['requests'] else None,
                       'requests': state['requests'], 'result': result})
         return result
     except Exception:
         state.update(phase='interrupted', next_node_id=None)
-        write(state)
+        checkpoint(state)
         raise
 
 
-def _one(state, emit,bank_reader=None):
+def _one(state, emit,bank_reader=None,persist=None):
     graph, ctx, language = state['record']['graph'], state['context'], state['language']
     current = state['next_node_id']
     node = next(n for n in graph['nodes'] if n['id'] == current)
@@ -192,7 +193,7 @@ def _one(state, emit,bank_reader=None):
         'context':copy.deepcopy(ctx),'messages':copy.deepcopy(messages),'turn':state['turn'],'bank_binding':copy.deepcopy(state.get('bank_binding')),
         'trace_length':len(state['trace']),'edges_length':len(state['visited_edges']),'requests_length':len(state['requests']),
         'latency_ms':state['latency_ms'],'last_edge_id':state['last_edge_id']}
-    write(state)
+    (persist or write)(state)
     tick = time.perf_counter()
     emit({'event': 'node_started', 'node_id': current, 'kind': kind})
     output, status, port = {}, 'ok', 'next'

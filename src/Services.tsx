@@ -6,6 +6,7 @@ import { api, ApiError } from './api';
 import { Badge, formatMoney } from './components';
 import { destinations, type Destination } from './navigation';
 import { localService, parseAmount, serviceTitle } from './catalog';
+import { PhonePayment } from './PhonePayment';
 import type { Locale } from './i18n';
 import type { Dashboard, RequestCase, Service, ServiceItem } from './types';
 
@@ -64,7 +65,7 @@ export function ServiceRequestDetails({ request }: { request: RequestCase }) {
     {data.reference && <div><dt>{t('catalogReference_' + (item?.referenceKind || 'receipt'))}</dt><dd>{data.reference}</dd></div>}
     {data.beneficiary && <div><dt>{t('catalogBeneficiary')}</dt><dd>{data.beneficiary}</dd></div>}
     {data.accountLast4 && <div><dt>{t('catalogSourceAccount')}</dt><dd>•••• {data.accountLast4}</dd></div>}
-    {data.amountMinor !== null && <div><dt>{t('amount')}</dt><dd>{formatMoney(data.amountMinor, i18n.language as Locale, data.currency || 'MXN')}</dd></div>}
+    {data.amountMinor != null && <div><dt>{t('amount')}</dt><dd>{formatMoney(data.amountMinor, i18n.language as Locale, data.currency || 'MXN')}</dd></div>}
   </dl>;
 }
 
@@ -74,6 +75,7 @@ export function ServicePage({ data, saved }: { data: Dashboard; saved: (id: stri
   useEffect(() => { const c = new AbortController(); setLoadError(''); setItem(previous => previous?.id === serviceId ? previous : null); void api<ServiceItem>('/services/' + encodeURIComponent(serviceId) + '?locale=' + locale, 'GET', undefined, c.signal).then(value => { if (!c.signal.aborted) setItem(value); }).catch(e => { if (!c.signal.aborted) setLoadError(failure(e)); }); return () => c.abort(); }, [serviceId, locale, retry]);
   if (loadError) return <div className="empty-panel"><p role="alert">{t(loadError)}</p><button className="button secondary" onClick={() => setRetry(retry + 1)}>{t('retry')}</button><Link className="text-link" to="/services">{t('allServices')}</Link></div>;
   if (!item) return <p role="status">{t('loading')}</p>;
+  if (item.id === 'phone-bill') return <PhonePayment data={data} saved={saved} />;
   if (item.kind === 'navigate' && item.target && Object.hasOwn(destinations, item.target)) return <Link className="button primary" to={destinations[item.target as Destination]}>{item.title}<ArrowRight size={18} /></Link>;
   return <ServiceForm key={item.id} item={item} data={data} saved={saved} />;
 }
@@ -107,7 +109,7 @@ function ServiceForm({ item, data, saved }: { item: ServiceItem; data: Dashboard
     <div className="service-page-header"><ServiceIcon item={item} /><div><p className="eyebrow">{item.provider || t(item.category === 'support' ? 'catalogSupport' : item.category)}</p><h1>{item.title}</h1><p>{item.summary}</p></div></div>
     <>{item.workflow && <details className="workflow-procedure" open><summary>{t('workflowSteps')}</summary><ol>{item.workflow.steps.map((step,index)=><li key={index}>{step}</li>)}</ol><p>{t('workflowOutcome')}</p></details>}</><ol className="service-steps" aria-label={t('catalogSteps')}>{['catalogStepDetails', 'catalogStepReview', 'catalogStepFollow'].map((key, index) => <li key={key} aria-current={(receipt ? 2 : review ? 1 : 0) === index ? 'step' : undefined}><span>{index + 1}</span>{t(key)}</li>)}</ol>
     <section className="panel service-operation">
-      {receipt ? <div className="service-success"><span className="round-icon"><Check size={30} /></span><h2>{t('catalogReceived')}</h2><p>{t('catalogReceivedHint')}</p><strong className="case-reference">{receipt}</strong><Badge status="received" /><Link className="button primary" to="/requests">{t('requests')}<ArrowRight size={18} /></Link></div> : !review ? <form className="form-stack" onSubmit={prepare}>
+      {receipt ? <div className="service-success"><span className="round-icon"><Check size={30} /></span><h2>{t('catalogReceived')}</h2><p>{t('catalogReceivedHint')}</p><strong className="case-reference">{receipt}</strong><Badge status="received" /><Link className="button primary" to={item.kind === 'claim' ? '/complaints?case=' + receipt : '/requests'}>{t(item.kind === 'claim' ? 'myClaims' : 'requests')}<ArrowRight size={18} /></Link></div> : !review ? <form className="form-stack" onSubmit={prepare}>
         <h2>{t('catalogDetailsTitle')}</h2>
         {monetary && <>
           <label>{t('catalogSourceAccount')}<select required value={accountId} onChange={e => setAccountId(e.target.value)}><option value="">{t('catalogChooseAccount')}</option>{accounts.map(p => <option key={p.id} value={p.id}>{t(p.type)} · •••• {p.last4} · {formatMoney(p.balanceMinor || 0, locale)}</option>)}</select></label>

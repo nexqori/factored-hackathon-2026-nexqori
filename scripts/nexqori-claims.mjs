@@ -127,7 +127,7 @@ try {
   assert.equal(foreign.status(), 404);
   const customerPage = await customer.context.newPage(); page = customerPage;
   page.on('pageerror', e => report.errors.push(e.message));
-  await page.goto(origin + '/requests'); await page.locator('.case-card').click();
+  await page.goto(origin + '/complaints'); await page.locator('.claim-choice').click(); await page.locator('.claims-detail-header button').click();
   await page.locator('dialog [data-trace-ready=true]').waitFor();
   await expect(page.locator('dialog .trace-current')).toContainText(copy.es['trace.outcome.refund_pending']);
   await axe('customer-case');

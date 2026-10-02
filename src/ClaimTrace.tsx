@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Check, Clock3, FileText, MessageCircle, RefreshCw } from 'lucide-react';
 import { api } from './api';
 import { Badge, formatMoney } from './components';
+import { ChatFlow } from './ChatFlow';
 import { RequestStatus } from './RequestProgress';
 import type { Locale } from './i18n';
 import type { AuditEvent, Conversation, ConversationPage, RequestCase } from './types';
@@ -77,7 +78,7 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
         {conversationBusy && <p role="status">{t('loading')}</p>}{conversationError && <p role="alert" className="error-text">{t('trace.error')}</p>}
         {conversation && <section className="trace-transcript" aria-label={t('conversation')}><div className="trace-toolbar"><strong>{t('conversation')}</strong><button className="text-link" onClick={() => { messageController.current?.abort(); setConversationBusy(false); setConversation(null); }}>{t('close')}</button></div><p className="muted">{t('trace.originalLanguage')}</p>
           {conversation.before && <button className="text-link" disabled={conversationBusy} onClick={() => void viewConversation(conversation.conversation.id, conversation.before!)}>{t('olderMessages')}</button>}
-          {conversation.messages.map(m => <article className={'trace-message ' + m.role} key={m.id}><strong>{t(m.role === 'user' ? 'customer' : 'assistant')}</strong><time dateTime={m.at}>{timestamp(m.at)}</time><p className="trace-text" lang={m.locale}>{m.text}</p></article>)}</section>}
+          {conversation.flow && <ChatFlow readOnly result={conversation.flow} conversationId={conversation.conversation.id} text="" onRegistered={() => {}}/>}{conversation.messages.map(m => <article className={'trace-message ' + m.role} key={m.id}><strong>{t(m.role === 'user' ? 'customer' : 'assistant')}</strong><time dateTime={m.at}>{timestamp(m.at)}</time><p className="trace-text" lang={m.locale}>{m.text}</p></article>)}</section>}
       </section>
       <section className="trace-section"><h3><Clock3 size={18} />{t('trace.activity')} <span className="trace-count">{trace.eventCount}</span></h3><p className="muted">{t('trace.activityHint')}</p>
         <ol className="trace-events">{trace.events.map(e => <li key={e.id}><span className="trace-event-icon"><Check size={14} /></span><article><div className="trace-event-heading"><strong>{eventTitle(e.action)}</strong><time dateTime={e.at}>{timestamp(e.at)}</time></div><p>{eventDescription(e.action)}</p><div className="trace-event-meta"><span>{t('auditActor')}: {e.actorName}</span><span>{t('trace.relation.' + e.relation)}</span></div><details><summary>{t('trace.references')}</summary><dl><div><dt>{t('trace.auditId')}</dt><dd><code>{e.id}</code></dd></div>{e.transactionId && <div><dt>{t('linkedMovement')}</dt><dd><code>{e.transactionId}</code></dd></div>}{e.conversationId && <div><dt>{t('conversation')}</dt><dd><code>{e.conversationId}</code></dd></div>}<div><dt>{t('trace.eventCode')}</dt><dd><code>{e.action}</code></dd></div></dl></details></article></li>)}</ol>

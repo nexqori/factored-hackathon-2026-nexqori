@@ -1,5 +1,7 @@
 # Probar flujos con registros del usuario del banco
 
+Actualización del 2 de octubre: [chat conectado al banco, pago de teléfono con comprobante y sección Mis reclamos](chat-bancario-y-pagos.md). Esta ampliación sustituye las limitaciones anteriores que indicaban que el chat sólo navegaba y que teléfono sólo registraba solicitudes. Los demás servicios conservan su alcance.
+
 El bloque **Reunir contexto del caso** puede consultar movimientos, solicitudes vinculadas, tarjetas enmascaradas y eventos internos del titular autenticado. Se conserva un solo flujo: **Consulta o problema · Jev** clasifica y deriva directamente; los problemas pasan a identificar el caso, cargar su contrato y reunir contexto.
 
 ## Empezar
