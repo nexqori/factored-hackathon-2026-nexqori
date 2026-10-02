@@ -1,0 +1,38 @@
+{
+  "created_at": "2026-10-02T06:08:27.794323+00:00",
+  "sources": [
+    {
+      "path": "backend/config/intent-taxonomy.json",
+      "sha256": "0cfdb95e2ea6bf9474f8a217312c567981449cc7fb47eda3c03f6db56021bf10"
+    },
+    {
+      "path": "notebooks/evidencia/reglas_resolucion.json",
+      "sha256": "4772512186d2300dbe4045842391a83c8b784faedad59fe56891cb0e0d7d2d5a"
+    },
+    {
+      "path": "notebooks/evidencia/reglas_resolucion.schema.json",
+      "sha256": "1cffe81046512e7f43d57434b89ed30669208ce8e40bf580f313d9672a140daa"
+    },
+    {
+      "path": "notebooks/evidencia/casos_clasificacion_cinco_tipos.json",
+      "sha256": "7c77f0e211d60fbdea1162212c39e2b48c0e9b5e8bf0bdde345c1358225e61bd"
+    },
+    {
+      "path": "notebooks/intentions/LLM/LLM_INTENTIONS_EXPERIMENT.ipynb",
+      "sha256": "4ef987e0e7279c29eb4d5ef56ebb3d80d16aacaa6097b0ee32d0ff72e4f2fa59"
+    },
+    {
+      "path": "notebooks/evidencia/EVIDENCE_SUFFICIENCY_EXPERIMENT.ipynb",
+      "sha256": "584b5b326bf0be0a603e7874657ffecb40b0b5fc32f1176cf7964d7578ea9ce5"
+    },
+    {
+      "path": "notebooks/rag-actions/POSTGRES_RAG_ACTIONS_EXPERIMENT.ipynb",
+      "sha256": "7b6194bebc3d0fb4fb8b2f28101167127db8c3d4993680d2254fae775725792d"
+    }
+  ],
+  "notes": [
+    "No se ejecutaron notebooks ni se importaron sus outputs.",
+    "El archivo de casos citado dos veces por el usuario se adapta una sola vez.",
+    "Los contratos originales y backend no fueron modificados."
+  ]
+}

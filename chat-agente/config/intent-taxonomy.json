@@ -1,0 +1,188 @@
+{
+  "version": "2.0.0-chat-agent",
+  "status": "standalone_not_connected_to_app",
+  "locales": [
+    "es",
+    "en",
+    "pt"
+  ],
+  "notes": [
+    "Adaptación de la taxonomía del backend; excluye report (reclamo).",
+    "Reclamos se detienen en código 2. documents significa reporte/documento, no disputa.",
+    "Probabilidad y confianza Jev no son precisión medida ni permiso.",
+    "Ejemplos no son un conjunto reservado de evaluación."
+  ],
+  "intents": [
+    {
+      "id": "balance",
+      "definition": "Consultar saldo, sin operar.",
+      "examples": {
+        "es": "¿Cuál es mi saldo?",
+        "en": "What is my balance?",
+        "pt": "Qual é meu saldo?"
+      }
+    },
+    {
+      "id": "movements",
+      "definition": "Consultar movimientos e historial, sin tramitar disputas.",
+      "examples": {
+        "es": "Ver movimientos",
+        "en": "Show transactions",
+        "pt": "Ver movimentações"
+      }
+    },
+    {
+      "id": "requests",
+      "definition": "Consultar seguimiento de solicitudes existentes o pedir información de atención, sin iniciar reclamos.",
+      "examples": {
+        "es": "Seguir mi solicitud",
+        "en": "Track my request",
+        "pt": "Acompanhar minha solicitação"
+      }
+    },
+    {
+      "id": "human",
+      "definition": "Preparar atención humana; no conectar operador.",
+      "examples": {
+        "es": "Quiero atención humana",
+        "en": "I want human support",
+        "pt": "Quero atendimento humano"
+      }
+    },
+    {
+      "id": "accounts",
+      "definition": "Consultar cuentas; saldo explícito corresponde a balance.",
+      "examples": {
+        "es": "Ver cuentas",
+        "en": "Show accounts",
+        "pt": "Ver contas"
+      }
+    },
+    {
+      "id": "cards",
+      "definition": "Consultar tarjetas propias, sin iniciar reclamos.",
+      "examples": {
+        "es": "Ver tarjetas",
+        "en": "Show cards",
+        "pt": "Ver cartões"
+      }
+    },
+    {
+      "id": "transfers",
+      "definition": "Abrir transferencias, sin ejecutar.",
+      "examples": {
+        "es": "Abrir transferencias",
+        "en": "Open transfers",
+        "pt": "Abrir transferências"
+      }
+    },
+    {
+      "id": "payments",
+      "definition": "Abrir pagos, sin ejecutar ni inferir obligación.",
+      "examples": {
+        "es": "Abrir pagos",
+        "en": "Open payments",
+        "pt": "Abrir pagamentos"
+      }
+    },
+    {
+      "id": "loans",
+      "definition": "Consultar préstamos, sin decidir elegibilidad.",
+      "examples": {
+        "es": "Ver préstamos",
+        "en": "Show loans",
+        "pt": "Ver empréstimos"
+      }
+    },
+    {
+      "id": "investments",
+      "definition": "Consultar inversiones, sin contratar.",
+      "examples": {
+        "es": "Ver inversiones",
+        "en": "Show investments",
+        "pt": "Ver investimentos"
+      }
+    },
+    {
+      "id": "insurance",
+      "definition": "Consultar seguros, sin contratar.",
+      "examples": {
+        "es": "Ver seguros",
+        "en": "Show insurance",
+        "pt": "Ver seguros"
+      }
+    },
+    {
+      "id": "cash",
+      "definition": "Consultar retiros y depósitos, sin operar.",
+      "examples": {
+        "es": "Ver retiros",
+        "en": "Show withdrawals",
+        "pt": "Ver saques"
+      }
+    },
+    {
+      "id": "products",
+      "definition": "Consultar productos sin tipo específico.",
+      "examples": {
+        "es": "Ver productos",
+        "en": "Show products",
+        "pt": "Ver produtos"
+      }
+    },
+    {
+      "id": "services",
+      "definition": "Consultar índice de servicios.",
+      "examples": {
+        "es": "Ver servicios",
+        "en": "Show services",
+        "pt": "Ver serviços"
+      }
+    },
+    {
+      "id": "help",
+      "definition": "Ayuda general; atención humana explícita corresponde a human.",
+      "examples": {
+        "es": "Abrir ayuda",
+        "en": "Open help",
+        "pt": "Abrir ajuda"
+      }
+    },
+    {
+      "id": "home",
+      "definition": "Volver al inicio.",
+      "examples": {
+        "es": "Ir al inicio",
+        "en": "Go home",
+        "pt": "Ir ao início"
+      }
+    },
+    {
+      "id": "unknown",
+      "definition": "Ambigüedad, negación, sin coincidencia o fuera de alcance.",
+      "examples": {
+        "es": "Necesito algo",
+        "en": "I need something",
+        "pt": "Preciso de algo"
+      }
+    },
+    {
+      "id": "restricted",
+      "definition": "Administración: señal informativa, permisos en servidor.",
+      "examples": {
+        "es": "Abrir administración",
+        "en": "Open administration",
+        "pt": "Abrir administração"
+      }
+    },
+    {
+      "id": "documents",
+      "definition": "Solicitar reporte, estado de cuenta como archivo, documento, exportación o envío de un resumen; capacidad pendiente.",
+      "examples": {
+        "es": "Necesito un reporte de mis movimientos en PDF.",
+        "en": "I need a PDF report of my transactions.",
+        "pt": "Preciso de um relatório das minhas movimentações em PDF."
+      }
+    }
+  ]
+}

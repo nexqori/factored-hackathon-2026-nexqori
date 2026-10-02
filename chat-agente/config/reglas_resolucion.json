@@ -1,0 +1,1066 @@
+{
+  "version": "2.0.0-chat-agent",
+  "status": "standalone_not_connected_to_app",
+  "source_version": "1.1.0",
+  "classes": {
+    "automatico": "Información mínima suficiente para una consulta de lectura; sin ejecutar operaciones.",
+    "supervisado": "Información suficiente, pero requiere confirmación y permisos fuera del modelo.",
+    "insatisfecho": "Faltan datos mínimos; preguntar específicamente y volver a evaluar en otro turno.",
+    "humano": "Se requiere una persona o una capacidad no disponible; punto de integración pendiente.",
+    "desconocido": "No se entiende la solicitud o la respuesta; pedir reformulación."
+  },
+  "questions": {
+    "scope": {
+      "es": "¿Quieres consultar un producto específico o todos tus productos?",
+      "en": "Do you want to view one product or all your products?",
+      "pt": "Você quer consultar um produto específico ou todos os seus produtos?"
+    },
+    "period": {
+      "es": "¿Qué periodo quieres consultar?",
+      "en": "Which period would you like to view?",
+      "pt": "Qual período você quer consultar?"
+    },
+    "details": {
+      "es": "Cuéntanos qué ocurrió y qué necesitas que revisemos.",
+      "en": "Tell us what happened and what you need us to review.",
+      "pt": "Conte o que aconteceu e o que você precisa que seja analisado."
+    },
+    "service": {
+      "es": "¿Con qué servicio necesitas ayuda?",
+      "en": "Which service do you need help with?",
+      "pt": "Com qual serviço você precisa de ajuda?"
+    },
+    "selection": {
+      "es": "¿Qué producto, movimiento o solicitud quieres consultar? Indica su referencia.",
+      "en": "Which product, transaction or request do you want to view? Provide its reference.",
+      "pt": "Qual produto, movimentação ou solicitação deseja consultar? Informe a referência."
+    },
+    "topic": {
+      "es": "¿Sobre qué tema necesitas información?",
+      "en": "What topic do you need information about?",
+      "pt": "Sobre qual assunto precisa de informações?"
+    },
+    "objective": {
+      "es": "No entendí tu solicitud. ¿Puedes indicar nuevamente qué necesitas consultar o solicitar?",
+      "en": "I did not understand your request. Could you explain what you need to view or request?",
+      "pt": "Não entendi sua solicitação. Pode explicar novamente o que deseja consultar ou solicitar?"
+    }
+  },
+  "rules": {
+    "balance": {
+      "definition": "Consultar saldo, sin operar.",
+      "actions": [
+        {
+          "id": "read",
+          "kind": "read",
+          "description": "Consultar datos propios sin operar.",
+          "query": "products",
+          "requires": [
+            "scope"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/products",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "movements": {
+      "definition": "Consultar movimientos e historial, sin tramitar disputas.",
+      "actions": [
+        {
+          "id": "read",
+          "kind": "read",
+          "description": "Consultar datos propios sin operar.",
+          "query": "transactions",
+          "requires": [
+            "scope",
+            "period"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/movements",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "requests": {
+      "definition": "Consultar seguimiento de solicitudes existentes o pedir información de atención, sin iniciar reclamos.",
+      "actions": [
+        {
+          "id": "read",
+          "kind": "read",
+          "description": "Consultar datos propios sin operar.",
+          "query": "requests",
+          "requires": [
+            "scope"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/requests",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "human": {
+      "definition": "Preparar atención humana; no conectar operador.",
+      "actions": [
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Pedir atención humana; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "accounts": {
+      "definition": "Consultar cuentas; saldo explícito corresponde a balance.",
+      "actions": [
+        {
+          "id": "read",
+          "kind": "read",
+          "description": "Consultar datos propios sin operar.",
+          "query": "products",
+          "requires": [
+            "scope"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/products?kind=accounts",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "cards": {
+      "definition": "Consultar tarjetas propias, sin iniciar reclamos.",
+      "actions": [
+        {
+          "id": "read",
+          "kind": "read",
+          "description": "Consultar datos propios sin operar.",
+          "query": "products",
+          "requires": [
+            "scope"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/products?kind=cards",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "transfers": {
+      "definition": "Abrir transferencias, sin ejecutar.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/services/transfers",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "payments": {
+      "definition": "Abrir pagos, sin ejecutar ni inferir obligación.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/services/payments",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "loans": {
+      "definition": "Consultar préstamos, sin decidir elegibilidad.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/services/loans",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "investments": {
+      "definition": "Consultar inversiones, sin contratar.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/services/investments",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "insurance": {
+      "definition": "Consultar seguros, sin contratar.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/services/insurance",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "cash": {
+      "definition": "Consultar retiros y depósitos, sin operar.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/services/cash",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "products": {
+      "definition": "Consultar productos sin tipo específico.",
+      "actions": [
+        {
+          "id": "read",
+          "kind": "read",
+          "description": "Consultar datos propios sin operar.",
+          "query": "products",
+          "requires": [
+            "scope"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/products",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "services": {
+      "definition": "Consultar índice de servicios.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/services",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "help": {
+      "definition": "Ayuda general; atención humana explícita corresponde a human.",
+      "actions": [
+        {
+          "id": "read",
+          "kind": "read",
+          "description": "Informar: se pueden consultar productos, movimientos y solicitudes; operaciones, navegación y contacto humano no están conectados en este agente.",
+          "query": "catalog",
+          "requires": [
+            "topic"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/help",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "home": {
+      "definition": "Volver al inicio.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Consultar servicio sin tablas operativas suficientes; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "navigate",
+          "kind": "navigate",
+          "description": "Abrir o ir a la pantalla del servicio; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": "/",
+          "execution_authorized": false
+        },
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "request",
+          "kind": "supervised",
+          "description": "Solicitar una gestión o registro, no consultar datos; requiere formulario/confirmación e integración de escritura.",
+          "query": null,
+          "requires": [
+            "details",
+            "service"
+          ],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "human",
+          "kind": "human",
+          "description": "Solicitar atención de una persona.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        },
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "No se puede determinar una sola acción solicitada.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "unknown": {
+      "definition": "Ambigüedad, negación, sin coincidencia o fuera de alcance.",
+      "actions": [
+        {
+          "id": "clarify",
+          "kind": "clarify",
+          "description": "Solicitud no entendida; pedir reformulación.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "restricted": {
+      "definition": "Administración: señal informativa, permisos en servidor.",
+      "actions": [
+        {
+          "id": "unsupported",
+          "kind": "unsupported",
+          "description": "Acceso administrativo no permitido a este agente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    },
+    "documents": {
+      "definition": "Solicitar reporte, estado de cuenta como archivo, documento, exportación o envío de un resumen; capacidad pendiente.",
+      "actions": [
+        {
+          "id": "document",
+          "kind": "document",
+          "description": "Crear, exportar o enviar reporte/documento; integración pendiente.",
+          "query": null,
+          "requires": [],
+          "destination": null,
+          "execution_authorized": false
+        }
+      ]
+    }
+  },
+  "precedence": [
+    "complaint_gate",
+    "unknown",
+    "missing_fields",
+    "pending_adapter",
+    "supervised",
+    "read"
+  ],
+  "limits": {
+    "misunderstood_replies": 3,
+    "additional_retries": 2,
+    "max_clarification_rounds": 8
+  },
+  "authorization": "Session and owner checks are independent of model classifications; execution_authorized is always false."
+}

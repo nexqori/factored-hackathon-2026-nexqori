@@ -1,0 +1,102 @@
+{
+  "status": "specification_not_executed",
+  "adapted_from_count": 7,
+  "cases": [
+    {
+      "id": "balance_all",
+      "intent": "balance",
+      "action_id": "read",
+      "fields": {
+        "scope": "all"
+      },
+      "expected_evidence_class": "automatico",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "balance_missing_scope",
+      "intent": "balance",
+      "action_id": "read",
+      "fields": {},
+      "expected_evidence_class": "insatisfecho",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "movements_missing_period",
+      "intent": "movements",
+      "action_id": "read",
+      "fields": {
+        "scope": "all"
+      },
+      "expected_evidence_class": "insatisfecho",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "movements_all",
+      "intent": "movements",
+      "action_id": "read",
+      "fields": {
+        "scope": "all",
+        "all_history": true
+      },
+      "expected_evidence_class": "automatico",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "request_supervised",
+      "intent": "services",
+      "action_id": "request",
+      "fields": {
+        "details": "Solicito información adicional del servicio.",
+        "service": "support"
+      },
+      "expected_evidence_class": "supervisado",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "human_request",
+      "intent": "human",
+      "action_id": "human",
+      "fields": {},
+      "expected_evidence_class": "humano",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "unknown_request",
+      "intent": "unknown",
+      "action_id": "clarify",
+      "fields": {},
+      "expected_evidence_class": "desconocido",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "selected_missing_id",
+      "intent": "accounts",
+      "action_id": "read",
+      "fields": {
+        "scope": "selected"
+      },
+      "expected_evidence_class": "insatisfecho",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "request_tracking",
+      "intent": "requests",
+      "action_id": "read",
+      "fields": {
+        "scope": "selected",
+        "request_id": "request-own-example"
+      },
+      "expected_evidence_class": "automatico",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    }
+  ]
+}
