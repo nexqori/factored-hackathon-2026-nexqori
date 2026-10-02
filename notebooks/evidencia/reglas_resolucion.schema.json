@@ -1,0 +1,569 @@
+{
+  "type": "object",
+  "required": [
+    "version",
+    "status",
+    "created_at",
+    "timezone",
+    "taxonomy_version",
+    "sources",
+    "navigation_routes",
+    "capabilities",
+    "facts",
+    "messages",
+    "rules",
+    "decision_contract",
+    "classification_contract"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string"
+    },
+    "taxonomy_version": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "navigation_routes": {
+      "type": "object",
+      "required": [
+        "home",
+        "products",
+        "movements",
+        "requests",
+        "services",
+        "help",
+        "accounts",
+        "cards",
+        "transfers",
+        "payments",
+        "loans",
+        "investments",
+        "insurance",
+        "cash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "home": {
+          "type": "string"
+        },
+        "products": {
+          "type": "string"
+        },
+        "movements": {
+          "type": "string"
+        },
+        "requests": {
+          "type": "string"
+        },
+        "services": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "accounts": {
+          "type": "string"
+        },
+        "cards": {
+          "type": "string"
+        },
+        "transfers": {
+          "type": "string"
+        },
+        "payments": {
+          "type": "string"
+        },
+        "loans": {
+          "type": "string"
+        },
+        "investments": {
+          "type": "string"
+        },
+        "insurance": {
+          "type": "string"
+        },
+        "cash": {
+          "type": "string"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "status",
+          "permission",
+          "endpoint",
+          "effect"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effect": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "meaning",
+          "accepted_sources",
+          "validation",
+          "missing_resolution",
+          "question"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "meaning": {
+            "type": "string"
+          },
+          "accepted_sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validation": {
+            "type": "string"
+          },
+          "missing_resolution": {
+            "type": "string"
+          },
+          "question": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "es",
+                  "en",
+                  "pt"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "es": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  },
+                  "pt": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "messages": {
+      "type": "object",
+      "required": [
+        "unknown",
+        "restricted",
+        "unavailable",
+        "conflict"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "unknown": {
+          "type": "object",
+          "required": [
+            "es",
+            "en",
+            "pt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": "string"
+            },
+            "en": {
+              "type": "string"
+            },
+            "pt": {
+              "type": "string"
+            }
+          }
+        },
+        "restricted": {
+          "type": "object",
+          "required": [
+            "es",
+            "en",
+            "pt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": "string"
+            },
+            "en": {
+              "type": "string"
+            },
+            "pt": {
+              "type": "string"
+            }
+          }
+        },
+        "unavailable": {
+          "type": "object",
+          "required": [
+            "es",
+            "en",
+            "pt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": "string"
+            },
+            "en": {
+              "type": "string"
+            },
+            "pt": {
+              "type": "string"
+            }
+          }
+        },
+        "conflict": {
+          "type": "object",
+          "required": [
+            "es",
+            "en",
+            "pt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "es": {
+              "type": "string"
+            },
+            "en": {
+              "type": "string"
+            },
+            "pt": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "intent",
+          "definition",
+          "minimum_resolution",
+          "actions",
+          "prohibited",
+          "email_policy",
+          "dashboard_policy"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "intent": {
+            "enum": [
+              "balance",
+              "movements",
+              "report",
+              "requests",
+              "human",
+              "accounts",
+              "cards",
+              "transfers",
+              "payments",
+              "loans",
+              "investments",
+              "insurance",
+              "cash",
+              "products",
+              "services",
+              "help",
+              "home",
+              "unknown",
+              "restricted"
+            ]
+          },
+          "definition": {
+            "type": "string"
+          },
+          "minimum_resolution": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "capability",
+                "requires_all",
+                "navigation_destination",
+                "ui_instruction",
+                "success_evidence",
+                "on_missing",
+                "on_conflict",
+                "auto_execute",
+                "sufficient_class",
+                "insufficient_class",
+                "business_requires_all"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "capability": {
+                  "type": "string"
+                },
+                "requires_all": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "navigation_destination": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ui_instruction": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "success_evidence": {
+                  "type": "string"
+                },
+                "on_missing": {
+                  "type": "string"
+                },
+                "on_conflict": {
+                  "type": "string"
+                },
+                "auto_execute": {
+                  "type": "boolean"
+                },
+                "sufficient_class": {
+                  "enum": [
+                    "automatico",
+                    "supervisado",
+                    "insatisfecho",
+                    "humano",
+                    "desconocido"
+                  ]
+                },
+                "insufficient_class": {
+                  "enum": [
+                    "automatico",
+                    "supervisado",
+                    "insatisfecho",
+                    "humano",
+                    "desconocido"
+                  ]
+                },
+                "business_requires_all": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "prohibited": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "email_policy": {
+            "type": "string"
+          },
+          "dashboard_policy": {
+            "type": "string"
+          }
+        }
+      },
+      "minItems": 19,
+      "maxItems": 19
+    },
+    "decision_contract": {
+      "type": "object",
+      "required": [
+        "unit",
+        "precedence",
+        "outcomes",
+        "required_output",
+        "execution_authorized",
+        "absent_fact",
+        "unrecognized_intent",
+        "unrecognized_action",
+        "fact_acceptance",
+        "freshness",
+        "empty_required_facts",
+        "fail_closed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "type": "string"
+        },
+        "precedence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_output": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "execution_authorized": {
+          "type": "boolean"
+        },
+        "absent_fact": {
+          "type": "string"
+        },
+        "unrecognized_intent": {
+          "type": "string"
+        },
+        "unrecognized_action": {
+          "type": "string"
+        },
+        "fact_acceptance": {
+          "type": "string"
+        },
+        "freshness": {
+          "type": "string"
+        },
+        "empty_required_facts": {
+          "type": "string"
+        },
+        "fail_closed": {
+          "type": "string"
+        }
+      }
+    },
+    "classification_contract": {
+      "type": "object",
+      "required": [
+        "version",
+        "labels",
+        "primary_output",
+        "execution_only_facts",
+        "precedence",
+        "execution_authorized",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "required": [
+            "automatico",
+            "supervisado",
+            "insatisfecho",
+            "humano",
+            "desconocido"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "automatico": {
+              "type": "string"
+            },
+            "supervisado": {
+              "type": "string"
+            },
+            "insatisfecho": {
+              "type": "string"
+            },
+            "humano": {
+              "type": "string"
+            },
+            "desconocido": {
+              "type": "string"
+            }
+          }
+        },
+        "primary_output": {
+          "type": "string"
+        },
+        "execution_only_facts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "precedence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "execution_authorized": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nexqori: reglas de evidencia y resolución v1"
+}

@@ -1,0 +1,615 @@
+{
+  "status": "synthetic_specification_not_executed",
+  "cases": [
+    {
+      "id": "balance_base",
+      "intent": "balance",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "balance_no_session",
+      "intent": "balance",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "movements_base",
+      "intent": "movements",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "movements_no_session",
+      "intent": "movements",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "report_base",
+      "intent": "report",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "report_no_session",
+      "intent": "report",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "requests_base",
+      "intent": "requests",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "requests_no_session",
+      "intent": "requests",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "human_base",
+      "intent": "human",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "human_no_session",
+      "intent": "human",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "accounts_base",
+      "intent": "accounts",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "accounts_no_session",
+      "intent": "accounts",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "cards_base",
+      "intent": "cards",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "cards_no_session",
+      "intent": "cards",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "transfers_base",
+      "intent": "transfers",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "transfers_no_session",
+      "intent": "transfers",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "payments_base",
+      "intent": "payments",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "payments_no_session",
+      "intent": "payments",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "loans_base",
+      "intent": "loans",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "loans_no_session",
+      "intent": "loans",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "investments_base",
+      "intent": "investments",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "investments_no_session",
+      "intent": "investments",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "insurance_base",
+      "intent": "insurance",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "insurance_no_session",
+      "intent": "insurance",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "cash_base",
+      "intent": "cash",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "cash_no_session",
+      "intent": "cash",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "products_base",
+      "intent": "products",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "products_no_session",
+      "intent": "products",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "services_base",
+      "intent": "services",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "services_no_session",
+      "intent": "services",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "help_base",
+      "intent": "help",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "help_no_session",
+      "intent": "help",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "home_base",
+      "intent": "home",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "session",
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "sufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "home_no_session",
+      "intent": "home",
+      "action_id": "open_screen",
+      "valid_facts": [
+        "customer",
+        "screen"
+      ],
+      "missing_facts": [
+        "session"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "unknown_base",
+      "intent": "unknown",
+      "action_id": "clarify_unknown",
+      "valid_facts": [],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "request_new_requirement",
+      "execution_authorized": false
+    },
+    {
+      "id": "restricted_base",
+      "intent": "restricted",
+      "action_id": "deny_admin",
+      "valid_facts": [],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "deny",
+      "execution_authorized": false
+    },
+    {
+      "id": "report_register_request",
+      "intent": "report",
+      "action_id": "register_request",
+      "valid_facts": [
+        "session",
+        "customer",
+        "own_scope",
+        "reason",
+        "details",
+        "service",
+        "confirmation",
+        "csrf_origin",
+        "idempotency"
+      ],
+      "missing_facts": [
+        "transaction"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "human_handoff_existing_case",
+      "intent": "human",
+      "action_id": "handoff_existing_case",
+      "valid_facts": [
+        "session",
+        "customer",
+        "own_scope",
+        "case",
+        "human_requested",
+        "csrf_origin"
+      ],
+      "missing_facts": [
+        "confirmation"
+      ],
+      "conflicting_facts": [],
+      "expected_outcome": "insufficient",
+      "execution_authorized": false
+    },
+    {
+      "id": "balance_answer_from_own_data",
+      "intent": "balance",
+      "action_id": "answer_from_own_data",
+      "valid_facts": [
+        "session",
+        "customer",
+        "own_scope",
+        "fresh_data"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [
+        "scope"
+      ],
+      "expected_outcome": "conflict",
+      "execution_authorized": false
+    },
+    {
+      "id": "requests_send_email",
+      "intent": "requests",
+      "action_id": "send_email",
+      "valid_facts": [
+        "session",
+        "customer",
+        "own_scope",
+        "email_request",
+        "verified_recipient",
+        "email_preview",
+        "confirmation",
+        "csrf_origin",
+        "idempotency"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "blocked",
+      "execution_authorized": false
+    },
+    {
+      "id": "home_generate_dashboard",
+      "intent": "home",
+      "action_id": "generate_dashboard",
+      "valid_facts": [
+        "session",
+        "customer",
+        "own_scope",
+        "fresh_data",
+        "scope",
+        "period",
+        "aggregate_spec",
+        "reconciled"
+      ],
+      "missing_facts": [],
+      "conflicting_facts": [],
+      "expected_outcome": "blocked",
+      "execution_authorized": false
+    }
+  ]
+}

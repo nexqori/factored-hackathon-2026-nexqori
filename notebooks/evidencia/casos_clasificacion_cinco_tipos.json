@@ -1,0 +1,99 @@
+{
+  "status": "synthetic_specification_not_model_results",
+  "cases": [
+    {
+      "id": "balance_answer_from_own_data_verified",
+      "intent": "balance",
+      "action_id": "answer_from_own_data",
+      "valid_business_facts": [
+        "fresh_data",
+        "scope"
+      ],
+      "missing_business_facts": [],
+      "permission_state": "verified",
+      "expected_evidence_class": "automatico",
+      "execution_authorized": false
+    },
+    {
+      "id": "report_register_request_verified",
+      "intent": "report",
+      "action_id": "register_request",
+      "valid_business_facts": [
+        "transaction",
+        "reason",
+        "details",
+        "service"
+      ],
+      "missing_business_facts": [],
+      "permission_state": "verified",
+      "expected_evidence_class": "supervisado",
+      "execution_authorized": false
+    },
+    {
+      "id": "report_register_request_verified",
+      "intent": "report",
+      "action_id": "register_request",
+      "valid_business_facts": [
+        "reason",
+        "details",
+        "service"
+      ],
+      "missing_business_facts": [
+        "transaction"
+      ],
+      "permission_state": "verified",
+      "expected_evidence_class": "insatisfecho",
+      "execution_authorized": false
+    },
+    {
+      "id": "human_handoff_existing_case_verified",
+      "intent": "human",
+      "action_id": "handoff_existing_case",
+      "valid_business_facts": [
+        "case",
+        "human_requested"
+      ],
+      "missing_business_facts": [],
+      "permission_state": "verified",
+      "expected_evidence_class": "humano",
+      "execution_authorized": false
+    },
+    {
+      "id": "unknown_clarify_unknown_unverified",
+      "intent": "unknown",
+      "action_id": "clarify_unknown",
+      "valid_business_facts": [],
+      "missing_business_facts": [],
+      "permission_state": "unverified",
+      "expected_evidence_class": "desconocido",
+      "execution_authorized": false
+    },
+    {
+      "id": "requests_send_email_verified",
+      "intent": "requests",
+      "action_id": "send_email",
+      "valid_business_facts": [
+        "email_request",
+        "verified_recipient",
+        "email_preview"
+      ],
+      "missing_business_facts": [],
+      "permission_state": "verified",
+      "expected_evidence_class": "humano",
+      "execution_authorized": false
+    },
+    {
+      "id": "balance_answer_from_own_data_denied",
+      "intent": "balance",
+      "action_id": "answer_from_own_data",
+      "valid_business_facts": [
+        "fresh_data",
+        "scope"
+      ],
+      "missing_business_facts": [],
+      "permission_state": "denied",
+      "expected_evidence_class": "humano",
+      "execution_authorized": false
+    }
+  ]
+}

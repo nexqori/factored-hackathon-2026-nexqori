@@ -1,0 +1,2597 @@
+{
+  "version": "1.1.0",
+  "status": "declarative_not_connected",
+  "created_at": "2026-10-01",
+  "timezone": "America/Lima",
+  "taxonomy_version": "1.0.0",
+  "sources": [
+    "backend/config/intent-taxonomy.json",
+    "backend/config/intent-policy.json",
+    "backend/navigation.py",
+    "backend/schemas.py",
+    "backend/main.py",
+    "docs/agente.md",
+    "docs/arquitectura.md",
+    "docs/servicios-basados-en-datos.md"
+  ],
+  "navigation_routes": {
+    "home": "/",
+    "products": "/products",
+    "movements": "/movements",
+    "requests": "/requests",
+    "services": "/services",
+    "help": "/help",
+    "accounts": "/products?kind=accounts",
+    "cards": "/products?kind=cards",
+    "transfers": "/services/transfers",
+    "payments": "/services/payments",
+    "loans": "/services/loans",
+    "investments": "/services/investments",
+    "insurance": "/services/insurance",
+    "cash": "/services/cash"
+  },
+  "capabilities": {
+    "navigate": {
+      "status": "existing",
+      "permission": "customer.navigate",
+      "endpoint": "POST /api/assistant",
+      "effect": "navigation_proposal"
+    },
+    "read_own": {
+      "status": "existing",
+      "permission": "customer.read_own",
+      "endpoint": "GET /api/bootstrap",
+      "effect": "read_only"
+    },
+    "create_request": {
+      "status": "existing",
+      "permission": "customer.create_request",
+      "endpoint": "POST /api/requests",
+      "effect": "write"
+    },
+    "handoff": {
+      "status": "existing_demo",
+      "permission": "customer.handoff_own_request",
+      "endpoint": "POST /api/requests/{request_id}/handoff",
+      "effect": "write"
+    },
+    "help_answer": {
+      "status": "proposed",
+      "permission": "customer.read_help",
+      "endpoint": null,
+      "effect": "read_only"
+    },
+    "dashboard_generate": {
+      "status": "proposed",
+      "permission": "customer.generate_own_dashboard",
+      "endpoint": null,
+      "effect": "local_artifact"
+    },
+    "email_send": {
+      "status": "unavailable",
+      "permission": "customer.send_own_summary_email",
+      "endpoint": null,
+      "effect": "external_message"
+    },
+    "clarify": {
+      "status": "existing",
+      "permission": "none",
+      "endpoint": null,
+      "effect": "message_only"
+    },
+    "deny": {
+      "status": "existing",
+      "permission": "none",
+      "endpoint": null,
+      "effect": "message_only"
+    }
+  },
+  "facts": {
+    "session": {
+      "meaning": "Sesión vigente y principal autenticado",
+      "accepted_sources": [
+        "server_session"
+      ],
+      "validation": "Validar en cada acción, no aceptar identidad del mensaje.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "customer": {
+      "meaning": "Rol customer",
+      "accepted_sources": [
+        "server_session"
+      ],
+      "validation": "Igualdad exacta con rol de sesión; no inferir por intención.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "own_scope": {
+      "meaning": "Consulta aislada al titular",
+      "accepted_sources": [
+        "server_authorization"
+      ],
+      "validation": "Filtro de servidor por user_id de sesión; nunca user_id aportado por el modelo.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "fresh_data": {
+      "meaning": "Datos autorizados obtenidos para esta evaluación",
+      "accepted_sources": [
+        "server_query"
+      ],
+      "validation": "Consulta exitosa al estado actual de la aplicación; registrar fecha y snapshot. Una lista vacía válida no es fallo ni saldo cero.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "screen": {
+      "meaning": "Destino permitido y solicitud de abrirlo",
+      "accepted_sources": [
+        "server_validation"
+      ],
+      "validation": "Destino de la regla en ROUTES; intención revisada sin contradicción con el mensaje.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "scope": {
+      "meaning": "Alcance explícito: producto único o todos los propios",
+      "accepted_sources": [
+        "user_message",
+        "confirmed_form"
+      ],
+      "validation": "Resolver selección inequívoca; si pide todo no exigir ID individual.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Quieres consultar un producto específico o todos tus productos?",
+        "en": "Do you want to view one product or all your products?",
+        "pt": "Você quer consultar um produto específico ou todos os seus produtos?"
+      }
+    },
+    "owned_selection": {
+      "meaning": "Selección de producto/movimiento/caso verificada",
+      "accepted_sources": [
+        "server_authorization"
+      ],
+      "validation": "Cada ID seleccionado existe y pertenece al titular; un nombre o últimos dígitos ambiguos no bastan.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "period": {
+      "meaning": "Periodo solicitado definido",
+      "accepted_sources": [
+        "user_message",
+        "confirmed_form"
+      ],
+      "validation": "Inicio <= fin, zona horaria definida; aceptar explícitamente todo el historial disponible, sin inventar fechas.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Qué periodo quieres consultar?",
+        "en": "Which period would you like to view?",
+        "pt": "Qual período você quer consultar?"
+      }
+    },
+    "transaction": {
+      "meaning": "Movimiento concreto identificado y verificado",
+      "accepted_sources": [
+        "server_authorization"
+      ],
+      "validation": "ID único y titular/producto coherentes, fecha, importe y moneda del servidor; si faltan, buscar con pistas sin dar por cierto el reclamo.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "reason": {
+      "meaning": "Motivo de solicitud válido",
+      "accepted_sources": [
+        "confirmed_form"
+      ],
+      "validation": "Uno de unknown, amount, payment, other; unknown aquí es un motivo de cargo, NO la intención unknown.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Qué ocurrió: no reconoces el cargo, el importe es distinto, hubo un problema con un pago u otro motivo?",
+        "en": "What happened: an unrecognized charge, a different amount, a payment issue, or another reason?",
+        "pt": "O que aconteceu: cobrança não reconhecida, valor diferente, problema com pagamento ou outro motivo?"
+      }
+    },
+    "details": {
+      "meaning": "Descripción mínima del problema",
+      "accepted_sources": [
+        "user_message",
+        "confirmed_form"
+      ],
+      "validation": "Texto de 10–1000 caracteres, después de strip; describe problema y resultado solicitado; no aceptar sólo relleno.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "Cuéntanos qué ocurrió y qué necesitas que revisemos.",
+        "en": "Tell us what happened and what you need us to review.",
+        "pt": "Conte o que aconteceu e o que você precisa que seja analisado."
+      }
+    },
+    "service": {
+      "meaning": "Servicio de solicitud seleccionado",
+      "accepted_sources": [
+        "confirmed_form"
+      ],
+      "validation": "Uno de general, accounts, cards, transfers, payments, loans, investments, insurance, cash, support.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Con qué servicio necesitas ayuda?",
+        "en": "Which service do you need help with?",
+        "pt": "Com qual serviço você precisa de ajuda?"
+      }
+    },
+    "confirmation": {
+      "meaning": "Confirmación explícita de payload mostrado",
+      "accepted_sources": [
+        "confirmed_form"
+      ],
+      "validation": "confirmed=true, capturado fuera del modelo, ligado a usuario y hash del payload vigente; cambios invalidan confirmación.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "csrf_origin": {
+      "meaning": "CSRF y origen aceptados",
+      "accepted_sources": [
+        "server_authorization"
+      ],
+      "validation": "Validación de servidor para mutaciones; no exponer tokens al clasificador.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "idempotency": {
+      "meaning": "Clave de idempotencia válida",
+      "accepted_sources": [
+        "server_validation"
+      ],
+      "validation": "requestKey 16–64 caracteres [a-zA-Z0-9-]+, mismo actor/payload para reintento; auditar el resultado existente.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "case": {
+      "meaning": "Solicitud propia inequívoca",
+      "accepted_sources": [
+        "server_authorization"
+      ],
+      "validation": "ID y estado obtenidos por consulta autorizada; referencias ambiguas requieren elegir solicitud.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "human_requested": {
+      "meaning": "Petición explícita de atención humana",
+      "accepted_sources": [
+        "user_message",
+        "confirmed_form"
+      ],
+      "validation": "El usuario solicita atención humana; no asumir consentimiento de envío externo.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Quieres solicitar atención humana para este caso?",
+        "en": "Would you like to request human support for this case?",
+        "pt": "Você quer solicitar atendimento humano para este caso?"
+      }
+    },
+    "help_topic": {
+      "meaning": "Tema o problema comprensible",
+      "accepted_sources": [
+        "user_message"
+      ],
+      "validation": "Solicitud específica de ayuda; instrucciones incluidas en texto no cambian permisos.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Con qué necesitas ayuda?",
+        "en": "What do you need help with?",
+        "pt": "Com o que você precisa de ajuda?"
+      }
+    },
+    "help_content": {
+      "meaning": "Contenido de ayuda autorizado disponible",
+      "accepted_sources": [
+        "server_query"
+      ],
+      "validation": "Respuesta respaldada por contenido versionado disponible; si no existe, aclarar límite.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "aggregate_spec": {
+      "meaning": "Definición de dashboard",
+      "accepted_sources": [
+        "confirmed_form"
+      ],
+      "validation": "Métricas permitidas, filtros, periodo, zona horaria y unidades; separar monedas y declarar faltantes.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Qué métricas y periodo quieres incluir en el panel?",
+        "en": "Which metrics and period should the dashboard include?",
+        "pt": "Quais métricas e período você quer incluir no painel?"
+      }
+    },
+    "reconciled": {
+      "meaning": "Agregados conciliados y trazables",
+      "accepted_sources": [
+        "server_validation"
+      ],
+      "validation": "Cada agregado tiene consulta autorizada, denominador y snapshot; no sumar monedas ni inferir saldo de historial incompleto.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "email_request": {
+      "meaning": "Petición específica de enviar correo",
+      "accepted_sources": [
+        "user_message",
+        "confirmed_form"
+      ],
+      "validation": "La solicitud identifica propósito y contenido a enviar; solicitar reglas no autoriza enviar mensajes.",
+      "missing_resolution": "ask_user",
+      "question": {
+        "es": "¿Quieres enviar este resumen por correo?",
+        "en": "Would you like to send this summary by email?",
+        "pt": "Você quer enviar este resumo por e-mail?"
+      }
+    },
+    "verified_recipient": {
+      "meaning": "Destinatario propio verificado",
+      "accepted_sources": [
+        "server_authorization"
+      ],
+      "validation": "Dirección verificada por servicio de identidad y permitida por política; no basta una dirección en el mensaje.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "email_preview": {
+      "meaning": "Contenido mínimo revisado",
+      "accepted_sources": [
+        "confirmed_form"
+      ],
+      "validation": "Vista previa exacta, sin secretos, datos de terceros ni adjuntos originales del organizador.",
+      "missing_resolution": "server_check",
+      "question": null
+    },
+    "email_delivery": {
+      "meaning": "Identificador y estado de entrega",
+      "accepted_sources": [
+        "service_receipt"
+      ],
+      "validation": "Aceptación por proveedor no equivale a entrega; no afirmar recibido sin comprobación.",
+      "missing_resolution": "server_check",
+      "question": null
+    }
+  },
+  "messages": {
+    "unknown": {
+      "es": "No entendí tu solicitud. Por favor, envía un nuevo requerimiento indicando qué necesitas.",
+      "en": "I did not understand your request. Please send a new request explaining what you need.",
+      "pt": "Não entendi sua solicitação. Por favor, envie um novo pedido explicando do que você precisa."
+    },
+    "restricted": {
+      "es": "No puedo abrir el panel administrativo desde el asistente. El acceso depende de los permisos de tu cuenta.",
+      "en": "I cannot open the administration panel from the assistant. Access depends on your account permissions.",
+      "pt": "Não posso abrir o painel administrativo pelo assistente. O acesso depende das permissões da sua conta."
+    },
+    "unavailable": {
+      "es": "Esta acción no está disponible actualmente. Puedo ayudarte con las opciones habilitadas.",
+      "en": "This action is not currently available. I can help you with the available options.",
+      "pt": "Esta ação não está disponível no momento. Posso ajudar com as opções disponíveis."
+    },
+    "conflict": {
+      "es": "La información es contradictoria. ¿Puedes aclarar qué necesitas y qué datos son correctos?",
+      "en": "The information is contradictory. Could you clarify what you need and which details are correct?",
+      "pt": "As informações são contraditórias. Você pode esclarecer do que precisa e quais dados estão corretos?"
+    }
+  },
+  "rules": [
+    {
+      "intent": "balance",
+      "definition": "Consultar saldo, sin operar.",
+      "minimum_resolution": "Alcance explícito (uno o todos), titularidad y saldo/moneda del servidor. Vacío no equivale a saldo cero.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "products",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Saldo por producto y moneda respaldado por snapshot; no inferir de transacciones.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "movements",
+      "definition": "Consultar historial; disputa corresponde a report.",
+      "minimum_resolution": "Para abrir historial no exigir fechas; para respuesta filtrada exigir alcance y periodo explícitos.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "movements",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Historial autorizado con fecha, referencia, importe, moneda y estado; vacío se informa sin inventar movimientos.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "report",
+      "definition": "Iniciar revisión de cargo; no seguir caso existente.",
+      "minimum_resolution": "Abrir formulario es preparación; registro requiere datos revisados y confirmación. Para un cargo concreto exigir movimiento propio; no concluir fraude ni reembolsar.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "movements",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "prepare_request_form",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "transaction"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "screen": "/movements",
+            "control": "Formulario existente de nueva solicitud",
+            "legacy_destination": "new-request",
+            "service": "general"
+          },
+          "success_evidence": "Formulario revisable abierto; todavía no se ha registrado solicitud.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "transaction"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "transaction",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "general"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "transaction",
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "not_applicable"
+    },
+    {
+      "intent": "requests",
+      "definition": "Seguir solicitudes existentes.",
+      "minimum_resolution": "Seguir solicitudes existentes.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "requests",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Lista de solicitudes propias o ausencia de solicitudes.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_selected_request",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "case"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Estado y referencia actuales de la solicitud propia, sin prometer cierre.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "case"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "human",
+      "definition": "Preparar atención humana; no conectar operador.",
+      "minimum_resolution": "Abrir formulario es preparación; registro requiere datos revisados y confirmación. Puede crear solicitud support o derivar una propia existente; no afirmar operador conectado.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "requests",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "human_requested"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "prepare_request_form",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "human_requested"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "screen": "/requests",
+            "control": "Formulario existente de nueva solicitud",
+            "legacy_destination": "new-request",
+            "service": "support"
+          },
+          "success_evidence": "Formulario revisable abierto; todavía no se ha registrado solicitud.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "human_requested"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "human_requested",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "support"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "human_requested",
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "handoff_existing_case",
+          "capability": "handoff",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "case",
+            "human_requested",
+            "confirmation",
+            "csrf_origin"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Estado de derivación persistido; idempotencia de la ruta existente, no conexión a operador real.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "case",
+            "human_requested"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "human_requested"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "not_applicable"
+    },
+    {
+      "intent": "accounts",
+      "definition": "Consultar cuentas; saldo explícito corresponde a balance.",
+      "minimum_resolution": "Para listar basta sesión y consulta propia válida; sólo exigir selección si el usuario pide un producto concreto.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "accounts",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Lista de accounts propios o ausencia explícita; no implica contratación, elegibilidad ni rentabilidad.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_selected_product",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Detalle del producto seleccionado devuelto por consulta; campos no disponibles se declaran ausentes.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "accounts"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "cards",
+      "definition": "Consultar tarjetas; disputa corresponde a report.",
+      "minimum_resolution": "Para listar basta sesión y consulta propia válida; sólo exigir selección si el usuario pide un producto concreto.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "cards",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Lista de cards propios o ausencia explícita; no implica contratación, elegibilidad ni rentabilidad.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_selected_product",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Detalle del producto seleccionado devuelto por consulta; campos no disponibles se declaran ausentes.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "cards"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "transfers",
+      "definition": "Abrir transferencias, sin ejecutar.",
+      "minimum_resolution": "Abrir pantalla o registrar solicitud de atención del servicio. No se ejecuta transferencia/pago aunque el texto contenga importe y beneficiario.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "transfers",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "transfers"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida.",
+        "Mover dinero, prometer liquidación o solicitar credenciales de beneficiario."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "not_applicable"
+    },
+    {
+      "intent": "payments",
+      "definition": "Abrir pagos, sin ejecutar ni inferir obligación.",
+      "minimum_resolution": "Abrir pantalla o registrar solicitud de atención del servicio. No se ejecuta transferencia/pago aunque el texto contenga importe y beneficiario.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "payments",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "payments"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida.",
+        "Mover dinero, prometer liquidación o solicitar credenciales de beneficiario."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "not_applicable"
+    },
+    {
+      "intent": "loans",
+      "definition": "Consultar préstamos, sin decidir elegibilidad.",
+      "minimum_resolution": "Para listar basta sesión y consulta propia válida; sólo exigir selección si el usuario pide un producto concreto.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "loans",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Lista de loans propios o ausencia explícita; no implica contratación, elegibilidad ni rentabilidad.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_selected_product",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Detalle del producto seleccionado devuelto por consulta; campos no disponibles se declaran ausentes.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "loans"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "investments",
+      "definition": "Consultar inversiones, sin contratar.",
+      "minimum_resolution": "Para listar basta sesión y consulta propia válida; sólo exigir selección si el usuario pide un producto concreto.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "investments",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Lista de investments propios o ausencia explícita; no implica contratación, elegibilidad ni rentabilidad.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_selected_product",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Detalle del producto seleccionado devuelto por consulta; campos no disponibles se declaran ausentes.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "investments"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "insurance",
+      "definition": "Consultar seguros, sin contratar.",
+      "minimum_resolution": "Para listar basta sesión y consulta propia válida; sólo exigir selección si el usuario pide un producto concreto.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "insurance",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Lista de insurance propios o ausencia explícita; no implica contratación, elegibilidad ni rentabilidad.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_selected_product",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Detalle del producto seleccionado devuelto por consulta; campos no disponibles se declaran ausentes.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "insurance"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "cash",
+      "definition": "Consultar retiros y depósitos, sin operar.",
+      "minimum_resolution": "Para abrir historial no exigir fechas; para respuesta filtrada exigir alcance y periodo explícitos.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "cash",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Historial autorizado con fecha, referencia, importe, moneda y estado; vacío se informa sin inventar movimientos.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "cash"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "products",
+      "definition": "Consultar productos sin tipo específico.",
+      "minimum_resolution": "Para listar basta sesión y consulta propia válida; sólo exigir selección si el usuario pide un producto concreto.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "products",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_from_own_data",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Lista de products propios o ausencia explícita; no implica contratación, elegibilidad ni rentabilidad.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_selected_product",
+          "capability": "read_own",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Detalle del producto seleccionado devuelto por consulta; campos no disponibles se declaran ausentes.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "owned_selection"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "general"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "send_email",
+          "capability": "email_send",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "email_request",
+            "verified_recipient",
+            "email_preview",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Acuse del proveedor y estado comprobado; aceptación no acredita entrega.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "email_request",
+            "verified_recipient",
+            "email_preview"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "explicit_request_and_verified_recipient_but_unavailable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "services",
+      "definition": "Consultar índice de servicios.",
+      "minimum_resolution": "Consultar índice de servicios.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "services",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "register_request",
+          "capability": "create_request",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "reason",
+            "details",
+            "service",
+            "confirmation",
+            "csrf_origin",
+            "idempotency"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": {
+            "service": "general"
+          },
+          "success_evidence": "Respuesta API: referencia/estado propios persistidos; no demuestra resolución del problema.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "supervisado",
+          "business_requires_all": [
+            "reason",
+            "details",
+            "service"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "not_applicable",
+      "dashboard_policy": "not_applicable"
+    },
+    {
+      "intent": "help",
+      "definition": "Ayuda general; atención humana explícita corresponde a human.",
+      "minimum_resolution": "Ayuda general; atención humana explícita corresponde a human.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "help",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "answer_help",
+          "capability": "help_answer",
+          "requires_all": [
+            "session",
+            "customer",
+            "help_topic",
+            "help_content"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Respuesta sustentada en contenido autorizado; no completar vacíos con afirmaciones.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "help_topic",
+            "help_content"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "not_applicable",
+      "dashboard_policy": "not_applicable"
+    },
+    {
+      "intent": "home",
+      "definition": "Volver al inicio.",
+      "minimum_resolution": "Volver al inicio.",
+      "actions": [
+        {
+          "id": "open_screen",
+          "capability": "navigate",
+          "requires_all": [
+            "session",
+            "customer",
+            "screen"
+          ],
+          "navigation_destination": "home",
+          "ui_instruction": null,
+          "success_evidence": "Comando validado emitido; apertura confirmada sólo con evento del frontend.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "automatico",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        },
+        {
+          "id": "generate_dashboard",
+          "capability": "dashboard_generate",
+          "requires_all": [
+            "session",
+            "customer",
+            "own_scope",
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Artefacto local con métricas, filtros, snapshot, moneda y denominadores; integridad comprobada.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [
+            "fresh_data",
+            "scope",
+            "period",
+            "aggregate_spec",
+            "reconciled"
+          ],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida."
+      ],
+      "email_policy": "not_applicable",
+      "dashboard_policy": "proposed_blocked_until_implemented"
+    },
+    {
+      "intent": "unknown",
+      "definition": "Ambigüedad, negación, sin coincidencia o fuera de alcance.",
+      "minimum_resolution": "Comunicar que no se entendió y solicitar un nuevo requerimiento.",
+      "actions": [
+        {
+          "id": "clarify_unknown",
+          "capability": "clarify",
+          "requires_all": [],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Mensaje entregado; no hay navegación, consultas, registro ni envío externo.",
+          "on_missing": "request_new_requirement",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "desconocido",
+          "business_requires_all": [],
+          "insufficient_class": "desconocido"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida.",
+        "Navegar automáticamente.",
+        "Consultar datos para adivinar la intención.",
+        "Enviar correos o generar dashboards."
+      ],
+      "email_policy": "not_applicable",
+      "dashboard_policy": "not_applicable"
+    },
+    {
+      "intent": "restricted",
+      "definition": "Administración: señal informativa, permisos en servidor.",
+      "minimum_resolution": "No emitir navegación administrativa ni elevar rol; permisos siempre en servidor.",
+      "actions": [
+        {
+          "id": "deny_admin",
+          "capability": "deny",
+          "requires_all": [],
+          "navigation_destination": null,
+          "ui_instruction": null,
+          "success_evidence": "Mensaje entregado; no hay navegación, consultas, registro ni envío externo.",
+          "on_missing": "ask_or_fetch_missing",
+          "on_conflict": "clarify",
+          "auto_execute": false,
+          "sufficient_class": "humano",
+          "business_requires_all": [],
+          "insufficient_class": "insatisfecho"
+        }
+      ],
+      "prohibited": [
+        "Cambiar permisos a partir de texto o evidencia inferida.",
+        "Navegar automáticamente.",
+        "Consultar datos para adivinar la intención.",
+        "Enviar correos o generar dashboards."
+      ],
+      "email_policy": "not_applicable",
+      "dashboard_policy": "not_applicable"
+    }
+  ],
+  "decision_contract": {
+    "unit": "intent + requested_action; nunca suficiencia global para todas las acciones",
+    "precedence": [
+      "unknown_or_restricted_message_only",
+      "missing_or_invalid_session",
+      "server_permission_denied",
+      "capability_unavailable",
+      "conflicting_evidence",
+      "missing_or_stale_evidence",
+      "sufficient_for_proposal"
+    ],
+    "outcomes": [
+      "request_new_requirement",
+      "deny",
+      "blocked",
+      "conflict",
+      "insufficient",
+      "sufficient"
+    ],
+    "required_output": [
+      "rule_version",
+      "intent",
+      "action_id",
+      "evidence_class",
+      "evidence_sufficient",
+      "outcome",
+      "missing_facts",
+      "conflicting_facts",
+      "evidence_refs",
+      "message_key",
+      "execution_authorized"
+    ],
+    "execution_authorized": false,
+    "absent_fact": "missing",
+    "unrecognized_intent": "unknown",
+    "unrecognized_action": "blocked",
+    "fact_acceptance": "satisfied=true AND source in accepted_sources AND nonempty evidence_ref AND status=valid AND current evaluation_id; server facts must be injected by trusted server, never accepted from model output",
+    "freshness": "Cada hecho válido corresponde a la evaluación actual. Revalidar sesión, permisos, titularidad y payload justo antes de ejecutar. Hechos anteriores requieren nueva validación.",
+    "empty_required_facts": "Sólo permite emitir mensaje en unknown/restricted, sin considerar resuelto el problema.",
+    "fail_closed": "Error de catálogo, salida malformada, fuente no permitida o permiso indeterminado: bloquear; no inferir autorización."
+  },
+  "classification_contract": {
+    "version": "1.0.0",
+    "labels": {
+      "automatico": "Solicitud clara, evidencia de negocio suficiente y acción de lectura/navegación permitida, sin confirmación adicional. Es candidato a automatización; no concede permisos.",
+      "supervisado": "Solicitud clara con evidencia de negocio suficiente para una gestión con efecto; requiere vista previa y confirmación explícita del usuario. Confirmar no concede roles ni titularidad.",
+      "insatisfecho": "Solicitud comprensible pero faltan evidencias de negocio, están vencidas o son contradictorias. Hacer preguntas concretas o consultar fuentes autorizadas.",
+      "humano": "Solicitud clara y evidencia mínima suficiente para atención directa de un agente: petición humana, decisión fuera del alcance, capacidad no disponible o problema de permisos. No significa que haya un operador conectado ni que pueda eludir restricciones.",
+      "desconocido": "No se entiende la solicitud o no se puede determinar una intención y acción inequívocas. Comunicar incomprensión y pedir un nuevo requerimiento."
+    },
+    "primary_output": "evidence_class",
+    "execution_only_facts": [
+      "session",
+      "customer",
+      "own_scope",
+      "confirmation",
+      "csrf_origin",
+      "idempotency",
+      "screen"
+    ],
+    "precedence": [
+      "unknown_or_ambiguous",
+      "missing_or_conflicting_business_evidence",
+      "human_or_unavailable_or_permission_issue",
+      "write_requires_supervision",
+      "read_or_navigation_automatic_candidate"
+    ],
+    "execution_authorized": false,
+    "notes": [
+      "Cinco tipos primarios; outcomes anteriores se conservan sólo como diagnóstico técnico.",
+      "Business facts = requires_all menos execution_only_facts; nunca usar evidencia falsa, sin procedencia o de otro caso.",
+      "Un fallo HTTP o parser es __invalid__, no desconocido.",
+      "Los permisos se verifican en servidor antes de cualquier acción; confirmar consentimiento no cambia roles.",
+      "Humano requiere un canal de atención real antes de afirmar conexión; deny/blocked conservan su fuerza."
+    ]
+  }
+}
