@@ -5,7 +5,7 @@ import {et} from './editorLocales';
 import type {Language} from './locales';
 import {ports,type Kind,type Port} from './workflowGraph';
 
-export const blockIcons={start:Play,triage:Route,jev:Shapes,case_router:GitBranch,contract:ClipboardList,preview:Zap,context:BrainCircuit,condition:Split,question:MessageCircle,response:MessageSquare,escalate:UserRound,diagnostic:FileSearch,notify:BellRing};
+export const blockIcons={start:Play,intake:Route,triage:Route,jev:Shapes,case_router:GitBranch,contract:ClipboardList,preview:Zap,context:BrainCircuit,condition:Split,question:MessageCircle,response:MessageSquare,escalate:UserRound,diagnostic:FileSearch,notify:BellRing};
 type BlockData={label:string;kind:Kind;language:Language;status?:string;connectedPorts:Port[];busy:boolean;canStep:boolean;canReplay:boolean;step:(id:string)=>void;addAfter:(id:string,port:Port)=>void};
 export type CanvasNode=Node<BlockData,'block'>;
 type EdgeData={language:Language;insert:(id:string)=>void;busy:boolean;port:Port;canStep:boolean;step:()=>void};
@@ -13,7 +13,7 @@ export type CanvasEdge=Edge<EdgeData,'insertable'>;
 
 export function BlockNode({id,data,selected}:NodeProps<CanvasNode>){
   const Icon=blockIcons[data.kind];
-  const top=(i:number)=>data.kind==='case_router'?(10+i*13)+'%':data.kind==='condition'?(i?'72%':'28%'):'50%';
+  const top=(i:number)=>data.kind==='case_router'?(10+i*13)+'%':data.kind==='intake'?(18+i*32)+'%':data.kind==='condition'?(i?'72%':'28%'):'50%';
   const updateInternals=useUpdateNodeInternals();
   // Restoring a checkpoint changes controlled node data before ResizeObserver can run.
   // Refresh handles after that render even when the tile's dimensions stayed identical.
@@ -26,7 +26,7 @@ export function BlockNode({id,data,selected}:NodeProps<CanvasNode>){
       {ports(data.kind).map((port,i)=><div key={port}>
         <Handle type="source" id={port} position={Position.Right} style={{top:top(i)}} title={et(data.language,'connectOutput')+' · '+et(data.language,port)+' · '+data.label}/>
         {data.kind==='condition'&&<span className={'port-label port-'+port}>{et(data.language,port)}</span>}
-        {data.kind==='case_router'&&<span className="router-port-label" style={{top:top(i)}}>{et(data.language,port)}</span>}
+        {(data.kind==='case_router'||data.kind==='intake')&&<span className="router-port-label" style={{top:top(i)}}>{et(data.language,port)}</span>}
         {port!=='reply'&&!data.connectedPorts.includes(port)&&<button className={'node-add nodrag nopan port-'+port} data-add-source={id} data-add-port={port} disabled={data.busy} style={{top:top(i)}} aria-label={et(data.language,'addAfter')+' '+data.label+' · '+et(data.language,port)} title={et(data.language,'addAfter')+' '+data.label} onClick={event=>{event.stopPropagation();data.addAfter(id,port);}}><Plus size={15}/></button>}
       </div>)}
     </div>

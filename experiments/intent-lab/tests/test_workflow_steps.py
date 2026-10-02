@@ -62,7 +62,7 @@ def result_of(response):
 
 def test_master_is_one_saved_graph_and_keeps_edits(private_config):
     client=TestClient(api.app);record=master(client)
-    assert record['validation']['valid'] and len(record['graph']['nodes'])==26
+    assert record['validation']['valid'] and len(record['graph']['nodes'])==24
     graph=copy.deepcopy(record['graph']);graph['name']['es']='Atención configurada'
     updated=client.put('/lab-api/editor/workflows/'+record['id'],json={'revision':1,'graph':graph}).json()
     assert master(client)==updated
@@ -163,7 +163,7 @@ def test_customer_feedback_loops_until_complete_without_reclassifying(private_co
 
 def test_graph_revision_change_blocks_resume_and_worker_restart_does_not_retry(private_config,monkeypatch):
     client=TestClient(api.app);record=master(client);value=start(client,record,mode='step')
-    next(n for n in record['graph']['nodes'] if n['kind']=='triage')['config']['instructions']['es']='Cambiar reglas de clasificación'
+    next(n for n in record['graph']['nodes'] if n['kind']=='intake')['config']['instructions']['es']='Cambiar reglas de clasificación'
     client.put('/lab-api/editor/workflows/'+record['id'],json={'revision':1,'graph':record['graph']})
     assert advance(client,value).json()['detail']=='revision_conflict'
     state=execution.read(value['execution']['id']);state.update(phase='running',worker='previous-process');execution.write(state)
@@ -337,7 +337,7 @@ def test_replay_reuses_upstream_inputs_and_recalculates_branch_without_stale_res
     assert child['execution']['phase']=='paused' and child['execution']['next_node_id']=='case_route'
     assert child['jev']['intent']=='app-support' and child['contract'] is None
     assert child['llm']['status']=='skipped' and not child['activation_plan'] and not child['questions']
-    assert child['trace'][:-1]==[{**row,'reused':True} for row in parent['trace'][:3]] and child['messages']==[{'role':'user','content':'No reconozco un cargo'}]
+    assert child['trace'][:-1]==[{**row,'reused':True} for row in parent['trace'][:2]] and child['messages']==[{'role':'user','content':'No reconozco un cargo'}]
     assert child['latency_ms']==child['trace'][-1]['latency_ms']
     assert [c[0] for c in calls]==['case']
     assert client.get('/lab-api/editor/executions/'+parent['execution']['id']).json()==parent
@@ -370,6 +370,6 @@ def test_replay_rejects_unreached_nodes_stale_versions_and_changed_rules(private
     stale=copy.deepcopy(parent);stale['execution']['version']-=1
     assert replay(client,stale,'start').status_code==409
     with api.provider_lock:assert replay(client,parent,'start').status_code==409
-    next(n for n in record['graph']['nodes'] if n['kind']=='triage')['config']['instructions']['es']='Reglas nuevas'
+    next(n for n in record['graph']['nodes'] if n['kind']=='intake')['config']['instructions']['es']='Reglas nuevas'
     client.put('/lab-api/editor/workflows/'+record['id'],json={'revision':record['revision'],'graph':record['graph']})
     assert replay(client,parent,'start').json()['detail']=='revision_conflict' and not calls

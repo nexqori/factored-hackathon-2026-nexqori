@@ -7,8 +7,8 @@ Abre [Flujos de atención](http://localhost:5190/?view=flows&mode=editor&lang=es
 1. Se abre **un único Flujo de atención** guardado. En **Casos**, elegir un problema carga sólo su conversación y parámetros en Inicio; conserva los bloques, conexiones y cambios del editor.
 2. En Inicio, revisa **Procedimiento del caso** y edita el mensaje. Es el procedimiento esperado del ejemplo: Jev decidirá la clasificación real. **Nueva conversación** borra el contexto de la prueba anterior.
 3. Pulsa **Flujo completo** en Inicio o en la barra superior. Guarda y valida automáticamente antes de ejecutar. Si falta una conexión, indica el bloque y la salida que debes corregir; no llama modelos con un grafo inválido.
-4. Jev decide primero **consulta/gestión, queja/problema o aclaración**. La queja pasa por identificación del problema y **Derivar según el caso**, con seis salidas hacia sus contratos visibles. Sólo la rama clasificada carga instrucciones, pasos, preguntas y datos necesarios; las demás permanecen sin recorrer. Las consultas tienen su propia clasificación y herramientas; no cargan contratos de problemas ni llaman a Luna para recoger evidencia de una queja.
-5. El bloque en ejecución muestra un indicador. Las ramas **Sí** recorridas se ven verdes y las **No**, ocres; las no recorridas permanecen grises. En **Ejecución** aparecen el caso, contrato real, salida, tiempo y pasos realizados. Pulsa un paso para revisar su salida.
+4. El bloque único **Consulta o problema · Jev** clasifica y deriva directamente a **problema/reclamo, consulta/gestión o aclaración**. El problema pasa por identificación del problema y **Derivar según el caso**, con seis salidas hacia sus contratos visibles. Sólo la rama clasificada carga instrucciones, pasos, preguntas y datos necesarios; las demás permanecen sin recorrer. Las consultas tienen su propia clasificación y herramientas; no cargan contratos de problemas ni llaman a Luna para recoger evidencia de un problema.
+5. El bloque en ejecución muestra un indicador. Las ramas **Sí** recorridas se ven verdes y las **No**, ocres; las no recorridas permanecen grises. En **Ejecución** aparecen el caso, contrato real, salida, tiempo y pasos realizados. Pulsa un paso para revisar **Resultado**, con explicación simple, o **JSON · detalle**. El inspector tiene un botón para ampliar su ancho.
 6. Si faltan datos, se abre la conversación con las preguntas y el estado **Esperando tu respuesta**. Al responder y continuar, la conexión discontinua vuelve a Contexto y a la comprobación de datos. Conserva Jev y el contrato iniciales: no vuelve a clasificar por cada fecha o importe. Repite hasta completar los datos, requerir una persona o llegar al límite de diez respuestas adicionales.
 
 ### Ejecutar por bloques
@@ -39,6 +39,10 @@ Los cinco escenarios conversacionales son ejemplos redactados basados en las cat
 
 En los bloques de clasificación y derivación, **Casos y subdivisiones** presenta el catálogo completo: seis problemas, ocho consultas, siete servicios y tres categorías de aclaración. Se puede buscar, filtrar **En este bloque** y desplegar requisitos, procedimiento y funciones de cada caso. Señala la clasificación guardada y muestra porcentajes sólo cuando los devuelve el proveedor. Explorar este catálogo no carga otro ejemplo ni cambia la conversación. La primera clasificación sigue decidiendo sólo la familia; el catálogo es una referencia de sus posibles derivaciones.
 
+## Consultar registros del usuario de prueba
+
+En Inicio, abre **Registros del banco**, consulta la sesión bancaria del mismo navegador y elige un movimiento propio. Contexto completará los datos disponibles y mostrará qué falta preguntar. La [guía de contexto bancario](contexto-bancario-en-flujos.md) incluye los tres casos persistentes, los accesos privados, los límites y `npm run test:lab:bank`. Las lecturas quedan auditadas; las operaciones siguen como propuestas.
+
 ## Crear y ajustar un flujo
 
 1. Abre **Mis flujos** con la carpeta de la barra superior. Puedes recuperar un flujo o crear uno desde cero, con Plantilla bancaria o con Incidencia de la app.
@@ -50,19 +54,19 @@ En los bloques de clasificación y derivación, **Casos y subdivisiones** presen
 
 **Duplicar** crea una variante pendiente de guardar. **Exportar JSON** descarga la definición completa para compartirla; **Importar JSON** la valida y abre como otro borrador. Revisa el contexto antes de compartir: puede contener lo que hayas escrito. Las claves se configuran únicamente en el archivo privado de proveedores.
 
-El guardado utiliza revisión optimista. Si otro editor guardó antes, recarga el flujo y vuelve a aplicar los cambios. La biblioteca tiene un máximo de 50 flujos locales. Las rutas automáticas son acíclicas, con un solo Inicio, hasta 40 bloques y 64 conexiones. La salida opcional Respuesta del cliente de una Pregunta sólo puede volver a un Contexto previo presente en todas las rutas que llegan a ella; espera un mensaje real y no admite bloques intermedios con +. Cada salida admite un destino; se permiten varias entradas al mismo bloque. Cada ruta debe haber pasado por sus requisitos: por ejemplo, Contexto según el caso necesita Jev, y Aviso local necesita Recoger logs.
+El guardado utiliza revisión optimista. Si otro editor guardó antes, recarga el flujo y vuelve a aplicar los cambios. La biblioteca tiene un máximo de 50 flujos locales. Las rutas automáticas son acíclicas, con un solo Inicio, hasta 40 bloques y 64 conexiones. La salida opcional Respuesta del cliente de una Pregunta sólo puede volver a un Contexto previo presente en todas las rutas que llegan a ella; espera un mensaje real o una referencia bancaria nueva y no admite bloques intermedios con +. Cada salida admite un destino; se permiten varias entradas al mismo bloque. Cada ruta debe haber pasado por sus requisitos: por ejemplo, Contexto según el caso necesita Jev, y Aviso local necesita Recoger logs.
 
 ## Bloques disponibles
 
 | Bloque | Configuración y efecto |
 | --- | --- |
 | Inicio | Recibe mensajes e idioma del turno. |
-| Consulta o queja · Jev | Clasifica la familia inicial: problema, consulta/gestión o aclaración. Máximo uno. |
+| Consulta o problema · Jev | Clasifica y deriva con tres salidas: problema, consulta/gestión o aclaración. Máximo uno. Reemplaza clasificación + condición inicial; los flujos antiguos conservan compatibilidad. |
 | Clasificación Jev | Clasifica el caso entre las categorías permitidas de su rama. Hasta dos bloques en ramas excluyentes, uno por recorrido. Un clasificador con alcance problema/consulta requiere la derivación previa. |
 | Rutas por problema | Seis salidas de contrato y una de aclaración. El servidor selecciona la salida según Jev. |
 | Contrato del caso | Carga el contrato y configuración del problema que Jev identificó. Hasta seis en ramas distintas, uno por recorrido. Un contrato fijo que no coincide con Jev detiene el flujo. |
 | Activación propuesta | Etapa consulta, acción, derivación, resultado o cierre. Devuelve funciones permitidas y requisitos, siempre `executed: false`; sin adaptadores ejecutables. |
-| Contexto · Luna | Elige campos según Jev o una lista explícita. Admite instrucciones y referencia no verificada. Extrae citas exactas de mensajes del cliente. Máximo uno. |
+| Contexto · Luna | Elige campos según Jev o una lista explícita. Admite instrucciones y referencia no verificada. Extrae citas exactas del cliente y puede combinar registros autenticados del banco, sin enviarlos al modelo. Muestra preguntas, fuentes y auditoría. Máximo uno. |
 | Condición | Compara intención, familia, datos faltantes, necesidad de atención humana o error registrado en los logs. |
 | Pregunta | Pide hasta dos datos faltantes o una pregunta personalizada. Con salida Respuesta del cliente conectada, espera y reanuda el contexto al recibirla. |
 | Respuesta | Termina con información, propuesta de revisión o conserva el resultado de la ruta recorrida. Texto por idioma. |
@@ -70,7 +74,7 @@ El guardado utiliza revisión optimista. Si otro editor guardó antes, recarga e
 | Recoger logs | Lee la incidencia local vinculada a la comprobación de acceso. Máximo uno. |
 | Aviso local | Registra una notificación en Avisos de incidencias, con referencia correlacionada. |
 
-No se aceptan bloques de código, SQL, URLs de ejecución, claves ni herramientas bancarias. Los modelos se llaman sólo si la ruta pasa por su bloque: en el flujo maestro, dos llamadas a Jev al iniciar (familia y caso), más Luna sólo si llega a Contexto. Cada respuesta sobre datos faltantes vuelve a Contexto y llama a Luna una vez, conservando Jev. El modo por pasos sólo consume la llamada del bloque que se ejecuta. Abrir, mover, validar, guardar e importar no llama a proveedores. No hay reintentos automáticos. Un error del proveedor detiene la ruta y queda en la traza.
+No se aceptan bloques de código, SQL, URLs de ejecución, claves ni comandos bancarios libres. Las lecturas autenticadas usan exclusivamente el adaptador cerrado de Contexto. Los modelos se llaman sólo si la ruta pasa por su bloque: en el flujo maestro, dos llamadas a Jev al iniciar (familia y caso), más Luna sólo si llega a Contexto. Cada respuesta sobre datos faltantes vuelve a Contexto y llama a Luna una vez, conservando Jev. El modo por pasos sólo consume la llamada del bloque que se ejecuta. Abrir, mover, validar, guardar e importar no llama a proveedores. No hay reintentos automáticos. Un error del proveedor detiene la ruta y queda en la traza.
 
 ## Probar el error de acceso, sin consumir modelos
 
@@ -98,7 +102,7 @@ El progreso usa `POST /editor/workflows/{uuid}/run-stream` bajo `/lab-api`, con 
 
 `POST /editor/executions/{uuid}/replay`, con `version` y `node_id`, repite exactamente un bloque que tenga entradas guardadas. Comprueba versión, estado, reglas y concurrencia; no admite saltar a bloques no recorridos. Una solicitud repetida sobre la misma versión/bloque devuelve el ID ya creado (`409 replay_exists`), que la interfaz consulta sin repetir llamadas. El operador debe pulsar ▶ otra vez sobre la ejecución vigente para una nueva repetición voluntaria.
 
-Una desconexión del navegador no cancela trabajo ya iniciado: termina la ejecución acotada y persiste su estado. Una interrupción del proceso deja el checkpoint interrumpido; nunca se reintenta una llamada o aviso silenciosamente. `POST /editor/master-workflow` crea el flujo predeterminado una sola vez y luego recupera ese mismo borrador con sus ediciones. La plantilla anterior intacta se actualiza a las seis ramas visibles conservando su ID y una copia en `workflow-revisions`; si ya tenía ediciones, se conserva. Al recuperar una ejecución de otra revisión se comparan las reglas: las diferencias visuales permiten continuar; las diferencias funcionales muestran el aviso de restauración y mantienen los resultados consultables. Consultar categorías y plantillas no consume modelos; todas las categorías comparten la misma plantilla.
+Una desconexión del navegador no cancela trabajo ya iniciado: termina la ejecución acotada y persiste su estado. Una interrupción del proceso deja el checkpoint interrumpido; nunca se reintenta una llamada o aviso silenciosamente. `POST /editor/master-workflow` crea el flujo predeterminado una sola vez y luego recupera ese mismo borrador con sus ediciones. Las plantillas anteriores intactas se actualizan al bloque inicial combinado y las seis ramas visibles conservando su ID y una copia en `workflow-revisions`; si ya tenía ediciones, se conserva. Al recuperar una ejecución de otra revisión se comparan las reglas: las diferencias visuales permiten continuar; las diferencias funcionales muestran el aviso de restauración y mantienen los resultados consultables. Consultar categorías y plantillas no consume modelos; todas las categorías comparten la misma plantilla.
 
 | Archivo local privado | Contenido |
 | --- | --- |

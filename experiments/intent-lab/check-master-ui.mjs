@@ -30,13 +30,13 @@ try{
  for(const [i,language] of ['es','en','pt'].entries()){
   for(const scenario of ['charge','app','human']){
    await page.goto(base+'/?view=flows&mode=editor&lang='+language);
-   await expect(editor.locator('[data-block-kind]')).toHaveCount(26);
+   await expect(editor.locator('[data-block-kind]')).toHaveCount(24);
    const masterId=new URL(page.url()).searchParams.get('workflow'),before=await api('workflows/'+masterId);
    assert.equal(before.graph.nodes.filter(n=>n.kind==='contract').length,6);
    assert.equal(before.graph.edges.filter(e=>e.source==='case_route').length,7);
    await editor.locator('#editor-message').fill({charge:'[charge] No reconozco un cargo de Comercio Alfa.',app:'[app] La app se cierra al pagar. Ya reinicié.',human:'[human] La atención no resuelve mi problema. Necesito una persona.'}[scenario]);
    if(scenario==='charge'){
-    for(let step=1;step<=4;step++){
+    for(let step=1;step<=3;step++){
      await editor.locator('.editor-toolbar').getByRole('button',{name:words.step[i],exact:true}).click();
      await expect(editor.locator('.editor-trace li')).toHaveCount(step);
      await expect(editor.locator('[data-execution-phase="paused"]')).toBeVisible();
@@ -50,7 +50,7 @@ try{
      await settle();await editor.getByRole('button',{name:words.fit[i],exact:true}).click();await settle();
      await editor.locator('.react-flow__node[data-id="'+id+'"] .editor-node-tile').click();
      assert.equal(new URL(page.url()).searchParams.get('execution'),checkpoint,'Selecting '+id+' must retain the execution');
-     await expect(editor.locator('.editor-trace li')).toHaveCount(4);
+     await expect(editor.locator('.editor-trace li')).toHaveCount(3);
     }
     // A tiny pointer movement while clicking must also preserve the paused run.
     const tile=editor.locator('.react-flow__node[data-id="contract_0"] .editor-node-tile'),box=await tile.boundingBox();
@@ -59,11 +59,12 @@ try{
     assert.deepEqual(await api('executions/'+checkpoint),paused);
     await editor.locator('.editor-toolbar').getByRole('button',{name:words.save[i],exact:true}).click();
     await expect(editor.locator('.editor-save-state.is-dirty')).toHaveCount(0);
-    await page.reload();await expect(editor.locator('.editor-trace li')).toHaveCount(4);
+    await page.reload();await expect(editor.locator('.editor-trace li')).toHaveCount(3);
     assert.equal(new URL(page.url()).searchParams.get('execution'),checkpoint);
     if(await editor.locator('.editor-palette').count())await editor.locator('.editor-palette').getByRole('button',{name:words.close[i],exact:true}).click();
     await settle();await editor.getByRole('button',{name:words.fit[i],exact:true}).click();await settle();
     await editor.locator('.react-flow__node[data-id="jev"] .editor-node-tile').click();
+    await editor.locator('.editor-inspector-tabs button').first().click();
     const catalog=editor.locator('.case-taxonomy');
     await expect(catalog.locator('[data-classification-case]')).toHaveCount(24);
     for(const [family,count] of Object.entries({problem:6,query:8,service:7,clarification:3}))await expect(catalog.locator('[data-case-family="'+family+'"] [data-classification-case]')).toHaveCount(count);
@@ -81,7 +82,7 @@ try{
     // A rule edit keeps outputs but blocks continuation until the original rules are restored.
     const instructions=editor.locator('.editor-config textarea').first(),oldInstructions=await instructions.inputValue();
     await instructions.fill(oldInstructions+' [verification]');await expect(editor.locator('.rules-changed')).toBeVisible();
-    assert.equal(new URL(page.url()).searchParams.get('execution'),checkpoint);await expect(editor.locator('.editor-trace li')).toHaveCount(4);
+    assert.equal(new URL(page.url()).searchParams.get('execution'),checkpoint);await expect(editor.locator('.editor-trace li')).toHaveCount(3);
     await expect(editor.locator('[data-inspector-step="jev"]')).toBeDisabled();
     await editor.locator('.rules-changed button').first().click();await expect(editor.locator('.rules-changed')).toHaveCount(0);
     assert.equal(executionRequests.length,executionsBeforeInspection);
@@ -89,15 +90,15 @@ try{
     await editor.locator('[data-inspector-step="jev"]').click();
     await expect.poll(()=>new URL(page.url()).searchParams.get('execution')).not.toBe(checkpoint);
     await expect(editor.locator('[data-execution-phase="paused"]')).toBeVisible();
-    await expect(editor.locator('.editor-trace li')).toHaveCount(4);
-    await expect(editor.locator('.editor-trace li[data-reused="true"]')).toHaveCount(3);
+    await expect(editor.locator('.editor-trace li')).toHaveCount(3);
+    await expect(editor.locator('.editor-trace li[data-reused="true"]')).toHaveCount(2);
     const childId=new URL(page.url()).searchParams.get('execution'),child=await api('executions/'+childId);
     assert.equal(child.replayed_from.execution_id,checkpoint);assert.equal(child.execution.next_node_id,'case_route');
     assert.equal(executionRequests.length,executionsBeforeInspection+1);assert.ok(executionRequests.at(-1).endsWith('/replay'));
     assert.deepEqual(await api('executions/'+checkpoint),paused);
-    await page.reload();await expect(editor.locator('.editor-trace li')).toHaveCount(4);assert.equal(new URL(page.url()).searchParams.get('execution'),childId);
+    await page.reload();await expect(editor.locator('.editor-trace li')).toHaveCount(3);assert.equal(new URL(page.url()).searchParams.get('execution'),childId);
     assert.equal(executionRequests.length,executionsBeforeInspection+1);
-    inspections.push({language,checkpoint:'preserved',steps:4,categories:24,cachedSteps:3,explicitReplay:1});
+    inspections.push({language,checkpoint:'preserved',steps:3,categories:24,cachedSteps:2,explicitReplay:1});
    }
    await editor.locator('.editor-toolbar').getByRole('button',{name:words.full[i],exact:true}).click();
    const stateSelector=scenario==='charge'?'waiting_reply':'completed';
@@ -113,7 +114,7 @@ try{
     await editor.locator('.editor-toolbar').getByRole('button',{name:words.full[i],exact:true}).click();
     await expect(editor.locator('[data-execution-phase="completed"]')).toBeVisible();
     value=await api('executions/'+id);
-    assert.equal(value.trace.filter(r=>r.kind==='triage').length,1);assert.equal(value.trace.filter(r=>r.kind==='jev').length,1);
+    assert.equal(value.trace.filter(r=>r.kind==='intake').length,1);assert.equal(value.trace.filter(r=>r.kind==='jev').length,1);
     assert.equal(value.trace.filter(r=>r.kind==='context').length,2);
    }
    assert.equal(value.state,scenario==='human'?'human_review':'review_in_bank');
@@ -137,7 +138,7 @@ try{
   for(const selector of ['.editor-config','.editor-palette'])if(await editor.locator(selector).count())await editor.locator(selector).getByRole('button',{name:words.close[i],exact:true}).click();
   await editor.locator('.editor-dock-tabs').getByRole('button',{name:words.close[i],exact:true}).click();
   await settle();await editor.getByRole('button',{name:words.fit[i],exact:true}).click();await settle();
-  await expect(editor.locator('.react-flow__edge')).toHaveCount(36);
+  await expect(editor.locator('.react-flow__edge')).toHaveCount(34);
   await page.screenshot({path:path.join(folder,'master-diagram-'+language+'.png'),fullPage:true});
  }
  assert.deepEqual(errors,[]);await fs.writeFile(path.join(folder,'master-ui.json'),JSON.stringify({results,inspections,checks,errors},null,2));

@@ -21,7 +21,7 @@ await page.route('**/lab-api/editor/**',async route=>{
   let record;
   if(url.pathname.endsWith('/advance')){const state=await api('executions/'+url.pathname.split('/').at(-2));record={graph:state.workflow};}
   else record=await api('workflows/'+url.pathname.split('/').at(-2));
-  if(record.graph.nodes.some(n=>['triage','jev','context'].includes(n.kind))){blocked++;await route.abort();return;}
+  if(record.graph.nodes.some(n=>['intake','triage','jev','context'].includes(n.kind))){blocked++;await route.abort();return;}
   writes++;
  }
  await route.continue();
@@ -77,7 +77,7 @@ try{
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await page.setViewportSize({width:1500,height:1000});await fit();
   // Invalid drafts show concrete missing connections, never a silently disabled Play.
-  await node('start').locator('.editor-node-tile').click();await editor.locator('#editor-message').fill('Verificar las conexiones');
+  await node('start').locator('.editor-node-tile').click();await editor.locator('.editor-inspector-tabs button').first().click();await editor.locator('#editor-message').fill('Verificar las conexiones');
   await editor.getByLabel(labels.connections[i],{exact:true}).selectOption('');
   const beforeInvalid=writes;await button('full',editor.locator('.editor-toolbar')).click();
   await expect(editor.locator('.editor-errors')).toBeVisible();assert.equal(writes,beforeInvalid);

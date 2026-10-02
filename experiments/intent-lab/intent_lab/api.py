@@ -7,7 +7,7 @@ import queue
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Query
 from uuid import UUID
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,12 +27,15 @@ from . import flow_engine
 from . import workflow_editor as editor
 from . import app_diagnostics
 from . import workflow_execution as execution
+from . import bank_context as bank
+from .bank_context import Selection as BankSelection
 
 app = FastAPI(title="Nexqori · Intent Lab", docs_url="/lab-api/docs", redoc_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
 lock = threading.Lock()
 provider_lock = threading.Lock()
 latest = None
+editor_router = APIRouter(prefix="/lab-api/editor")
 
 
 @app.middleware("http")
@@ -41,7 +44,8 @@ async def local_only(request: Request, call_next):
         if request.headers.get("origin") not in (None, "http://localhost:5190", "http://127.0.0.1:5190", "http://localhost:5191", "http://127.0.0.1:5191"):
             return JSONResponse({"error": "origin_not_allowed"}, status_code=403)
         # Provider inputs are saved only in private local run records.
-        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith(('/run','/run-stream','/advance','/replay')) else 24000
+        editor_path=request.url.path.removeprefix('/api')
+        limit = 96000 if editor_path.startswith('/lab-api/editor/') and not request.url.path.endswith(('/run','/run-stream','/advance','/replay')) else 24000
         if len(await request.body()) > limit:
             return JSONResponse({"error": "input_too_long"}, status_code=413)
     response = await call_next(request)
@@ -101,11 +105,13 @@ class EditorSave(BaseModel):
     revision: int | None=Field(default=None,ge=1)
 
 class EditorRun(Dialogue):
+    bank: BankSelection | None=None
     revision: int=Field(ge=1)
     incident_id: UUID | None=None
     mode: Literal['step','full']='full'
 
 class EditorAdvance(BaseModel):
+    bank: BankSelection | None=None
     model_config=ConfigDict(extra='forbid')
     version: int=Field(ge=0)
     node_id: str=Field(min_length=1,max_length=50)
@@ -117,88 +123,97 @@ class EditorReplay(BaseModel):
     version: int=Field(ge=0)
     node_id: str=Field(min_length=1,max_length=50)
 
-@app.get('/lab-api/editor/template')
+@editor_router.get('/template')
 def editor_template(kind: Literal['banking','app']='banking'):
     return {'graph':editor.template(kind),'fields':list(flow_engine.QUESTIONS),'taxonomy':taxonomy()}
 
-@app.post('/lab-api/editor/master-workflow')
+@editor_router.post('/master-workflow')
 def editor_master():
     with lock:
         try:return editor.master_workflow()
         except RuntimeError:raise HTTPException(409,'workflow_limit') from None
 
-@app.post('/lab-api/editor/app-check')
+@editor_router.post('/app-check')
 def editor_app_check():
     with lock: return app_diagnostics.reproduce()
 
-@app.get('/lab-api/editor/notifications')
+@editor_router.get('/notifications')
 def editor_notifications():
     return {'notifications':list(reversed(app_diagnostics.notifications()))[:30]}
 
-@app.get('/lab-api/editor/workflows')
+@editor_router.get('/workflows')
 def editor_list():
     return {'workflows':editor.list_workflows()}
 
-@app.post('/lab-api/editor/validate')
+@editor_router.post('/validate')
 def editor_validate(body: EditorSave):
     return editor.validate_graph(body.graph.model_dump()) | {'graph':body.graph.model_dump()}
 
-@app.post('/lab-api/editor/workflows',status_code=201)
+@editor_router.post('/workflows',status_code=201)
 def editor_create(body: EditorSave):
     with lock:
         try: return editor.save_workflow(body.graph.model_dump())
         except RuntimeError: raise HTTPException(409,'workflow_limit') from None
 
-@app.get('/lab-api/editor/workflows/{workflow_id}')
+@editor_router.get('/workflows/{workflow_id}')
 def editor_read(workflow_id: UUID):
     try: return editor.read_workflow(workflow_id)
     except FileNotFoundError: raise HTTPException(404,'not_found') from None
 
-@app.put('/lab-api/editor/workflows/{workflow_id}')
+@editor_router.put('/workflows/{workflow_id}')
 def editor_save(workflow_id: UUID,body: EditorSave):
     with lock:
         try: return editor.save_workflow(body.graph.model_dump(),workflow_id,body.revision)
         except FileNotFoundError: raise HTTPException(404,'not_found') from None
         except RuntimeError: raise HTTPException(409,'revision_conflict') from None
 
-@app.post('/lab-api/editor/workflows/{workflow_id}/run')
-def editor_run(workflow_id: UUID,body: EditorRun):
+@editor_router.post('/workflows/{workflow_id}/run')
+def editor_run(workflow_id: UUID,body: EditorRun,request: Request):
     if body.context: raise HTTPException(422,'configure_context_in_node')
     try: record=editor.read_workflow(workflow_id)
     except FileNotFoundError: raise HTTPException(404,'not_found') from None
     if record['revision']!=body.revision: raise HTTPException(409,'revision_conflict')
     if not editor.validate_graph(record['graph'])['valid']: raise HTTPException(422,'invalid_graph')
+    reader=bank.authenticate(request) if body.bank is not None else None
+    binding={'owner_id':reader.user['id'],**body.bank.model_dump()} if reader else None
     if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
     try:
-        state=execution.create(record,[m.model_dump() for m in body.messages],body.language,str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None)
-        return execution.advance(state,body.mode)
+        state=execution.create(record,[m.model_dump() for m in body.messages],body.language,str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None,binding)
+        return execution.advance(state,body.mode,bank_reader=reader)
     finally: provider_lock.release()
 
-@app.post('/lab-api/editor/workflows/{workflow_id}/run-stream')
-def editor_run_stream(workflow_id: UUID,body: EditorRun):
+@editor_router.post('/workflows/{workflow_id}/run-stream')
+def editor_run_stream(workflow_id: UUID,body: EditorRun,request: Request):
     if body.context: raise HTTPException(422,'configure_context_in_node')
     try: record=editor.read_workflow(workflow_id)
     except FileNotFoundError: raise HTTPException(404,'not_found') from None
     if record['revision']!=body.revision: raise HTTPException(409,'revision_conflict')
     if not editor.validate_graph(record['graph'])['valid']: raise HTTPException(422,'invalid_graph')
+    reader=bank.authenticate(request) if body.bank is not None else None
+    binding={'owner_id':reader.user['id'],**body.bank.model_dump()} if reader else None
     if not provider_lock.acquire(blocking=False): raise HTTPException(409,'classification_running')
     try:state=execution.create(record,[m.model_dump() for m in body.messages],body.language,
-                str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None)
+                str(body.thread_id) if body.thread_id else None,str(body.incident_id) if body.incident_id else None,binding)
     except Exception:
         provider_lock.release()
         raise
-    return execution_stream(state,body.mode)
+    return execution_stream(state,body.mode,bank_reader=reader)
 
-@app.get('/lab-api/editor/executions/{execution_id}')
-def editor_execution(execution_id: UUID):
-    try:return execution.view(execution.read(execution_id))
+@editor_router.get('/executions/{execution_id}')
+def editor_execution(execution_id: UUID,request: Request):
+    try:
+        state=execution.read(execution_id)
+        bank.for_execution(request,state)
+        return execution.view(state)
     except FileNotFoundError:raise HTTPException(404,'not_found') from None
 
-@app.post('/lab-api/editor/executions/{execution_id}/replay')
-def editor_replay(execution_id: UUID,body: EditorReplay):
+@editor_router.post('/executions/{execution_id}/replay')
+def editor_replay(execution_id: UUID,body: EditorReplay,request: Request):
     if not provider_lock.acquire(blocking=False):raise HTTPException(409,'classification_running')
     try:
-        state,reused=execution.replay(execution.read(execution_id),body.version,body.node_id)
+        parent=execution.read(execution_id)
+        reader=bank.for_execution(request,parent)
+        state,reused=execution.replay(parent,body.version,body.node_id)
     except (FileNotFoundError,RuntimeError,ValueError) as error:
         provider_lock.release()
         if isinstance(error,FileNotFoundError):raise HTTPException(404,'not_found') from None
@@ -209,14 +224,16 @@ def editor_replay(execution_id: UUID,body: EditorReplay):
     if reused:
         provider_lock.release()
         return JSONResponse({'detail':'replay_exists','execution_id':state['id']},status_code=409)
-    return execution_stream(state,'step')
+    return execution_stream(state,'step',bank_reader=reader)
 
-@app.post('/lab-api/editor/executions/{execution_id}/advance')
-def editor_advance(execution_id: UUID,body: EditorAdvance):
+@editor_router.post('/executions/{execution_id}/advance')
+def editor_advance(execution_id: UUID,body: EditorAdvance,request: Request):
     if not provider_lock.acquire(blocking=False):raise HTTPException(409,'classification_running')
     try:
         state=execution.read(execution_id)
-        execution.preflight(state,body.version,body.node_id,body.reply)
+        reader=bank.for_execution(request,state)
+        selection=body.bank.model_dump() if body.bank is not None else None
+        execution.preflight(state,body.version,body.node_id,body.reply,selection)
     except (FileNotFoundError,RuntimeError,ValueError) as error:
         provider_lock.release()
         if isinstance(error,FileNotFoundError):raise HTTPException(404,'not_found') from None
@@ -224,14 +241,14 @@ def editor_advance(execution_id: UUID,body: EditorAdvance):
     except Exception:
         provider_lock.release()
         raise
-    return execution_stream(state,body.mode,body.reply)
+    return execution_stream(state,body.mode,body.reply,reader,selection)
 
-def execution_stream(state,mode,reply=None):
+def execution_stream(state,mode,reply=None,bank_reader=None,bank_selection=None):
     events=queue.Queue()
     events.put({'event':'execution_created','result':execution.view(state)})
     def execute():
         try:
-            result=execution.advance(state,mode,reply,events.put)
+            result=execution.advance(state,mode,reply,events.put,bank_reader,bank_selection)
             phase=result['execution']['phase']
             events.put({'event':'complete' if phase=='completed' else phase,'result':result})
         except Exception:
@@ -252,7 +269,15 @@ def execution_stream(state,mode,reply=None):
             yield json.dumps(event,ensure_ascii=False)+'\n'
     return StreamingResponse(stream(),media_type='application/x-ndjson',headers={'X-Accel-Buffering':'no'})
 
-@app.get('/lab-api/editor/cases')
+@editor_router.get('/bank/session')
+def editor_bank_session(request: Request):
+    return {'user':bank.authenticate(request).user}
+
+@editor_router.post('/bank/records')
+def editor_bank_records(request: Request,language: Literal['es','en','pt']='es'):
+    return bank.authenticate(request).transactions(language)
+
+@editor_router.get('/cases')
 def editor_cases(language: Literal['es','en','pt']='es'):
     evidence=json.loads((ROOT/'evidence.json').read_text(encoding='utf-8'))
     examples={}
@@ -266,7 +291,7 @@ def editor_cases(language: Literal['es','en','pt']='es'):
         row['example_source']='authored_category_example'
     return {'cases':rows}
 
-@app.get('/lab-api/editor/case-template/{intent}')
+@editor_router.get('/case-template/{intent}')
 def editor_case_template(intent: str):
     if intent not in LABELS: raise HTTPException(404,'not_found')
     return editor.template()
@@ -348,15 +373,20 @@ def run_history(offset: int=Query(0,ge=0,le=100000)):
     for path in paths[offset:offset+30]:
         try:
             record=json.loads(path.read_text(encoding='utf-8'));result=record['result']
+            if result.get('bank_context'): continue
             rows.append({k:result.get(k) for k in ('id','created_at','thread_id')}|{'kind':record.get('kind','classification'),'actor':record.get('actor','local_operator'),'intent':result.get('jev',{}).get('intent'),'jev_status':result.get('jev',{}).get('status'),'llm_status':result.get('llm',{}).get('status')})
         except (ValueError,KeyError): continue
     return {'runs':rows,'nextOffset':offset+30 if len(paths)>offset+30 else None}
 
 @app.get('/lab-api/runs/{run_id}')
-def run_detail(run_id: UUID):
+@app.get('/api/lab-api/runs/{run_id}')
+def run_detail(run_id: UUID,request: Request):
     path=storage.DATA_DIR/'runs'/f'{run_id}.json'
     if not path.exists(): raise HTTPException(404,'not_found')
-    return json.loads(path.read_text(encoding='utf-8'))
+    record=json.loads(path.read_text(encoding='utf-8'))
+    binding=record.get('result',{}).get('bank_context')
+    if binding: bank.authenticate(request,binding['owner_id'])
+    return record
 
 
 @app.get("/lab-api/conversations")
@@ -439,6 +469,11 @@ def results():
 def health():
     return {"status": "ok", "external_calls": "jev_and_openai_on_explicit_run", "banking_actions": False}
 
+
+app.include_router(editor_router)
+# The /api prefix receives the bank's HttpOnly cookie, whose path is /api.
+# Existing LAB-only links remain compatible and cannot access bank-bound runs without it.
+app.include_router(editor_router,prefix='/api')
 
 if (ROOT / "dist").exists():
     app.mount("/", StaticFiles(directory=ROOT / "dist", html=True), name="ui")

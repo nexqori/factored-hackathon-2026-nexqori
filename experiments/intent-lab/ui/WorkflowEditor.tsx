@@ -7,13 +7,15 @@ import {et,allText,type EditorKey} from './editorLocales';
 import {scenarios,messagesFor,type Message} from './scenarios';
 import {BlockSettings} from './BlockSettings';
 import {ActivationPlan} from './ActivationPlan';
+import {BlockResult} from './BlockResult';
+import {BankContextPanel,type BankSelection} from './BankContextPanel';
 import {nodeTypes,edgeTypes,blockIcons,type CanvasNode,type CanvasEdge} from './WorkflowNodes';
 import {kinds,canAdd,insertBlock,connectGraph,arrangeGraph,moveBlocks,sameExecutionRules,type Graph,type Workflow,type Summary,type Kind,type Point,type Port,type InsertAt,type Validation,type Block,type Config,type Incident,type Notice,type Trace,type Result,type CaseDefinition} from './workflowGraph';
 import '@xyflow/react/dist/style.css';
 import './editor.css';
 
 async function api<T>(path:string,body?:unknown,method='POST'):Promise<T>{
- const r=await fetch('/lab-api/'+path,body===undefined?{}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const r=await fetch('/api/lab-api/'+path,body===undefined?{}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  if(!r.ok){const body=await r.json().catch(()=>({}));throw new Error(typeof body.detail==='string'?body.detail:String(r.status));}return r.json();
 }
 function exportJson(name:string,value:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();URL.revokeObjectURL(url);}
@@ -31,7 +33,8 @@ export function WorkflowEditor({language}:{language:Language}){
  const [measurements,setMeasurements]=useState<Record<string,{width:number;height:number}>>({});
  const [palette,setPalette]=useState<'cases'|'blocks'|null>('cases'),[search,setSearch]=useState(''),[pending,setPending]=useState<InsertAt|null>(null);
  const [selectedCase,setSelectedCase]=useState<string|null>(null),[dock,setDock]=useState<'conversation'|'execution'|'notifications'|null>(null);
- const [inspectorTab,setInspectorTab]=useState<'parameters'|'output'>('parameters'),[filesOpen,setFilesOpen]=useState(false);
+ const [inspectorTab,setInspectorTab]=useState<'parameters'|'output'|'json'>('parameters'),[filesOpen,setFilesOpen]=useState(false),[widePanel,setWidePanel]=useState(false);
+ const [bankSelection,setBankSelection]=useState<BankSelection|null>(null);
  const [trace,setTrace]=useState<Trace[]>([]),[activeNode,setActiveNode]=useState<string|null>(null),[taken,setTaken]=useState<string[]>([]),[zoom,setZoom]=useState(90);
  const undo=useRef<Graph[]>([]),redo=useRef<Graph[]>([]),dragBefore=useRef<Graph|null>(null),[,redraw]=useState(0);
  const fileInput=useRef<HTMLInputElement>(null),canvas=useRef<HTMLDivElement>(null),filesDialog=useRef<HTMLDialogElement>(null),thread=useRef<string|undefined>(undefined);
@@ -43,13 +46,15 @@ export function WorkflowEditor({language}:{language:Language}){
  const waiting=result?.execution.phase==='waiting_reply';
  const pendingNode=continuing?result!.execution.next_node_id:null;
  const rulesChanged=!!(continuing&&graph&&result&&!sameExecutionRules(graph,result.workflow));
- const runnable=!!graph&&!busy&&(!result||!['running','interrupted'].includes(result.execution.phase))&&(continuing?(!waiting||!!input.trim())&&!rulesChanged:!!input.trim()&&history.length<10);
+ const bankChanged=!!result?.bank_context&&!!bankSelection&&(bankSelection.transaction_id!==result.bank_context.transaction_id||bankSelection.request_id!==result.bank_context.request_id);
+ const bankEditable=!result||(!!result.bank_context&&continuing&&graph?.nodes.find(n=>n.id===pendingNode)?.kind==='context');
+ const runnable=!!graph&&!busy&&(!result||!['running','interrupted'].includes(result.execution.phase))&&(continuing?(!waiting||!!input.trim()||bankChanged)&&!rulesChanged:!!input.trim()&&history.length<10);
  const canStep=(id:string)=>runnable&&(continuing?id===pendingNode:graph?.nodes.find(n=>n.kind==='start')?.id===id);
  const canReplay=(id:string)=>!!(result&&graph&&!busy&&['paused','waiting_reply','completed'].includes(result.execution.phase)&&sameExecutionRules(graph,result.workflow)&&result.replayable_nodes?.includes(id));
  function runBlock(id:string){void run('step',id,!canStep(id)&&canReplay(id));}
  function clearExecution(){executionId.current=null;const url=new URL(location.href);url.searchParams.delete('execution');window.history.replaceState(null,'',url);setResult(null);setTrace([]);setTaken([]);thread.current=undefined;}
- function keepExecution(value:Result){executionId.current=value.execution.id;const url=new URL(location.href);url.searchParams.set('execution',value.execution.id);window.history.replaceState(null,'',url);setResult(value);setTrace(value.trace);setTaken(value.visited_edges);setHistory(value.messages);setIncident(value.incident);thread.current=value.thread_id;}
- function showError(error:unknown){const code=error instanceof Error?error.message:'';setErrorCode((['stale_step','revision_conflict','classification_running','execution_not_paused','invalid_graph'].includes(code)?code:'error') as EditorKey);setError(true);}
+ function keepExecution(value:Result){executionId.current=value.execution.id;const url=new URL(location.href);url.searchParams.set('execution',value.execution.id);window.history.replaceState(null,'',url);setResult(value);setTrace(value.trace);setTaken(value.visited_edges);setHistory(value.messages);setIncident(value.incident);setBankSelection(value.bank_context?{transaction_id:value.bank_context.transaction_id,request_id:value.bank_context.request_id}:null);thread.current=value.thread_id;}
+ function showError(error:unknown){const code=error instanceof Error?error.message:'';setErrorCode((['stale_step','revision_conflict','classification_running','execution_not_paused','invalid_graph','bank_session_required','bank_customer_required','bank_reference_unavailable','bank_read_forbidden','bank_unavailable'].includes(code)?code:'error') as EditorKey);setError(true);}
  async function recover(){if(!executionId.current)return;setBusy(true);try{keepExecution(await api<Result>('editor/executions/'+executionId.current));setError(false);}catch(error){showError(error);}finally{setBusy(false);}}
 
 
@@ -65,7 +70,7 @@ export function WorkflowEditor({language}:{language:Language}){
  function syncUrl(record:Workflow|null){const url=new URL(location.href);url.searchParams.set('view','flows');url.searchParams.set('mode','editor');url.searchParams.delete('run');if(record)url.searchParams.set('workflow',record.id);else url.searchParams.delete('workflow');window.history.replaceState(null,'',url);}
  function reset(next:Graph,record:Workflow|null){clearExecution();syncUrl(record);setGraph(next);setSaved(record);setDirty(!record);setValidation(record?.validation||null);setSelected('');setHistory([]);setResult(null);setTrace([]);setTaken([]);setIncident(null);setError(false);setMessage(null);setInput(t('defaultMessage'));setPending(null);setDock(null);setSelectedCase(null);undo.current=[];redo.current=[];thread.current=undefined;void instance?.setViewport({x:70,y:90,zoom:.9});}
  function mayDiscard(){return !dirty||confirm(t('discard'));}
- function selectNode(id:string,tab:'parameters'|'output'='parameters'){if(graph?.nodes.find(n=>n.id===id)?.kind==='start'&&dock==='conversation')setDock(null);setSelected(id);setInspectorTab(tab);setPending(null);if(innerWidth<1100)setPalette(null);}
+ function selectNode(id:string,tab?:'parameters'|'output'){if(graph?.nodes.find(n=>n.id===id)?.kind==='start'&&dock==='conversation')setDock(null);setSelected(id);setInspectorTab(tab||(trace.some(row=>row.node_id===id)?'output':'parameters'));setPending(null);if(innerWidth<1100)setPalette(null);}
  function openPalette(source?:string,port?:Port,position?:Point){setDock(null);setPalette('blocks');setSearch('');setPending(source&&port?{source,port,position}:null);setSelected('');}
  async function create(kind:string){if(!mayDiscard())return;setBusy(true);try{const template=await getTemplate(kind==='app'?'app':'banking');reset(kind==='blank'?{...template,name:allText('blankName'),nodes:[{...template.nodes[0],position:{x:0,y:100}}],edges:[]}:template,null);setFilesOpen(false);setPalette('blocks');}catch{setError(true);}finally{setBusy(false);}}
  async function load(id:string){if(!id||!mayDiscard())return;setBusy(true);try{const record=await api<Workflow>('editor/workflows/'+id);reset(record.graph,record);setFilesOpen(false);}catch{setError(true);}finally{setBusy(false);}}
@@ -98,10 +103,10 @@ export function WorkflowEditor({language}:{language:Language}){
    if(!record.validation.valid){setValidation(record.validation);setDock('execution');throw new Error('invalid_graph');}
    let path:string,payload:unknown;
    if(replay&&result){path='executions/'+result.execution.id+'/replay';payload={version:result.execution.version,node_id:nodeId};}
-   else if(continuing&&result){path='executions/'+result.execution.id+'/advance';payload={version:result.execution.version,node_id:result.execution.next_node_id,mode,...(waiting?{reply:input.trim()}:{})};}
-   else{path='workflows/'+record.id+'/run-stream';payload={language,messages:[...history,{role:'user',content:input.trim()}],revision:record.revision,thread_id:thread.current,incident_id:incident?.id,mode};clearExecution();}
+   else if(continuing&&result){path='executions/'+result.execution.id+'/advance';payload={version:result.execution.version,node_id:result.execution.next_node_id,mode,...(waiting&&input.trim()?{reply:input.trim()}:{}),...(bankChanged?{bank:bankSelection}:{})};}
+   else{path='workflows/'+record.id+'/run-stream';payload={language,messages:[...history,{role:'user',content:input.trim()}],revision:record.revision,thread_id:thread.current,incident_id:incident?.id,mode,...(bankSelection?{bank:bankSelection}:{})};clearExecution();}
    setDock('execution');setSelected('');
-   const r=await fetch('/lab-api/editor/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+   const r=await fetch('/api/lab-api/editor/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
    if(!r.ok){const body=await r.json().catch(()=>({}));if(replay&&body.detail==='replay_exists'&&typeof body.execution_id==='string'){keepExecution(await api<Result>('editor/executions/'+encodeURIComponent(body.execution_id)));setInput('');return;}throw new Error(typeof body.detail==='string'?body.detail:'execution_failed');}if(!r.body)throw new Error('execution_failed');
    const reader=r.body.getReader(),decoder=new TextDecoder();let buffer='';
    function consume(row:string){if(!row.trim())return;const event=JSON.parse(row) as Progress;
@@ -125,15 +130,16 @@ export function WorkflowEditor({language}:{language:Language}){
  const number=(value:number)=>new Intl.NumberFormat(language,{maximumFractionDigits:1}).format(value);
 
  function stepPanel(){return result&&<div className="editor-step-bar" data-execution-phase={result.execution.phase}><strong>{t(result.execution.phase==='completed'?'completed':result.execution.phase==='running'?'running':result.execution.phase)}</strong>{pendingNode&&<span>{t('nextBlock')}: {graph?.nodes.find(n=>n.id===pendingNode)?.label[language]}</span>}{continuing&&<button data-step-next disabled={!runnable} onClick={()=>void run('step')}><Play size={14}/>{t('stepNext')}</button>}{result.execution.phase==='running'&&<button disabled={busy} onClick={()=>void recover()}>{t('resume')}</button>}<code>{result.execution.id}</code>{result.replayed_from&&<small>{t('replayOrigin')} · {graph?.nodes.find(n=>n.id===result.replayed_from!.node_id)?.label[language]}</small>}</div>;}
- function questionPanel(){return <div className="editor-start-form">
+ function bankPanel(){return <>{result&&!result.bank_context&&<p className="editor-help">{t('bankNewConversation')}</p>}<BankContextPanel language={language} selection={bankSelection} onChange={setBankSelection} binding={result?.bank_context} locked={busy||!bankEditable}/></>;}
+ function questionPanel(){return <div className="editor-start-form"><div className="editor-conversation-context">
   <h3>{t(waiting?'waiting_reply':'questionStart')}</h3>{waiting&&<p className="editor-waiting">{result?.reply}</p>}{stepPanel()}{chosen&&<p className="case-selected"><ListChecks size={16}/>{chosen.title}</p>}
   {history.length>0&&<details className="editor-prior"><summary>{t('chat')} · {history.length}</summary><div className="editor-chat" role="log" aria-label={t('chat')} tabIndex={0}>{history.map((m,i)=><p key={i} className={m.role}>{m.content}</p>)}</div></details>}
-  <label>{t('input')}<textarea aria-label={t('input')} id="editor-message" rows={4} maxLength={2000} disabled={busy||(continuing&&!waiting)} value={input} onChange={e=>setInput(e.target.value)}/></label>
+  {bankPanel()}</div><div className="editor-message-entry"><label>{t('input')}<textarea aria-label={t('input')} id="editor-message" rows={4} maxLength={2000} disabled={busy||(continuing&&!waiting)} value={input} onChange={e=>setInput(e.target.value)}/></label>
   <div className="button-row"><button className="primary" aria-label={t('fullRun')} disabled={!runnable} onClick={()=>void run()}><Play size={15}/>{t('fullRun')}</button><button disabled={!runnable} onClick={()=>void run('step')}>{t('step')}</button><button disabled={busy} onClick={()=>{setHistory([]);setInput('');clearExecution();}}>{t('clear')}</button></div>
   <p className="editor-help">{t(waiting?'feedbackHint':continuing?'continueHint':!input.trim()?'readyInput':'autosave')}</p>
   {graph?.nodes.some(n=>n.kind==='diagnostic')&&<div className="editor-probe"><button disabled={busy} onClick={()=>void reproduce()}><ListChecks size={16}/>{t('reproduce')}</button>{incident&&<div className="editor-incident" role="status"><CheckCircle2 size={15}/><code>{incident.reference}</code><details><summary>{t('evidence')}</summary><pre tabIndex={0}>{JSON.stringify(incident.events,null,2)}</pre></details></div>}</div>}
   {chosen&&<details className="editor-case-detail"><summary>{t('procedure')}</summary><p>{chosen.summary}</p>{chosen.contract&&<ol>{chosen.contract.steps.map((step,i)=><li key={i}>{step}</li>)}</ol>}<h4>{t('needed')}</h4><p>{chosen.fields.map(f=>fieldTitle(language,f)).join(' · ')||'—'}</p><small>{t('caseOrigin')}</small></details>}
- </div>;}
+ </div></div>;}
  return <div className="workflow-editor">
   <h1 className="editor-screen-reader">{t('editor')}</h1>
   <div className="editor-toolbar">
@@ -167,14 +173,15 @@ export function WorkflowEditor({language}:{language:Language}){
     </ReactFlow>}
     <div className="editor-canvas-bottom"><div className="canvas-zoom"><button aria-label={t('zoomOut')} onClick={()=>void instance?.zoomOut()}>−</button><span>{zoom}%</span><button aria-label={t('zoomIn')} onClick={()=>void instance?.zoomIn()}>+</button><button aria-label={t('fit')} title={t('fit')} onClick={()=>void instance?.fitView({padding:.18,maxZoom:1})}><Maximize size={16}/></button><button disabled={busy||!graph} aria-label={t('arrange')} title={t('arrange')} onClick={()=>{if(graph){edited(arrangeGraph(graph));setTimeout(()=>void instance?.fitView({padding:.18,maxZoom:1}),60);}}}><LayoutGrid size={16}/></button></div><span className="canvas-hint">{t('canvasHint')}</span></div>
    </div>
-   {block&&graph&&<aside className="editor-config" aria-label={t('config')}>
-    <div className="editor-side-heading"><div><span className="editor-eyebrow">{t(block.kind)}</span><h2>{block.label[language]}</h2></div><button className="icon-button" aria-label={t('close')} onClick={()=>setSelected('')}><X size={19}/></button></div>
-    <div className="editor-inspector-tabs"><button aria-pressed={inspectorTab==='parameters'} onClick={()=>setInspectorTab('parameters')}>{t('parameters')}</button><button aria-pressed={inspectorTab==='output'} disabled={!output} onClick={()=>setInspectorTab('output')}>{t('output')}</button></div>
+   {block&&graph&&<aside className={'editor-config'+(widePanel?' is-wide':'')} aria-label={t('config')}>
+    <div className="editor-side-heading"><div><span className="editor-eyebrow">{t(block.kind)}</span><h2>{block.label[language]}</h2></div><button className="icon-button" aria-label={t(widePanel?'smallerPanel':'widerPanel')} onClick={()=>setWidePanel(!widePanel)}><Maximize size={17}/></button><button className="icon-button" aria-label={t('close')} onClick={()=>setSelected('')}><X size={19}/></button></div>
+    <div className="editor-inspector-tabs"><button aria-pressed={inspectorTab==='parameters'} onClick={()=>setInspectorTab('parameters')}>{t('parameters')}</button><button aria-pressed={inspectorTab==='output'} disabled={!output} onClick={()=>setInspectorTab('output')}>{t('simpleResult')}</button><button aria-pressed={inspectorTab==='json'} disabled={!output} onClick={()=>setInspectorTab('json')}>{t('jsonDetail')}</button></div>
     <div className="editor-inspector-scroll" tabIndex={0}>
      <div className="block-execution" data-block-execution={block.id}>{output?<><strong>{t('savedOutput')}</strong><span>{number(output.latency_ms)} ms · {t(output.reused?'cachedResult':output.status==='ok'?'completed':'error')}</span><div><code>{result?.execution.id}</code></div></>:<p>{t(canStep(block.id)?'readyBlock':'noBlockOutput')}</p>}<div className="button-row"><button className="primary" data-inspector-step={block.id} disabled={!canStep(block.id)&&!canReplay(block.id)} title={canReplay(block.id)&&!canStep(block.id)?t('replayHint'):t('stepBlock')} onClick={()=>runBlock(block.id)}><Play size={14}/>{t(canStep(block.id)?'stepBlock':canReplay(block.id)?'replayBlock':'stepBlock')}</button></div><p className="editor-help">{t('inspectHint')}</p></div>
-     {inspectorTab==='output'&&output?<><p className="editor-help">{number(output.latency_ms)} ms · {t(output.reused?'cachedResult':output.status==='ok'?'completed':'error')}</p><pre tabIndex={0}>{JSON.stringify(output.output,null,2)}</pre>{stepPanel()}</>:<>
+     {inspectorTab!=='parameters'&&output?<>{inspectorTab==='json'?<pre tabIndex={0}>{JSON.stringify(output.output,null,2)}</pre>:<BlockResult row={output} graph={result?.workflow||graph} language={language} cases={cases} waiting={!!waiting} respond={()=>{setDock('conversation');setSelected('');setTimeout(()=>document.getElementById('editor-message')?.focus(),50);}} configure={()=>setInspectorTab('parameters')}/>}<details><summary>{t('execution')}</summary>{stepPanel()}</details></>:<>
      {block.kind==='start'&&questionPanel()}{block.kind==='contract'&&<ul className="editor-contract-list">{cases.filter(c=>c.contract&&(!block.config.intent||c.intent===block.config.intent)).map(c=><li key={c.intent}><strong>{c.title}</strong><ol>{c.contract!.steps.map((step,i)=><li key={i}>{step}</li>)}</ol></li>)}</ul>}<div className="editor-config-heading"><span><code>{block.id}</code></span><button aria-label={t('remove')} disabled={busy||block.kind==='start'} onClick={removeBlock}><Trash2 size={15}/></button></div>
      <BlockSettings language={language} graph={graph} block={block} busy={busy} fields={fields} taxonomy={taxonomy} cases={cases} output={output} editBlock={editBlock} editConfig={editConfig} connect={connect}/>
+     {block.kind==='context'&&bankPanel()}
     </>}</div>
    </aside>}
   </div>

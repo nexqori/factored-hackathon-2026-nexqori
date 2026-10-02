@@ -1,7 +1,7 @@
 """The shared support diagram. Selecting an example never replaces this graph."""
 
 
-def support_workflow():
+def support_workflow_v2():
     from .workflow_editor import Graph, text, PROBLEM_PORTS
     def node(id, kind, labels, x, y, config=None):
         return {'id': id, 'kind': kind, 'label': text(*labels), 'position': {'x': x, 'y': y}, 'config': config or {}}
@@ -45,3 +45,20 @@ def support_workflow():
     for i,intent in enumerate(PROBLEM_PORTS): links += [('case_route','contract_'+str(i),intent),('contract_'+str(i),'context','next')]
     return Graph.model_validate({'name':text('Flujo de atención','Support workflow','Fluxo de atendimento'),'nodes':nodes,
                                 'edges':[{'id':f'm{i}','source':a,'target':b,'port':p} for i,(a,b,p) in enumerate(links)]}).model_dump()
+
+
+def support_workflow():
+    """Classify and route in one block while retaining the original problem branches."""
+    from .workflow_editor import Graph, text
+    graph=support_workflow_v2()
+    removed={'complaint_route','query_route'}
+    graph['nodes']=[node for node in graph['nodes'] if node['id'] not in removed]
+    for node in graph['nodes']:
+        if node['id']=='triage':
+            node.update(kind='intake',label=text('¿Consulta o problema?','Inquiry or problem?','Consulta ou problema?'))
+        elif node['position']['x']>=440:
+            node['position']['x']-=220
+    graph['edges']=[edge for edge in graph['edges'] if edge['source'] not in removed|{'triage'} and edge['target'] not in removed]
+    graph['edges'] += [{'id':'intake_'+family,'source':'triage','target':target,'port':family}
+                       for family,target in [('problem','jev'),('query','query_case'),('clarification','clarify')]]
+    return Graph.model_validate(graph).model_dump()

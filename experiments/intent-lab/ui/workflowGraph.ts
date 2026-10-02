@@ -1,13 +1,14 @@
 import type {Language} from './locales';
+import type {BankBinding} from './BankContextPanel';
 import {allText, type EditorKey} from './editorLocales';
 
-export type Kind='start'|'triage'|'jev'|'case_router'|'contract'|'preview'|'context'|'condition'|'question'|'response'|'escalate'|'diagnostic'|'notify';
+export type Kind='start'|'intake'|'triage'|'jev'|'case_router'|'contract'|'preview'|'context'|'condition'|'question'|'response'|'escalate'|'diagnostic'|'notify';
 export type Localized=Record<Language,string>;
 export type Config={instructions?:Localized;scope?:string;intent?:string;stage?:string;notes?:Localized;mode?:string;fields?:string[];predicate?:string;value?:string;text?:Localized;outcome?:string};
 export type Point={x:number;y:number};
 export type Block={id:string;kind:Kind;label:Localized;position:Point;config:Config};
 export const problemPorts=['unrecognized-charge','incorrect-charge','payment-status','app-support','branch-support','service-feedback'] as const;
-export type Port='next'|'yes'|'no'|'reply'|'otherwise'|typeof problemPorts[number];
+export type Port='next'|'yes'|'no'|'reply'|'otherwise'|'problem'|'query'|'clarification'|typeof problemPorts[number];
 export type Link={id:string;source:string;target:string;port:Port};
 export type Graph={schema_version:1;name:Localized;nodes:Block[];edges:Link[]};
 export type Validation={valid:boolean;errors:{code:EditorKey;node_id:string|null;port:string|null}[]};
@@ -19,13 +20,13 @@ export type Trace={node_id:string;kind:Kind;label:Localized;status:string;output
 export type ToolPlan={tools:{id:string;titles:Localized;status:string}[]};
 export type Activation={id:string;node_id:string;stage:string;titles:Localized;requirements:string[];status:'would_activate';executed:false};
 export type Execution={id:string;phase:'paused'|'waiting_reply'|'running'|'completed'|'interrupted';version:number;next_node_id:string|null;awaiting_node_id:string|null;last_edge_id:string|null;turn:number};
-export type Result={id:string;thread_id:string;language:Language;workflow_id:string;workflow:Graph;state:EditorKey;reply:string;trace:Trace[];visited_edges:string[];latency_ms:number;notification:Notice|null;incident:Incident|null;workflow_revision:number;triage:{family?:string};jev:{intent?:string};contract:{title?:string;steps:string[]}|null;tool_plan:ToolPlan;activation_plan?:Activation[];execution:Execution;replayable_nodes?:string[];replayed_from?:{execution_id:string;node_id:string};messages:{role:'user'|'assistant';content:string}[]};
+export type Result={bank_context?:BankBinding|null;executed_tools?:{tool:string;auditEventId:string}[];id:string;thread_id:string;language:Language;workflow_id:string;workflow:Graph;state:EditorKey;reply:string;trace:Trace[];visited_edges:string[];latency_ms:number;notification:Notice|null;incident:Incident|null;workflow_revision:number;triage:{family?:string};jev:{intent?:string};contract:{title?:string;steps:string[]}|null;tool_plan:ToolPlan;activation_plan?:Activation[];execution:Execution;replayable_nodes?:string[];replayed_from?:{execution_id:string;node_id:string};messages:{role:'user'|'assistant';content:string}[]};
 export type CaseDefinition={intent:string;title:string;summary:string;family:string;fields:string[];example:string;contract:null|{steps:string[]};tool_plan:ToolPlan;evidence:null|{records:number;denominator:number;source:string}};
 export type InsertAt={source:string;port:Port;position?:Point};
-export const kinds:Kind[]=['triage','jev','case_router','contract','preview','context','condition','question','response','escalate','diagnostic','notify'];
+export const kinds:Kind[]=['intake','jev','case_router','contract','preview','context','condition','question','response','escalate','diagnostic','notify'];
 export const terminals=new Set<Kind>(['question','response','escalate']);
 export const emptyText=()=>({es:'',en:'',pt:''});
-export const ports=(kind:Kind):Port[]=>kind==='question'?['reply']:terminals.has(kind)?[]:kind==='case_router'?[...problemPorts,'otherwise']:kind==='condition'?['yes','no']:['next'];
+export const ports=(kind:Kind):Port[]=>kind==='question'?['reply']:terminals.has(kind)?[]:kind==='intake'?['problem','query','clarification']:kind==='case_router'?[...problemPorts,'otherwise']:kind==='condition'?['yes','no']:['next'];
 export const uid=()=> 'n'+crypto.randomUUID().replaceAll('-','').slice(0,12);
 const edge=(source:string,port:Port,target:string):Link=>({id:'e'+uid(),source,port,target});
 
@@ -54,7 +55,7 @@ export function caseInScope(item:CaseDefinition,scope:string):boolean {
 }
 
 export function configFor(kind:Kind):Config {
-  if(kind==='triage')return {instructions:emptyText()};
+  if(kind==='triage'||kind==='intake')return {instructions:emptyText()};
   if(kind==='jev')return {instructions:emptyText(),scope:'all'};
   if(kind==='contract')return {intent:''};
   if(kind==='preview')return {stage:'action'};
@@ -74,8 +75,8 @@ export function connectGraph(graph:Graph,source:string,port:Port,target:string,r
 export function canAdd(graph:Graph,kind:Kind,pending:InsertAt|null):boolean {
   if(graph.nodes.length>=40)return false;
   if(pending?.port==='reply')return false;
-  const maximum=kind==='jev'?2:kind==='contract'?6:['triage','case_router','context','diagnostic'].includes(kind)?1:40;
-  if(graph.nodes.filter(n=>n.kind===kind).length>=maximum)return false;
+  const maximum=kind==='jev'?2:kind==='contract'?6:['intake','triage','case_router','context','diagnostic'].includes(kind)?1:40;
+  if(graph.nodes.filter(n=>['intake','triage'].includes(kind)?['intake','triage'].includes(n.kind):n.kind===kind).length>=maximum)return false;
   // A terminal cannot replace an existing connection without losing its continuation.
   return !(pending&&graph.edges.some(e=>e.source===pending.source&&e.port===pending.port)&&terminals.has(kind));
 }
@@ -95,7 +96,7 @@ export function insertBlock(graph:Graph,kind:Kind,position:Point,pending:InsertA
   }
   let next:Graph={...graph,nodes:[...nodes,{id,kind,label:allText(kind),position,config:configFor(kind)}]};
   if(pending)next=connectGraph(next,pending.source,pending.port,id);
-  if(old)next=connectGraph(next,id,kind==='condition'?'yes':kind==='case_router'?'otherwise':'next',old.target);
+  if(old)next=connectGraph(next,id,kind==='condition'?'yes':kind==='case_router'?'otherwise':kind==='intake'?'problem':'next',old.target);
   return {graph:next,id};
 }
 

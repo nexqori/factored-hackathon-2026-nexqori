@@ -51,9 +51,9 @@ Cada turno vuelve a calcular la ruta: problema → consulta elimina el contrato 
 2. Elige una conversación o crea una con «Quiero consultar el estado de mi folio». **Ruta y herramientas** antes de ejecutar está marcada **Referencia del caso**; no es inferencia.
 3. Pulsa **Ejecutar caso** para comparar Jev/Luna o **Probar respuesta de este caso** para el recorrido conversacional. El panel indica **Propuesta de Jev** con la ruta, lecturas, referencias necesarias y acciones revisables.
 4. Continúa con un problema de cobro y luego pide sólo el saldo. El panel cambia con la intención activa del nuevo turno. Si hay ambigüedad, debe mostrar aclaración sin herramientas.
-5. Revisa el JSON de salida o el historial. `tool_plan` incluye versión, procedencia, intención, contrato, permisos y pasos. `executed_tools` y `executed_operations` siguen vacíos en el LAB.
+5. Revisa el JSON de salida o el historial. `tool_plan` incluye versión, procedencia, intención, contrato, permisos y pasos. `executed_tools` y `executed_operations` siguen vacíos en la comparación de clasificación. El editor con Contexto bancario registra las lecturas en `executed_tools`, manteniendo vacías las operaciones.
 
-No hay llamadas automáticas a proveedores al abrir la página, ni solicitudes del LAB a las APIs del banco. Los enlaces bancarios sólo abren pantallas. El caso de [segunda atención](evaluacion-segunda-atencion.md) sigue disponible. Los registros de ejecución y textos se guardan únicamente en `.local/intent-lab/runs/`.
+No hay llamadas automáticas a proveedores al abrir la página. Los enlaces bancarios sólo abren pantallas. El editor de flujos incorpora una conexión explícita de lectura, descrita en [Contexto bancario](contexto-bancario-en-flujos.md). El caso de [segunda atención](evaluacion-segunda-atencion.md) sigue disponible. Los registros de ejecución y textos se guardan únicamente en `.local/intent-lab/runs/`.
 
 ## Base de ejecución de lectura en el banco
 
@@ -77,7 +77,7 @@ El gateway rechaza todas las herramientas `prepare-*` y cualquier nombre libre. 
 
 ## Límite de integración
 
-El chat bancario sigue guiado y su botón **Preguntar por este movimiento** consulta registros propios actualizados. Jev y Luna siguen en el LAB. La base de ejecución de herramientas está disponible y probada, pero **el LAB no tiene sesión bancaria ni ejecuta esas lecturas**, y todavía no hay adaptador que lleve el plan de Jev al chat autenticado. La conexión posterior debe decidir qué contexto autorizado puede enviarse a proveedores y cómo seleccionar referencias; no puede reutilizar un plan JSON como autorización.
+El chat bancario sigue guiado y su botón **Preguntar por este movimiento** consulta registros propios actualizados. Jev y Luna permanecen en el LAB. Su editor puede consultar registros mediante la sesión bancaria del titular y una selección explícita de movimiento. Las lecturas pasan por el gateway existente; no se envían tokens ni respuestas bancarias a modelos. La biblioteca del editor conserva su alcance de operador local y todavía no hay adaptador Jev en el chat bancario. Un plan JSON nunca autoriza operaciones.
 
 La evidencia de movimientos procede de Nexqori; no hay logs de un procesador o emisor externo. No se ha añadido captura de voz, aprobación por mensajes ni operaciones financieras automáticas.
 

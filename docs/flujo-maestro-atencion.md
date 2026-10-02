@@ -4,10 +4,10 @@ Referencia acordada con Bryan el 1 de octubre de 2026 (America/Lima): diagrama c
 
 ```mermaid
 flowchart LR
-    A[Conversación del cliente] --> B[Jev: consulta o queja]
+    A[Conversación del cliente] --> B[Jev: consulta o problema]
     B -->|Consulta o gestión| Q[Identificar consulta y sus herramientas]
     Q --> QR[Respuesta o siguiente paso de la consulta]
-    B -->|Queja o problema| C[Jev: identificar el problema]
+    B -->|Problema o reclamo| C[Jev: identificar el problema]
     B -->|No está claro| P[Pedir precisión]
     C --> CT{Derivar al contrato según el caso}
     CT --> C1[Cargo no reconocido: investigar riesgo]
@@ -41,10 +41,10 @@ flowchart LR
 - **Un solo flujo para todos los casos**. Elegir un caso cambia conversación y parámetros, no sustituye el diagrama ni crea un flujo por categoría. El bloque Contrato carga la configuración correspondiente a la clasificación real.
 - **Flujo completo** guarda, valida y ejecuta desde el punto pendiente; **Paso a paso** usa ese mismo estado. Los errores de conexión se muestran explícitamente.
 - Seleccionar un bloque muestra su último resultado, sin recalcular ni perder el avance. Mover, renombrar, guardar el diseño o inspeccionar otra rama tampoco ejecuta pasos. Sólo **▶** recalcula el bloque solicitado con sus entradas guardadas; conserva los resultados previos y continúa desde su nueva derivación. La ejecución anterior permanece consultable.
-- Los 24 casos se muestran subdivididos dentro de la clasificación: seis problemas, ocho consultas, siete servicios y tres aclaraciones. Ver o buscar una categoría no cambia el caso en ejecución. La selección inicial de consulta/queja y los alcances de cada clasificador permanecen separados.
-- Clasificar **consulta o queja antes de identificar el problema concreto**. Sólo la rama de queja carga el procedimiento de problemas. Las solicitudes de servicios conservan sus herramientas propias dentro de consultas/gestiones.
+- Los 24 casos se muestran subdivididos dentro de la clasificación: seis problemas, ocho consultas, siete servicios y tres aclaraciones. Ver o buscar una categoría no cambia el caso en ejecución. La selección inicial de consulta/problema y los alcances de cada clasificador permanecen separados.
+- Clasificar **consulta o problema antes de identificar el problema concreto**. Sólo la rama de problema carga el procedimiento de problemas. Las solicitudes de servicios conservan sus herramientas propias dentro de consultas/gestiones.
 - Recibir el mensaje y su conversación previa antes de clasificar. El caso de ejemplo elegido no impone la respuesta de Jev.
-- En **Preguntar lo que falta**, detener la ejecución para recibir un mensaje real. Actualizar el contexto y volver a comprobar lo que falta; nunca avanzar por un bucle automático sin respuesta ni repetir Jev por cada dato.
+- En **Preguntar lo que falta**, detener la ejecución para recibir un mensaje real o seleccionar la referencia bancaria pendiente. Actualizar el contexto y volver a comprobar lo que falta; nunca avanzar por un bucle automático sin respuesta ni repetir Jev por cada dato.
 - Distinguir **datos declarados completos** de **evidencia bancaria suficiente**. Tener fecha e importe no confirma un cobro, su titularidad ni el derecho a devolución.
 - Cuando no se pueda obtener o aclarar la evidencia, preparar la derivación con contexto y pendientes. No afirmar que un especialista fue contactado si sólo se preparó el paquete.
 - El avance por pasos y el flujo completo deben usar el mismo motor, las mismas condiciones y el mismo estado. El operador no puede forzar la rama contraria ni omitir requisitos desde un botón.
@@ -64,8 +64,8 @@ flowchart LR
 
 ## Estado e integraciones
 
-El editor local implementa el flujo común de 26 bloques, derivación inicial, seis ramas de contrato visibles, contexto declarado, ejecución por pasos, trazas y retorno conversacional. Las instrucciones/preguntas del caso se capturan al cargar el contrato y se conservan en la continuación. Cada contrato enumera las lecturas que necesitaría; Contexto sólo extrae lo declarado en la conversación. Para app se muestran correlación de logs y aviso condicionado a un error verificado, sin ejecutarlos. La plantilla separada Incidencia de la app conserva la comprobación y aviso locales cuando se elige expresamente. Los ejemplos conversacionales están redactados a partir de categorías, no son transcripciones auténticas de clientes.
+El editor local implementa el flujo común de 24 bloques, derivación inicial, seis ramas de contrato visibles, contexto declarado, ejecución por pasos, trazas y retorno conversacional. Las instrucciones/preguntas del caso se capturan al cargar el contrato y se conservan en la continuación. Cada contrato enumera las lecturas que necesitaría. Contexto separa las citas declaradas de los datos consultados mediante la sesión del titular, con selección de movimiento, folios de auditoría y preguntas por lo que falta. La clasificación y derivación inicial son un solo bloque de tres salidas. Para app se muestran correlación de logs y aviso condicionado a un error verificado, sin ejecutarlos. La plantilla separada Incidencia de la app conserva la comprobación y aviso locales cuando se elige expresamente. Los ejemplos conversacionales están redactados a partir de categorías, no son transcripciones auténticas de clientes.
 
-La aplicación bancaria tiene lecturas autenticadas, bloqueo propio y devolución con aprobación administrativa; **el editor aún no ejecuta esas operaciones ni obtiene automáticamente sus registros**. El [evaluador de evidencia y escalamiento](flujo-evidencia-y-escalamiento.md) describe la integración que falta. Evidencias adjuntas, contacto efectivo con especialista, entrega externa del paquete y CSAT/gamificación del diagrama requieren sus adaptadores y validación; no deben representarse como operaciones terminadas.
+La aplicación bancaria tiene lecturas autenticadas, bloqueo propio y devolución con aprobación administrativa; **el editor consulta los registros del titular cuando se conecta expresamente su sesión; todavía no ejecuta operaciones financieras**. La [guía de contexto bancario](contexto-bancario-en-flujos.md) explica cómo probarlo y distingue eventos internos de logs técnicos pendientes. El [evaluador de evidencia y escalamiento](flujo-evidencia-y-escalamiento.md) describe la integración que falta. Evidencias adjuntas, contacto efectivo con especialista, entrega externa del paquete y CSAT/gamificación del diagrama requieren sus adaptadores y validación; no deben representarse como operaciones terminadas.
 
 La voz queda aplazada hasta nueva indicación de Bryan, confirmado de nuevo el 1 de octubre de 2026. No se conecta GPT-Live ni se activa el micrófono. La prueba actual es escrita. Instrucciones para usar el editor: [Flujos de atención](editor-flujos-lab.md).

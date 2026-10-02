@@ -25,7 +25,7 @@ let runs=0,blocked=0;
 page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
 await page.route('**/lab-api/editor/workflows/*/run-stream',async route=>{
  const id=new URL(route.request().url()).pathname.split('/').at(-2),{graph}=await api('workflows/'+id);
- if(graph.nodes.some(n=>['triage','jev','context'].includes(n.kind))){blocked++;await route.abort();return;}
+ if(graph.nodes.some(n=>['intake','triage','jev','context'].includes(n.kind))){blocked++;await route.abort();return;}
  runs++;await route.continue();
 });
 const labels={
@@ -44,7 +44,7 @@ const node=id=>editor.locator('.react-flow__node[data-id="'+id+'"]');
 async function settle(){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))));}
 async function fit(){await settle();await button('fit').click();await settle();}
 async function closeSide(){for(const side of ['.editor-config','.editor-palette']){if(await editor.locator(side).count())await button('close',editor.locator(side)).click();}}
-async function select(id){await node(id).locator('.editor-node-tile').click();}
+async function select(id){await node(id).locator('.editor-node-tile').click();await editor.locator('.editor-inspector-tabs button').first().click();}
 async function exportGraph(){
  await button('files').click();
  const promise=page.waitForEvent('download');await button('export',editor.locator('dialog')).click();
@@ -143,7 +143,7 @@ try{
   assert.deepEqual(await exportGraph(),beforeCase);
   // Open the shared master for model instructions; merely reading it does not run providers.
   await page.goto(base+'/?view=flows&mode=editor&lang='+lang);
-  await expect(editor.locator('[data-block-kind]')).toHaveCount(26);
+  await expect(editor.locator('[data-block-kind]')).toHaveCount(24);
   await closeSide();await fit();await select('context');
   await editor.getByLabel(['Instrucciones adicionales','Additional instructions','Instruções adicionais'][i],{exact:true}).fill('Verificación de instrucciones '+lang);
   await editor.getByLabel(['Contexto de referencia','Reference context','Contexto de referência'][i],{exact:true}).fill('Verificación de contexto '+lang);

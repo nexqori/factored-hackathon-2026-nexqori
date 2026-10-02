@@ -11,7 +11,7 @@ from .providers import classify_jev, openai_response
 from .workflow_routing import classify_triage, case_criteria
 
 PROBLEM_PORTS = ('unrecognized-charge', 'incorrect-charge', 'payment-status', 'app-support', 'branch-support', 'service-feedback')
-KINDS = ('start', 'triage', 'jev', 'case_router', 'contract', 'preview', 'context', 'condition', 'question', 'response', 'escalate', 'diagnostic', 'notify')
+KINDS = ('start', 'intake', 'triage', 'jev', 'case_router', 'contract', 'preview', 'context', 'condition', 'question', 'response', 'escalate', 'diagnostic', 'notify')
 TERMINALS = {'question', 'response', 'escalate'}
 
 
@@ -97,13 +97,13 @@ class PreviewConfig(Strict):
     stage: Literal['query', 'action', 'handoff', 'delivery', 'closure'] = 'action'
 
 
-CONFIGS = {'start': Strict, 'case_router': Strict, 'contract': ContractConfig, 'preview': PreviewConfig, 'diagnostic': Strict, 'notify': Strict, 'triage': ModelConfig, 'jev': JevConfig, 'context': ContextConfig, 'condition': ConditionConfig,
+CONFIGS = {'start': Strict, 'case_router': Strict, 'contract': ContractConfig, 'preview': PreviewConfig, 'diagnostic': Strict, 'notify': Strict, 'intake': ModelConfig, 'triage': ModelConfig, 'jev': JevConfig, 'context': ContextConfig, 'condition': ConditionConfig,
            'question': QuestionConfig, 'response': ResponseConfig, 'escalate': EscalateConfig}
 
 
 class Node(Strict):
     id: str = Field(pattern=r'^[a-zA-Z][a-zA-Z0-9_-]{0,49}$')
-    kind: Literal['start','triage','jev','case_router','contract','preview','context','condition','question','response','escalate','diagnostic','notify']
+    kind: Literal['start','intake','triage','jev','case_router','contract','preview','context','condition','question','response','escalate','diagnostic','notify']
     label: Text
     position: Position
     config: dict = Field(default_factory=dict)
@@ -119,7 +119,7 @@ class Edge(Strict):
     id: str = Field(pattern=r'^[a-zA-Z][a-zA-Z0-9_-]{0,99}$')
     source: str = Field(max_length=50)
     target: str = Field(max_length=50)
-    port: Literal['next', 'yes', 'no', 'reply', 'unrecognized-charge', 'incorrect-charge', 'payment-status', 'app-support', 'branch-support', 'service-feedback', 'otherwise'] = 'next'
+    port: Literal['next', 'yes', 'no', 'reply', 'problem', 'query', 'clarification', 'unrecognized-charge', 'incorrect-charge', 'payment-status', 'app-support', 'branch-support', 'service-feedback', 'otherwise'] = 'next'
 
 
 class Graph(Strict):
@@ -250,17 +250,19 @@ def master_workflow():
             record = read_workflow(pointer['id'])
             # Only upgrade the untouched generated graph. Preserve custom edits and
             # the original snapshot for old execution links and local recovery.
-            if pointer.get('template_version', 1) < 2 and Graph.model_validate(record['graph']).model_dump() == legacy_master_template():
+            from .workflow_templates import support_workflow_v2
+            previous=Graph.model_validate(record['graph']).model_dump()
+            if pointer.get('template_version', 1) < 3 and previous in (legacy_master_template(), support_workflow_v2()):
                 archive = storage.DATA_DIR/'workflow-revisions'/f"{record['id']}-v{record['revision']}.json"
                 archive.parent.mkdir(parents=True, exist_ok=True)
                 archive.write_text(json.dumps(record, ensure_ascii=False), encoding='utf-8')
                 record = save_workflow(template(), record['id'], record['revision'])
-                temp=path.with_suffix('.tmp');temp.write_text(json.dumps({'id':record['id'], 'template_version':2}),encoding='utf-8');temp.replace(path)
+                temp=path.with_suffix('.tmp');temp.write_text(json.dumps({'id':record['id'], 'template_version':3}),encoding='utf-8');temp.replace(path)
             return record
         except FileNotFoundError:pass
     record=save_workflow(template())
     path.parent.mkdir(parents=True,exist_ok=True)
-    temp=path.with_suffix('.tmp');temp.write_text(json.dumps({'id':record['id'], 'template_version':2}),encoding='utf-8');temp.replace(path)
+    temp=path.with_suffix('.tmp');temp.write_text(json.dumps({'id':record['id'], 'template_version':3}),encoding='utf-8');temp.replace(path)
     return record
 
 
@@ -274,13 +276,13 @@ def validate_graph(graph):
     starts=[n['id'] for n in graph['nodes'] if n['kind']=='start']
     if len(starts)!=1: error('one_start')
     for kind,limit in [('jev',2),('triage',1),('case_router',1),('contract',6),('context',1),('diagnostic',1)]:
-        if sum(n['kind']==kind for n in graph['nodes'])>limit: error('one_provider_node',kind)
+        if sum((n['kind'] in ('triage','intake')) if kind=='triage' else n['kind']==kind for n in graph['nodes'])>limit: error('one_provider_node',kind)
     outgoing={id:{} for id in nodes};incoming={id:[] for id in nodes};feedback=[]
     for edge in graph['edges']:
         a,b,port=edge['source'],edge['target'],edge['port']
         if a not in nodes or b not in nodes: error('missing_node');continue
         kind=nodes[a]['kind']
-        ports=('reply',) if kind=='question' else () if kind in TERMINALS else (*PROBLEM_PORTS,'otherwise') if kind=='case_router' else ('yes','no') if kind=='condition' else ('next',)
+        ports=('reply',) if kind=='question' else () if kind in TERMINALS else ('problem','query','clarification') if kind=='intake' else (*PROBLEM_PORTS,'otherwise') if kind=='case_router' else ('yes','no') if kind=='condition' else ('next',)
         if port not in ports: error('invalid_port',a,port)
         if port in outgoing[a]: error('duplicate_port',a,port)
         if nodes[b]['kind']=='start': error('start_has_input',b)
@@ -290,7 +292,7 @@ def validate_graph(graph):
             if kind!='question' or nodes[b]['kind']!='context': error('invalid_feedback',a,port)
         else: incoming[b].append(a)
     for id,node in nodes.items():
-        ports=() if node['kind'] in TERMINALS else (*PROBLEM_PORTS,'otherwise') if node['kind']=='case_router' else ('yes','no') if node['kind']=='condition' else ('next',)
+        ports=() if node['kind'] in TERMINALS else ('problem','query','clarification') if node['kind']=='intake' else (*PROBLEM_PORTS,'otherwise') if node['kind']=='case_router' else ('yes','no') if node['kind']=='condition' else ('next',)
         for port in ports:
             if port not in outgoing[id]: error('unconnected_port',id,port)
     if errors:return {'valid':False,'errors':errors}
@@ -325,7 +327,8 @@ def validate_graph(graph):
         if node['kind']=='question' and node['config']['mode']=='missing':needs='context'
         if node['kind']=='notify':needs='diagnostic'
         if needs and needs not in before:error('requires_'+needs,id)
-        known[id]=before|{node['kind']};any_provider[id]=prior|{node['kind']}
+        role='triage' if node['kind']=='intake' else node['kind']
+        known[id]=before|{role};any_provider[id]=prior|{role}
     for edge in feedback:
         if edge['target'] not in ancestors[edge['source']]:error('invalid_feedback',edge['source'],'reply')
     return {'valid':not errors,'errors':errors}

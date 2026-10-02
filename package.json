@@ -23,7 +23,8 @@
     "test:lab:flows": "node experiments/intent-lab/check-flow-ui.mjs",
     "test:lab:editor": "node experiments/intent-lab/check-editor-ui.mjs",
     "test:lab:steps": "node experiments/intent-lab/check-step-ui.mjs",
-    "test:lab:master": "node experiments/intent-lab/check-master-ui.mjs"
+    "test:lab:master": "node experiments/intent-lab/check-master-ui.mjs",
+    "test:lab:bank": "node experiments/intent-lab/check-bank-context-ui.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
