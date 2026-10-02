@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {insertBlock,connectGraph,arrangeGraph,type Graph} from './workflowGraph';
+import {insertBlock,connectGraph,arrangeGraph,moveBlocks,sameExecutionRules,type Graph} from './workflowGraph';
 
 const text={es:'Verificación',en:'Verification',pt:'Verificação'};
 function fixture():Graph{return {schema_version:1,name:text,nodes:[
@@ -11,6 +11,17 @@ function fixture():Graph{return {schema_version:1,name:text,nodes:[
  {id:'b',source:'branch',port:'yes',target:'yes'},{id:'c',source:'branch',port:'no',target:'no'}]};}
 
 describe('visual graph edits preserve the intended route',()=>{
+ it('ignores position notifications with no actual movement and preserves the execution rules for layout edits',()=>{
+  const graph=fixture();
+  expect(moveBlocks(graph,[{id:'start',position:{x:0,y:0}}])).toBe(graph);
+  expect(moveBlocks(graph,[{id:'start'}])).toBe(graph);
+  const moved=moveBlocks(graph,[{id:'start',position:{x:3,y:2}}]);
+  moved.name={...text,es:'Otro nombre'};
+  expect(sameExecutionRules(graph,moved)).toBe(true);
+  const configured=structuredClone(moved);configured.nodes[1].config.predicate='has_missing';
+  expect(sameExecutionRules(graph,configured)).toBe(false);
+  expect(sameExecutionRules(graph,connectGraph(moved,'branch','no','yes'))).toBe(false);
+ });
  it('inserts on No without changing Yes or losing the continuation',()=>{
   const original=fixture(),before=structuredClone(original);
   const value=insertBlock(original,'notify',{x:520,y:200},{source:'branch',port:'no'})!;

@@ -41,7 +41,7 @@ async def local_only(request: Request, call_next):
         if request.headers.get("origin") not in (None, "http://localhost:5190", "http://127.0.0.1:5190", "http://localhost:5191", "http://127.0.0.1:5191"):
             return JSONResponse({"error": "origin_not_allowed"}, status_code=403)
         # Provider inputs are saved only in private local run records.
-        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith(('/run','/run-stream','/advance')) else 24000
+        limit = 96000 if request.url.path.startswith('/lab-api/editor/') and not request.url.path.endswith(('/run','/run-stream','/advance','/replay')) else 24000
         if len(await request.body()) > limit:
             return JSONResponse({"error": "input_too_long"}, status_code=413)
     response = await call_next(request)
@@ -111,6 +111,11 @@ class EditorAdvance(BaseModel):
     node_id: str=Field(min_length=1,max_length=50)
     mode: Literal['step','full']='step'
     reply: str | None=Field(default=None,min_length=1,max_length=2000)
+
+class EditorReplay(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    version: int=Field(ge=0)
+    node_id: str=Field(min_length=1,max_length=50)
 
 @app.get('/lab-api/editor/template')
 def editor_template(kind: Literal['banking','app']='banking'):
@@ -188,6 +193,23 @@ def editor_run_stream(workflow_id: UUID,body: EditorRun):
 def editor_execution(execution_id: UUID):
     try:return execution.view(execution.read(execution_id))
     except FileNotFoundError:raise HTTPException(404,'not_found') from None
+
+@app.post('/lab-api/editor/executions/{execution_id}/replay')
+def editor_replay(execution_id: UUID,body: EditorReplay):
+    if not provider_lock.acquire(blocking=False):raise HTTPException(409,'classification_running')
+    try:
+        state,reused=execution.replay(execution.read(execution_id),body.version,body.node_id)
+    except (FileNotFoundError,RuntimeError,ValueError) as error:
+        provider_lock.release()
+        if isinstance(error,FileNotFoundError):raise HTTPException(404,'not_found') from None
+        raise HTTPException(409 if isinstance(error,RuntimeError) else 422,str(error)) from None
+    except Exception:
+        provider_lock.release()
+        raise
+    if reused:
+        provider_lock.release()
+        return JSONResponse({'detail':'replay_exists','execution_id':state['id']},status_code=409)
+    return execution_stream(state,'step')
 
 @app.post('/lab-api/editor/executions/{execution_id}/advance')
 def editor_advance(execution_id: UUID,body: EditorAdvance):

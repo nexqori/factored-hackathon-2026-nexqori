@@ -137,6 +137,13 @@ class Graph(Strict):
 def text(es, en, pt): return dict(zip(flow.LANGS, (es, en, pt)))
 
 
+def execution_rules(graph):
+    """Presentation edits do not invalidate a paused execution's frozen rules."""
+    return {'schema_version': graph['schema_version'],
+            'nodes': sorted(({key:n[key] for key in ('id','kind','config')} for n in graph['nodes']), key=lambda n:n['id']),
+            'edges': sorted(graph['edges'], key=lambda e:e['id'])}
+
+
 def legacy_template(kind='banking'):
     def node(id, kind, label, x, y, config=None):
         return {'id':id,'kind':kind,'label':text(*label),'position':{'x':x,'y':y},'config':config or {}}

@@ -174,6 +174,17 @@ body:has(.flow-workspace-shell.editor-mode)>.root,body:has(.flow-workspace-shell
 .editor-step-bar p{width:100%;margin:3px 0;line-height:1.5}.editor-step-bar code{font-size:10px;overflow-wrap:anywhere}
 .editor-waiting{padding:12px;border-left:3px solid #9a4b32;background:#f9efe5;line-height:1.6;font-size:12px}
 .editor-contract-list{font-size:12px;line-height:1.65;padding-left:18px}
+.block-execution{padding:12px;border:1px solid #d6c4b2;border-radius:9px;background:#f9f3ec;margin:12px 0;font-size:12px;line-height:1.6}
+.block-execution strong{display:block}.block-execution code{font-size:10px;overflow-wrap:anywhere}.block-execution .button-row{margin-top:8px}
+.rules-changed{padding:10px 18px;border-bottom:1px solid #c6aa81;background:#fff4e2;font-size:12px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.case-taxonomy{border-top:1px solid #decec0;padding-top:12px;margin:18px 0}.case-taxonomy h3{font-size:14px}.case-taxonomy h4{font-size:12px;margin:18px 0 8px}.case-taxonomy h5{font-size:11px;margin:10px 0 4px}
+.case-taxonomy h3>span,.case-taxonomy h4>span{float:right;padding:2px 6px;background:#f1e2d5;border-radius:4px;font-size:10px}
+.catalog-filters{display:flex;gap:6px;margin:10px 0}.workflow-editor .catalog-filters button{font-size:10px;min-height:36px;padding:7px}
+.catalog-filters button[aria-pressed=true]{background:#f2d8c8;border-color:#9a4b32;color:#6f351f}
+.taxonomy-case{border:1px solid #decec0;border-radius:7px;padding:9px;margin:7px 0;font-size:11px;line-height:1.55;background:#fffdfa}
+.taxonomy-case summary>span{display:flex;gap:6px;align-items:center}.taxonomy-case summary strong{font-size:11px;font-weight:600}.taxonomy-case summary small{display:block;font-size:10px;color:#695243;margin-top:4px}
+.taxonomy-case.other-route{background:#f7f5f1}.taxonomy-case.is-classified{border-color:#60836f;background:#f1f7f2}.taxonomy-case summary svg{color:#315b45;flex-shrink:0}
+.taxonomy-case ol,.taxonomy-case ul{padding-left:16px}.taxonomy-route{font-weight:600}
 .editor-node-status.running{background:#9a4b32;color:#fff}
 .editor-block[data-stage-status=running] .editor-node-tile{border-color:#9a4b32;box-shadow:0 0 0 5px #9a4b3222}
 .editor-block[data-stage-status=ok] .editor-node-tile{border-color:#56856a}

@@ -20,7 +20,7 @@ def models(monkeypatch, family='problem', intent='unrecognized-charge', assessme
         if request.url.host=='api.typesafe.ai':
             criteria=body['questions']['intent']['criteria']
             is_triage='problem' in criteria
-            choice=family if is_triage else intent
+            choice=family if is_triage else (intent() if callable(intent) else intent)
             assert choice in criteria
             if not is_triage:
                 assert (set(criteria)&problem_intents()==problem_intents()) if family=='problem' else not(set(criteria)&problem_intents())
@@ -163,11 +163,29 @@ def test_customer_feedback_loops_until_complete_without_reclassifying(private_co
 
 def test_graph_revision_change_blocks_resume_and_worker_restart_does_not_retry(private_config,monkeypatch):
     client=TestClient(api.app);record=master(client);value=start(client,record,mode='step')
+    next(n for n in record['graph']['nodes'] if n['kind']=='triage')['config']['instructions']['es']='Cambiar reglas de clasificación'
     client.put('/lab-api/editor/workflows/'+record['id'],json={'revision':1,'graph':record['graph']})
     assert advance(client,value).json()['detail']=='revision_conflict'
     state=execution.read(value['execution']['id']);state.update(phase='running',worker='previous-process');execution.write(state)
     restored=client.get('/lab-api/editor/executions/'+state['id']).json()
     assert restored['execution']['phase']=='interrupted' and restored['execution']['next_node_id'] is None
+
+
+def test_saved_layout_and_labels_preserve_checkpoint_inputs_and_progress(private_config,monkeypatch):
+    enable(private_config);calls=models(monkeypatch)
+    client=TestClient(api.app);record=master(client);value=start(client,record,mode='step')
+    original=copy.deepcopy(value)
+    record['graph']['name']['es']='Nombre visual'
+    for node in record['graph']['nodes']:
+        node['position']['x']+=3
+        node['label']['es']+=' · vista'
+    updated=client.put('/lab-api/editor/workflows/'+record['id'],json={'revision':1,'graph':record['graph']}).json()
+    assert updated['revision']==2
+    assert client.get('/lab-api/editor/executions/'+value['execution']['id']).json()==original
+    result=result_of(advance(client,value))
+    assert result['execution']['id']==value['execution']['id'] and result['execution']['version']==value['execution']['version']+1
+    assert result['workflow']==original['workflow'] and result['messages']==value['messages']
+    assert [r['node_id'] for r in result['trace']]==['start','triage'] and len(calls)==1
 
 
 @pytest.mark.parametrize('target',['jev','missing','query_case'])
@@ -301,3 +319,57 @@ def test_selected_contract_keeps_its_custom_questions_and_instructions(private_c
     assert 'Contrato original' in calls[-1][1]['custom_instructions']
     assert 'Contexto original' in calls[-1][1]['custom_instructions']
     assert 'cambiado' not in calls[-1][1]['custom_instructions']
+
+
+def replay(client,value,node_id):
+    return client.post('/lab-api/editor/executions/'+value['execution']['id']+'/replay',json={'version':value['execution']['version'],'node_id':node_id})
+
+
+def test_replay_reuses_upstream_inputs_and_recalculates_branch_without_stale_results(private_config,monkeypatch):
+    enable(private_config);choice={'intent':'unrecognized-charge'}
+    calls=models(monkeypatch,intent=lambda:choice['intent'],assessments=[{'assessment':'continue','observations':[]}] * 2)
+    client=TestClient(api.app);parent=start(client,master(client))
+    assert parent['execution']['phase']=='waiting_reply' and len(calls)==3
+    choice['intent']='app-support';calls.clear()
+    child=result_of(replay(client,parent,'jev'))
+    assert child['execution']['id']!=parent['execution']['id']
+    assert child['replayed_from']['execution_id']==parent['execution']['id']
+    assert child['execution']['phase']=='paused' and child['execution']['next_node_id']=='case_route'
+    assert child['jev']['intent']=='app-support' and child['contract'] is None
+    assert child['llm']['status']=='skipped' and not child['activation_plan'] and not child['questions']
+    assert child['trace'][:-1]==[{**row,'reused':True} for row in parent['trace'][:3]] and child['messages']==[{'role':'user','content':'No reconozco un cargo'}]
+    assert child['latency_ms']==child['trace'][-1]['latency_ms']
+    assert [c[0] for c in calls]==['case']
+    assert client.get('/lab-api/editor/executions/'+parent['execution']['id']).json()==parent
+    duplicate=replay(client,parent,'jev')
+    assert duplicate.status_code==409 and duplicate.json()['execution_id']==child['execution']['id'] and len(calls)==1
+    assert replay(client,child,'contract_0').status_code==422  # no cached input on the new path
+    child=result_of(advance(client,child,mode='full'))
+    assert child['contract']==contract_for('app-support','es') and child['execution']['phase']=='waiting_reply'
+    assert [c[0] for c in calls]==['case','context']
+    assert not child['executed_operations'] and child['notification'] is None
+
+
+def test_replay_uses_last_iteration_inputs_after_customer_reply(private_config,monkeypatch):
+    enable(private_config)
+    calls=models(monkeypatch,assessments=[{'assessment':'continue','observations':[]}] * 3)
+    client=TestClient(api.app);parent=start(client,master(client))
+    parent=result_of(advance(client,parent,mode='full',reply='Todavía no encuentro el dato'))
+    snapshot=list(parent['messages'][:-1])
+    child=result_of(replay(client,parent,'context'))
+    assert child['messages']==snapshot and child['execution']['turn']==1
+    assert calls[-1][1]['messages']==snapshot
+    assert [c[0] for c in calls]==['triage','case','context','context','context']
+    assert child['execution']['next_node_id']=='human' and child['execution']['phase']=='paused'
+
+
+def test_replay_rejects_unreached_nodes_stale_versions_and_changed_rules(private_config,monkeypatch):
+    enable(private_config);calls=models(monkeypatch)
+    client=TestClient(api.app);record=master(client);parent=start(client,record,mode='step')
+    assert replay(client,parent,'context').status_code==422 and not calls
+    stale=copy.deepcopy(parent);stale['execution']['version']-=1
+    assert replay(client,stale,'start').status_code==409
+    with api.provider_lock:assert replay(client,parent,'start').status_code==409
+    next(n for n in record['graph']['nodes'] if n['kind']=='triage')['config']['instructions']['es']='Reglas nuevas'
+    client.put('/lab-api/editor/workflows/'+record['id'],json={'revision':record['revision'],'graph':record['graph']})
+    assert replay(client,parent,'start').json()['detail']=='revision_conflict' and not calls

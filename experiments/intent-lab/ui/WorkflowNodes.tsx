@@ -6,7 +6,7 @@ import type {Language} from './locales';
 import {ports,type Kind,type Port} from './workflowGraph';
 
 export const blockIcons={start:Play,triage:Route,jev:Shapes,case_router:GitBranch,contract:ClipboardList,preview:Zap,context:BrainCircuit,condition:Split,question:MessageCircle,response:MessageSquare,escalate:UserRound,diagnostic:FileSearch,notify:BellRing};
-type BlockData={label:string;kind:Kind;language:Language;status?:string;connectedPorts:Port[];busy:boolean;canStep:boolean;step:(id:string)=>void;addAfter:(id:string,port:Port)=>void};
+type BlockData={label:string;kind:Kind;language:Language;status?:string;connectedPorts:Port[];busy:boolean;canStep:boolean;canReplay:boolean;step:(id:string)=>void;addAfter:(id:string,port:Port)=>void};
 export type CanvasNode=Node<BlockData,'block'>;
 type EdgeData={language:Language;insert:(id:string)=>void;busy:boolean;port:Port;canStep:boolean;step:()=>void};
 export type CanvasEdge=Edge<EdgeData,'insertable'>;
@@ -32,7 +32,7 @@ export function BlockNode({id,data,selected}:NodeProps<CanvasNode>){
     </div>
     <strong>{data.label}</strong><span className="editor-node-kind">{et(data.language,data.kind)}</span>
     {data.kind==='preview'&&<span className="node-preview-badge">{et(data.language,'wouldActivate')}</span>}
-    <button className="node-step nodrag nopan" data-step-node={id} disabled={!data.canStep} title={et(data.language,data.canStep?'stepBlock':'stepUnavailable')} aria-label={et(data.language,'stepBlock')+' · '+data.label} onClick={event=>{event.stopPropagation();data.step(id);}}><Play size={12}/></button>
+    <button className="node-step nodrag nopan" data-step-node={id} disabled={!data.canStep&&!data.canReplay} title={et(data.language,data.canStep?'stepBlock':data.canReplay?'replayHint':'stepUnavailable')} aria-label={et(data.language,data.canStep||!data.canReplay?'stepBlock':'replayBlock')+' · '+data.label} onClick={event=>{event.stopPropagation();data.step(id);}}><Play size={12}/></button>
   </div>;
 }
 

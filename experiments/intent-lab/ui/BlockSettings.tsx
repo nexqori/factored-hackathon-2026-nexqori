@@ -2,15 +2,18 @@ import type {Language} from './locales';
 import {et,type EditorKey} from './editorLocales';
 import {allText} from './editorLocales';
 import {fieldTitle,ft} from './flowLocales';
-import {emptyText,ports,problemPorts,type Block,type Config,type Graph,type Port,type Trace} from './workflowGraph';
+import {emptyText,ports,problemPorts,type Block,type Config,type Graph,type Port,type Trace,type CaseDefinition} from './workflowGraph';
+import {CaseTaxonomy} from './CaseTaxonomy';
 
-type Props={language:Language;graph:Graph;block:Block;busy:boolean;fields:string[];taxonomy:{id:string;copy:Record<Language,{title:string}>}[];output?:Trace;editBlock:(patch:Partial<Block>)=>void;editConfig:(patch:Config)=>void;connect:(source:string,port:Port,target:string)=>void};
-export function BlockSettings({language,graph,block,busy,fields,taxonomy,output,editBlock,editConfig,connect}:Props){
+type Props={language:Language;graph:Graph;block:Block;busy:boolean;fields:string[];taxonomy:{id:string;copy:Record<Language,{title:string}>}[];cases:CaseDefinition[];output?:Trace;editBlock:(patch:Partial<Block>)=>void;editConfig:(patch:Config)=>void;connect:(source:string,port:Port,target:string)=>void};
+export function BlockSettings({language,graph,block,busy,fields,taxonomy,cases,output,editBlock,editConfig,connect}:Props){
  const t=(key:EditorKey)=>et(language,key);
+ const classification=output?.output as {intent?:string;probabilities?:Record<string,number>}|undefined;
  return <>
     <label>{t('nodeName')}<input value={block.label[language]} maxLength={90} disabled={busy} onChange={e=>editBlock({label:{...block.label,[language]:e.target.value}})}/></label>
     {(['triage','jev','context'].includes(block.kind))&&<label>{t('instructions')}<textarea aria-label={t('instructions')} value={block.config.instructions?.[language]||''} rows={3} maxLength={1200} disabled={busy} onChange={e=>editConfig({instructions:{...(block.config.instructions||emptyText()),[language]:e.target.value}})}/></label>}
     {block.kind==='jev'&&<label>{t('scope')}<select value={block.config.scope||'all'} disabled={busy} onChange={e=>editConfig({scope:e.target.value})}>{['all','problem','query'].map(scope=><option key={scope} value={scope}>{scope==='all'?t('all'):ft(language,scope as 'query')}</option>)}</select></label>}
+    {['triage','jev','case_router'].includes(block.kind)&&<CaseTaxonomy key={block.id} language={language} cases={cases} scope={block.kind==='case_router'?'problem':block.config.scope||'all'} selected={classification?.intent} probabilities={classification?.probabilities}/>}
     {block.kind==='contract'&&<><p>{t('contractHintLong')}</p><label>{t('contract')}<select value={block.config.intent||''} disabled={busy} onChange={e=>editConfig({intent:e.target.value})}><option value="">{t('dynamicContract')}</option>{problemPorts.map(intent=><option key={intent} value={intent}>{t(intent)}</option>)}</select></label></>}
     {block.kind==='case_router'&&<p>{t('case_routerHint')}</p>}
     {block.kind==='preview'&&<><p className="editor-preview-note">{t('previewOnly')}</p><label>{t('activationStage')}<select value={block.config.stage||'action'} disabled={busy} onChange={e=>editConfig({stage:e.target.value})}>{(['query','action','handoff','delivery','closure'] as const).map(stage=><option key={stage} value={stage}>{t(stage)}</option>)}</select></label></>}
@@ -21,6 +24,6 @@ export function BlockSettings({language,graph,block,busy,fields,taxonomy,output,
     {((block.kind==='response'&&block.config.outcome!=='current')||block.kind==='escalate'||(block.kind==='question'&&block.config.mode==='custom'))&&<label>{t('message')}<textarea aria-label={t('message')} value={block.config.text?.[language]||''} rows={4} maxLength={block.kind==='question'?600:1200} disabled={busy} onChange={e=>editConfig({text:{...(block.config.text||emptyText()),[language]:e.target.value}})}/>{(block.kind==='escalate'||block.config.outcome==='review_in_bank')&&<small>{t('emptyDefault')}</small>}</label>}
     {['start','diagnostic','notify'].includes(block.kind)&&<p>{t('locked')}</p>}
     {!!ports(block.kind).length&&<fieldset className="editor-connections"><legend>{t('connections')}</legend>{ports(block.kind).map(port=><label key={port}>{t(port)}<select aria-label={t('connections')+' · '+t(port)} value={graph.edges.find(e=>e.source===block.id&&e.port===port)?.target||''} disabled={busy} onChange={e=>connect(block.id,port,e.target.value)}><option value="">{t('disconnected')}</option>{graph.nodes.filter(n=>n.id!==block.id&&n.kind!=='start'&&(port!=='reply'||n.kind==='context')).map(n=><option key={n.id} value={n.id}>{n.label[language]} · {n.id}</option>)}</select></label>)}</fieldset>}
-    {output&&<details open><summary>{t('output')} · {new Intl.NumberFormat(language,{maximumFractionDigits:1}).format(output.latency_ms)} ms</summary><pre tabIndex={0}>{JSON.stringify(output.output,null,2)}</pre></details>}
+    {output&&<details><summary>{t('output')} · {new Intl.NumberFormat(language,{maximumFractionDigits:1}).format(output.latency_ms)} ms</summary><pre tabIndex={0}>{JSON.stringify(output.output,null,2)}</pre></details>}
  </>;
 }

@@ -47,6 +47,7 @@ def create(record, messages, language, thread_id=None, incident_id=None):
              'next_node_id': next(n['id'] for n in record['graph']['nodes'] if n['kind'] == 'start'),
              'awaiting_node_id': None, 'feedback_edge_id': None, 'last_edge_id': None,
              'trace': [], 'visited_edges': [], 'requests': [], 'latency_ms': 0,
+             'node_inputs': {}, 'replays': {},
              'context': {'triage': {'status': 'skipped'}, 'jev': {'status': 'skipped'},
                          'llm': {'status': 'skipped'}, 'missing': [], 'observations': [],
                          'questions': [], 'intent': None, 'fields': [], 'incident': None,
@@ -65,10 +66,13 @@ def view(state):
             'state': cfg['state'], 'reply': cfg['reply'], 'questions': cfg['questions'],
             'missing_fields': cfg['missing'], 'observations': cfg['observations'],
             'trace': state['trace'], 'visited_edges': state['visited_edges'], 'latency_ms': round(state['latency_ms'], 1),
+            'reused_latency_ms': round(sum(row['latency_ms'] for row in state['trace'] if row.get('reused')), 1),
             'tool_plan': route_plan(cfg['jev']), 'incident': cfg['incident'], 'notification': cfg['notice'],
             'activation_plan': cfg.get('activation_plan', []),
             'executed_operations': [], 'executed_tools': [], 'authorizes_execution': False, 'verified_facts': [],
             'messages': state['messages'],
+            'replayable_nodes': list(state.get('node_inputs', {})),
+            'replayed_from': state.get('replayed_from'),
             'execution': {key: state[key] for key in ('id', 'phase', 'version', 'next_node_id', 'awaiting_node_id', 'last_edge_id', 'turn')}})
 
 
@@ -76,12 +80,45 @@ def preflight(state, version, node_id, reply=None):
     if state['version'] != version: raise RuntimeError('stale_step')
     if state['phase'] not in ('paused', 'waiting_reply'): raise RuntimeError('execution_not_paused')
     if state['next_node_id'] != node_id: raise RuntimeError('wrong_next_node')
-    if editor.read_workflow(state['record']['id'])['revision'] != state['record']['revision']:
+    current = editor.read_workflow(state['record']['id'])
+    if editor.execution_rules(current['graph']) != editor.execution_rules(state['record']['graph']):
         raise RuntimeError('revision_conflict')
     if state['phase'] == 'waiting_reply':
         if not reply or not reply.strip(): raise ValueError('reply_required')
         if state['turn'] >= MAX_REPLIES or len(state['messages']) >= 30: raise ValueError('conversation_limit')
     elif reply is not None: raise ValueError('unexpected_reply')
+
+
+def replay(state, version, node_id):
+    """Fork a reached block from its saved inputs, retaining the original run.
+
+    Downstream results never become inputs of the replay. Only the chosen block
+    runs; its newly selected route becomes the next paused step.
+    """
+    if state['version'] != version: raise RuntimeError('stale_step')
+    if state['phase'] not in ('paused','waiting_reply','completed'): raise RuntimeError('execution_not_paused')
+    snapshot=state.get('node_inputs', {}).get(node_id)
+    if not snapshot: raise ValueError('block_inputs_unavailable')
+    current=editor.read_workflow(state['record']['id'])
+    if editor.execution_rules(current['graph']) != editor.execution_rules(state['record']['graph']):
+        raise RuntimeError('revision_conflict')
+    key=f'{version}:{node_id}'
+    existing=state.get('replays', {}).get(key)
+    if existing: return read(existing), True
+    child=copy.deepcopy(state)
+    child.update(id=str(uuid.uuid4()),run_id=str(uuid.uuid4()),created_at=datetime.now(timezone.utc).isoformat(),
+                 phase='paused',version=0,worker=BOOT_ID,next_node_id=node_id,awaiting_node_id=None,feedback_edge_id=None,
+                 context=copy.deepcopy(snapshot['context']),messages=copy.deepcopy(snapshot['messages']),turn=snapshot['turn'],
+                 latency_ms=0,last_edge_id=snapshot['last_edge_id'],replays={},
+                 replayed_from={'execution_id':state['id'],'node_id':node_id,'step_index':snapshot['trace_length']})
+    for keyname, length in [('trace','trace_length'),('visited_edges','edges_length'),('requests','requests_length')]:
+        child[keyname]=child[keyname][:snapshot[length]]
+    child['trace']=[{**row,'reused':True} for row in child['trace']]
+    child['node_inputs']={id:value for id,value in child['node_inputs'].items() if value['trace_length']<snapshot['trace_length']}
+    write(child)
+    state.setdefault('replays', {})[key]=child['id']
+    write(state)
+    return child, False
 
 
 def advance(state, mode='step', reply=None, on_event=None):
@@ -125,6 +162,11 @@ def _one(state, emit):
     current = state['next_node_id']
     node = next(n for n in graph['nodes'] if n['id'] == current)
     kind, cfg, messages = node['kind'], node['config'], state['messages']
+    state.setdefault('node_inputs', {})[current] = {
+        'context':copy.deepcopy(ctx),'messages':copy.deepcopy(messages),'turn':state['turn'],
+        'trace_length':len(state['trace']),'edges_length':len(state['visited_edges']),'requests_length':len(state['requests']),
+        'latency_ms':state['latency_ms'],'last_edge_id':state['last_edge_id']}
+    write(state)
     tick = time.perf_counter()
     emit({'event': 'node_started', 'node_id': current, 'kind': kind})
     output, status, port = {}, 'ok', 'next'
