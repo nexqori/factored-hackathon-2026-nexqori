@@ -29,14 +29,14 @@ export function BlockResult({row,graph,language,cases,waiting,respond,configure}
  {out.contract&&<section><h3>{t('procedure')}</h3><ol>{out.contract.steps.map((s,i)=><li key={i}>{s}</li>)}</ol></section>}
  {out.required_fields&&row.kind==='contract'&&<p>{t('needed')}: {out.required_fields.map(field).join(' · ')}</p>}
  {out.assessment&&<section><h3>{t('resultAssessment')}</h3><p>{t(('assessment_'+out.assessment) as EditorKey)}</p></section>}
+ {row.kind==='context'&&(out.missing_fields?.length?<section><h3>{t('resultMissing')}</h3><ul>{out.missing_fields.map(f=><li key={f}>{field(f)}</li>)}</ul></section>:row.status==='ok'&&<p className="result-complete">{t('resultAllFields')}</p>)}
+ {questions.length>0&&<section className="result-questions"><h3>{t('resultQuestions')}</h3>{questions.map((q,i)=><p key={i}>{q.text}</p>)}{waiting?<button data-respond-now onClick={respond}>{t('respondNow')}</button>:<p className="editor-help">{t('resultPausedQuestion')}</p>}</section>}
  {facts(out.verified_facts||[],'resultVerified')}{facts(out.observations||[],'resultDeclared')}
  {row.kind==='context'&&<>
- {out.missing_fields?.length?<section><h3>{t('resultMissing')}</h3><ul>{out.missing_fields.map(f=><li key={f}>{field(f)}</li>)}</ul></section>:row.status==='ok'&&<p className="result-complete">{t('resultAllFields')}</p>}
  <section><h3>{t('resultSources')}</h3>{out.bank_evidence?.reads?.length?out.bank_evidence.reads.map((read,i)=><article className="bank-read" key={i}><strong>{cases.flatMap(c=>c.tool_plan.tools).find(tool=>tool.id===read.tool)?.titles[language]||read.tool}</strong><small>{t('bankAudit')}: {read.auditEventId}</small><small>{t('bankReadAt')}: {new Date(read.observed_at).toLocaleString(language)}</small>
  {read.data.transaction&&<p>{read.data.transaction.merchant} · {read.data.transaction.status}<br/><code>{read.data.transaction.id}</code></p>}{read.data.request&&<p>{t('requestId')}: {read.data.request.id} · {read.data.request.status}</p>}
  {read.data.events&&<><h4>{t('bankLogs')}</h4>{read.data.events.length?<ul>{read.data.events.map((event,j)=><li key={j}>{event.action} · {new Date(event.at).toLocaleString(language)}</li>)}</ul>:<p>{t('bankNoLogs')}</p>}</>}</article>):<p>{t('resultBankPending')}</p>}<p className="editor-help">{t('bankLogLimit')}</p></section>
  <section><h3>{t('resultReference')}</h3><p>{t(out.reference_context?.status==='provided'?'resultReferenceUsed':'resultNoReference')}</p><button onClick={configure}>{t('contextSettings')}</button></section></>}
- {questions.length>0&&<section className="result-questions"><h3>{t('resultQuestions')}</h3>{questions.map((q,i)=><p key={i}>{q.text}</p>)}{waiting?<button data-respond-now onClick={respond}>{t('respondNow')}</button>:<p className="editor-help">{t('resultPausedQuestion')}</p>}</section>}
  {out.reply&&<p className="result-quote">{out.reply}</p>}
  {!!out.would_activate?.length&&<><h3>{t('pendingActions')}</h3><ActivationPlan items={out.would_activate} language={language}/></>}
  {target&&<p className="result-next">{t('resultNext')}: <strong>{graph.nodes.find(n=>n.id===target)?.label[language]}</strong></p>}
