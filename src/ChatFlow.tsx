@@ -9,6 +9,7 @@ import type { Message } from './types';
 
 export type FlowResult = { canDocument?: boolean; execution: {phase: string}; workflow_id: string; workflow_revision: number; state: string; reply: string;
   suggestedTransaction?: {id:string} | null;
+  selectedRequestId?: string | null;
   jev: {intent?: string; status: string}; triage: {family?: string}; canRegister: boolean; requestId: string | null; latency_ms: number;
   missing_fields: string[]; verified_facts: {field: string; value: string; reference_id: string}[];
   trace: {node_id: string; label: Record<string,string>; kind: string; status: string; latency_ms: number}[] };

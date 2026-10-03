@@ -187,7 +187,7 @@ def test_original_turn_retries_keep_fingerprint_after_optional_flag_added(setup,
     app, engine = setup; client, _ = login(app); calls, control = models
     body = message(transactionId='TX-1002'); first = client.post('/api/assistant/flow', json=body)
     assert first.status_code == 200
-    historical = chat.FlowMessage.model_validate(body).model_dump(exclude={'requestKey', 'replaceTransaction'})
+    historical = chat.FlowMessage.model_validate(body).model_dump(exclude={'requestKey', 'replaceTransaction', 'updateSelection'})
     expected = hashlib.sha256(json.dumps(historical, sort_keys=True).encode()).hexdigest()
     with make_sessions(engine)() as db:
         assert db.get(AssistantTurn, ('andrea', body['requestKey'])).fingerprint == expected

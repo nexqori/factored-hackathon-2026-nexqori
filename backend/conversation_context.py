@@ -80,9 +80,9 @@ def safe_query_reply(intent, locale, *, reference_needed=False):
     """Static descriptions only; never interpolate evidence, IDs or amounts."""
     i = ('es', 'en', 'pt').index(locale)
     if reference_needed:
-        return ('Elige el caso en Detalles → Datos del caso para consultar su seguimiento.',
-                'Choose the case in Details → Case details to check its progress.',
-                'Escolha o caso em Detalhes → Dados do caso para consultar seu andamento.')[i]
+        return ('Abre Detalles, activa Un caso, elige el registro y pulsa Usar selección para consultar su seguimiento.',
+                'Open Details, select A case, choose the record and press Use selection to check its progress.',
+                'Abra Detalhes, marque Um caso, escolha o registro e pressione Usar seleção para consultar seu andamento.')[i]
     extra = {
         'documents': ('documentos informativos en PDF', 'informational PDF documents', 'documentos informativos em PDF'),
         'request-status': ('seguimiento del caso seleccionado', 'tracking the selected case', 'acompanhamento do caso selecionado'),

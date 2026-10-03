@@ -693,5 +693,20 @@
   "movements.invalidPeriod": "Check the dates: the start must be on or before the end.",
   "auditActions.tool_filtered_transactions": "Transactions viewed with filters",
   "auditActions.claim_previewed": "Complaint summary prepared",
-  "documents": "My documents"
+  "documents": "My documents",
+  "chatSelection.title": "What would you like to review?",
+  "chatSelection.hint": "You can choose a transaction, a case, both or neither. Selecting records does not make payments or register a complaint.",
+  "chatSelection.movement": "A transaction",
+  "chatSelection.case": "A case",
+  "chatSelection.chooseMovement": "Choose a transaction",
+  "chatSelection.chooseCase": "Choose a case",
+  "chatSelection.apply": "Use selection",
+  "chatSelection.none": "Continue without a selection",
+  "chatSelection.pending": "Apply your selection to update the follow-up.",
+  "chatSelection.locked": "This complaint is already registered. Start a new conversation to change the records.",
+  "chatSelection.movementMessage": "I want to review this transaction.",
+  "chatSelection.caseMessage": "I want to check this case.",
+  "chatSelection.bothMessage": "I want to review this transaction and this case.",
+  "chatSelection.noneMessage": "I want to continue without selected records.",
+  "audit.chat_context_changed": "Conversation records updated"
 }

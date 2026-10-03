@@ -37,17 +37,17 @@ try{
   }
   await panel.locator('.paste-composer textarea').fill('Mi borrador');
   await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
-  const details=page.locator('.chat-details-dialog');await details.getByRole('tab',{name:copy['chatDetails.records'],exact:true}).click();
+  const details=page.locator('.chat-details-dialog');await expect(details.getByRole('tab')).toHaveCount(0);
   await expect(details.locator('pre')).toHaveCount(0);await axe('details-'+person.locale+'-'+person.intent);
   await page.keyboard.press('Escape');await expect(panel.locator('.paste-composer textarea')).toHaveValue('Mi borrador');
   await expect(panel.getByRole('button',{name:copy['chatDetails.open'],exact:true})).toBeFocused();
   if(person.intent!=='unrecognized-charge'){
    const counts=await(await context.request.get(origin+'/api/verification/summary')).json();
    await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
-   await details.getByRole('tab',{name:copy['chatDetails.records'],exact:true}).click();
+   await details.getByRole('checkbox',{name:copy['chatSelection.movement'],exact:true}).check();
    await details.getByLabel(copy.chooseTransaction,{exact:true}).selectOption(person.transactionId);
    await expect(details.locator('[data-selected-movement]')).toContainText(person.transactionId);
-   await details.getByRole('button',{name:copy['chatMovement.apply'],exact:true}).click();
+   await details.getByRole('button',{name:copy['chatSelection.apply'],exact:true}).click();
    await expect(panel.locator('.paste-composer textarea')).toHaveValue('Mi borrador');
    await expect(panel.locator('[data-chat-movement]')).toHaveAttribute('data-chat-movement',person.transactionId);
    assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),counts,'Preparing a movement before conversation must not execute models');
@@ -89,7 +89,7 @@ try{
     await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     await panel.scrollIntoViewIfNeeded();await axe('suggestion-mobile');await page.screenshot({path:path.join(folder,'suggestion-mobile.png'),fullPage:true});await page.setViewportSize({width:1512,height:1050});
    }
-   await panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true}).click();await expect(details.locator('select').first()).toBeEnabled();await page.keyboard.press('Escape');
+   await panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true}).click();await details.getByRole('checkbox',{name:copy['chatSelection.movement'],exact:true}).check();await expect(details.locator('select').first()).toBeEnabled();await page.keyboard.press('Escape');
    const confirmation=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
    if(person.locale==='pt'){await panel.locator('.paste-composer textarea').fill(copy['chatSending.confirmMessage']);await panel.locator('.paste-entry button').click();}
    else await panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true}).click();
@@ -109,10 +109,10 @@ try{
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1512,height:1050});
    }
    const replacement=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
-   await details.getByRole('button',{name:copy['chatMovement.replace'],exact:true}).click();
+   await details.getByRole('button',{name:copy['chatSelection.apply'],exact:true}).click();
    const replaced=await replacement;assert.equal(replaced.status(),200);result=await replaced.json();
-   assert.equal(replaced.request().postDataJSON().replaceTransaction,true);
-   assert.equal(replaced.request().postDataJSON().message,copy['chatMovement.message']);
+   assert.equal(replaced.request().postDataJSON().updateSelection,true);
+   assert.equal(replaced.request().postDataJSON().message,copy['chatSelection.movementMessage']);
    assert.equal(result.conversation.transactionId,person.alternateTransactionId);assert.equal(result.flow.canRegister,true);
    assert.equal(result.flow.jev.intent,person.intent);assert(!JSON.stringify(result.flow.verified_facts).includes(person.transactionId));
    await expect(panel.locator('.paste-composer textarea')).toHaveValue('Borrador que se conserva');
@@ -167,6 +167,45 @@ try{
   await page.locator('.claims-detail .trace-conversation').first().click();await expect(page.locator('.claims-detail')).toContainText(copy['chatFlow.title']);
   await expect(page.locator('.claims-detail pre')).toHaveCount(0);await expect(page.locator('.claims-detail .trace-tabs')).toHaveCount(0);await axe('claim-'+person.locale+'-'+person.intent);
   if(person.intent==='incorrect-charge'){await page.screenshot({path:path.join(folder,'chat-claim-'+person.locale+'.png'),fullPage:true});await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+person.locale);}
+  // Each reference is optional. Staging and cancelling never run the model or
+  // mutate an existing conversation; all four choices work in the same dialog.
+  await page.setViewportSize({width:1512,height:1050});
+  await panel.locator('.conversation-toolbar button').first().click();
+  const selectionCounts=await(await context.request.get(origin+'/api/verification/summary')).json();
+  for(const [movement,useCase] of [[false,false],[true,false],[false,true],[true,true]]){
+   await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
+   await expect(details.locator('.chat-details-tabs')).toHaveCount(0);
+   await details.getByRole('checkbox',{name:copy['chatSelection.movement'],exact:true}).setChecked(movement);
+   await details.getByRole('checkbox',{name:copy['chatSelection.case'],exact:true}).setChecked(useCase);
+   if(movement)await details.getByLabel(copy.chooseTransaction,{exact:true}).selectOption(preview.transactionId);
+   if(useCase)await details.getByLabel(copy['chatFlow.case'],{exact:true}).selectOption(rid);
+   await expect(details.getByRole('button',{name:copy[movement||useCase?'chatSelection.apply':'chatSelection.none'],exact:true})).toBeEnabled();
+   await details.getByRole('button',{name:copy[movement||useCase?'chatSelection.apply':'chatSelection.none'],exact:true}).click();
+   await expect(details).toHaveCount(0);
+   await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
+   await expect(details.getByRole('checkbox',{name:copy['chatSelection.movement'],exact:true})).toBeChecked({checked:movement});
+   await expect(details.getByRole('checkbox',{name:copy['chatSelection.case'],exact:true})).toBeChecked({checked:useCase});
+   if(useCase)await expect(details.getByLabel(copy['chatFlow.case'],{exact:true})).toHaveValue(rid);
+   if(movement&&useCase){
+    await axe('unified-details-'+person.locale+'-'+person.intent);
+    if(person.intent==='incorrect-charge'){
+     await page.screenshot({path:path.join(folder,'unified-details-'+person.locale+'.png'),fullPage:true});
+     await page.setViewportSize({width:390,height:844});await axe('unified-details-mobile-'+person.locale);
+     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+     await page.screenshot({path:path.join(folder,'unified-details-mobile-'+person.locale+'.png'),fullPage:true});
+     await page.setViewportSize({width:1512,height:1050});
+    }
+   }
+   await page.keyboard.press('Escape');
+  }
+  await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
+  await details.getByRole('checkbox',{name:copy['chatSelection.movement'],exact:true}).uncheck();
+  await details.getByRole('checkbox',{name:copy['chatSelection.case'],exact:true}).uncheck();
+  await details.getByRole('button',{name:copy['chatDetails.back'],exact:true}).click();
+  await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
+  await expect(details.getByRole('checkbox')).toHaveCount(2);
+  for(const checkbox of await details.getByRole('checkbox').all())await expect(checkbox).toBeChecked();
+  assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),selectionCounts);
   report.cases.push({locale:person.locale,intent:person.intent,conversationId:cid,requestId:rid});await context.close();
  }
  const summary=await(await fetch(origin+'/api/verification/summary')).json();assert.deepEqual(summary.counts,{triage:9,jev:9,llm:18});assert.equal(summary.bankRecordsSentToModels,false);

@@ -693,5 +693,20 @@
   "movements.invalidPeriod": "Revisa las fechas: el inicio debe ser anterior o igual al final.",
   "auditActions.tool_filtered_transactions": "Movimientos consultados con filtros",
   "auditActions.claim_previewed": "Resumen del reclamo preparado",
-  "documents": "Mis documentos"
+  "documents": "Mis documentos",
+  "chatSelection.title": "Qué quieres consultar",
+  "chatSelection.hint": "Puedes elegir un movimiento, un caso, ambos o ninguno. Seleccionar registros no realiza pagos ni registra un reclamo.",
+  "chatSelection.movement": "Un movimiento",
+  "chatSelection.case": "Un caso",
+  "chatSelection.chooseMovement": "Selecciona un movimiento",
+  "chatSelection.chooseCase": "Selecciona un caso",
+  "chatSelection.apply": "Usar selección",
+  "chatSelection.none": "Continuar sin selección",
+  "chatSelection.pending": "Aplica la selección para actualizar el seguimiento.",
+  "chatSelection.locked": "Este reclamo ya está registrado. Para cambiar los registros, inicia una conversación nueva.",
+  "chatSelection.movementMessage": "Quiero revisar este movimiento.",
+  "chatSelection.caseMessage": "Quiero consultar este caso.",
+  "chatSelection.bothMessage": "Quiero revisar este movimiento y este caso.",
+  "chatSelection.noneMessage": "Quiero continuar sin registros seleccionados.",
+  "audit.chat_context_changed": "Datos de la conversación actualizados"
 }

@@ -41,6 +41,7 @@ class FlowMessage(ChatInput):
     requestKey: str = Field(min_length=16, max_length=64, pattern=r'^[a-zA-Z0-9-]+$')
     requestId: str | None = Field(default=None, min_length=1, max_length=64)
     replaceTransaction: bool = False
+    updateSelection: bool = False
 
 
 class RegisterClaim(ConfirmInput):
@@ -92,6 +93,7 @@ def flow_view(row):
             'missing_fields','contract','trace','latency_ms','verified_facts','bank_evidence','activation_plan')} | {
         'state': 'registered' if row.request_id else value['state'],
         'suggestedTransaction': row.state.get('transaction_suggestion'),
+        'selectedRequestId': row.state.get('bank_binding', {}).get('request_id'),
         'canDocument': can_document(row),
         'requestId': row.request_id, 'canRegister': not row.request_id and row.state.get('phase') == 'completed'
                        and value['triage'].get('family') == 'problem' and value['state'] in ('review_in_bank','human_review')
@@ -124,6 +126,7 @@ def chat_router(conversation_view, message_view):
         fingerprint_data = body.model_dump(exclude={'requestKey'})
         # Preserve retries of turns created before the optional replacement flag.
         if not body.replaceTransaction: fingerprint_data.pop('replaceTransaction')
+        if not body.updateSelection: fingerprint_data.pop('updateSelection')
         fingerprint = hashlib.sha256(json.dumps(fingerprint_data, sort_keys=True).encode()).hexdigest()
         previous = db.get(AssistantTurn, (user.id, body.requestKey))
         if previous:
@@ -135,21 +138,27 @@ def chat_router(conversation_view, message_view):
         if body.conversationId:
             conv = db.scalar(select(Conversation).where(Conversation.id == body.conversationId, Conversation.user_id == user.id).with_for_update())
             if not conv: raise HTTPException(404, 'not_found')
-            if body.transactionId and conv.transaction_id and body.transactionId != conv.transaction_id and not body.replaceTransaction:
+            if body.transactionId and conv.transaction_id and body.transactionId != conv.transaction_id and not (body.replaceTransaction or body.updateSelection):
                 raise HTTPException(409, 'conversation_context_conflict')
         else:
             conv = Conversation(id=str(uuid4()), user_id=user.id, title=message[:100], locale=body.locale, transaction_id=body.transactionId)
             db.add(conv); db.flush()
             db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action='conversation_started'))
         row = db.get(ConversationFlow, conv.id)
-        replacing = bool(body.replaceTransaction and body.transactionId != conv.transaction_id)
-        if replacing and row and row.request_id:
+        previous_request = row.state.get('bank_binding', {}).get('request_id') if row else None
+        selection_changed = body.updateSelection and (body.transactionId != conv.transaction_id or body.requestId != previous_request)
+        replacing = bool((body.replaceTransaction and body.transactionId != conv.transaction_id)
+                         or (selection_changed and (conv.transaction_id or previous_request)))
+        if (replacing or selection_changed) and row and row.request_id:
             raise HTTPException(409, 'conversation_context_conflict')
+        if selection_changed:
+            db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id,
+                              transaction_id=body.transactionId, request_id=body.requestId, action='chat_context_changed'))
         proposed = row.state.get('transaction_suggestion') if row else None
         dismissed = list(row.state.get('dismissed_transaction_ids', [])) if row else []
         selected_id = body.transactionId
         reply_to_proposal = confirmation(body.message) if not body.pastedText.strip() else None
-        if proposed and not conv.transaction_id and not selected_id and not row.request_id:
+        if proposed and not conv.transaction_id and not selected_id and not row.request_id and not body.updateSelection:
             if reply_to_proposal == 'yes':
                 selected_id = proposed['id']
                 transaction_evidence(db, user.id, selected_id)
@@ -160,8 +169,10 @@ def chat_router(conversation_view, message_view):
                 db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id,
                                   transaction_id=selected_id, action='chat_transaction_changed' if replacing else 'chat_transaction_selected'))
             conv.transaction_id = selected_id
+        elif body.updateSelection:
+            conv.transaction_id = None
         selection = {'owner_id': user.id, 'transaction_id': conv.transaction_id,
-                     'request_id': None if replacing else body.requestId or (row.state.get('bank_binding',{}).get('request_id') if row else None)}
+                     'request_id': body.requestId if body.updateSelection else None if replacing else body.requestId or previous_request}
         reader = SessionReader(db, user, conv)
         registered = bool(row and row.request_id)
         # A clarification keeps the active case. An explicit change of topic is
@@ -186,7 +197,7 @@ def chat_router(conversation_view, message_view):
             state.setdefault(key, value)
         state['transaction_suggestion'] = None
         state['dismissed_transaction_ids'] = dismissed
-        state['conversation_context'] = {'mode': 'registered_case' if registered else 'replace_transaction' if replacing else 'new_topic' if new_topic else
+        state['conversation_context'] = {'mode': 'registered_case' if registered else ('replace_selection' if body.updateSelection else 'replace_transaction') if replacing else 'new_topic' if new_topic else
                                         'continue_question' if continuing else 'continue_review' if reviewing else 'classify',
                                         'source': 'provider_safe_history'}
         if registered:
@@ -230,9 +241,9 @@ def chat_router(conversation_view, message_view):
                     labels = {'received': ('Recibido','Received','Recebido'), 'in_review': ('En revisión','Under review','Em análise'), 'handed_off': ('Derivado a atención','Referred to support','Encaminhado ao atendimento')}
                     ctx['reply'] = statuses[0]['id'] + ' · ' + labels[statuses[0]['status']][('es','en','pt').index(body.locale)]
                 else:
-                    ctx['reply'] = ('Abre Detalles → Datos del caso, elige el caso y envía tu consulta.',
-                                    'Open Details → Case details, choose the case and send your question.',
-                                    'Abra Detalhes → Dados do caso, escolha o caso e envie sua pergunta.')[('es','en','pt').index(body.locale)]
+                    ctx['reply'] = ('Abre Detalles, activa Un caso, elige el registro y pulsa Usar selección.',
+                                    'Open Details, select A case, choose the record and press Use selection.',
+                                    'Abra Detalhes, marque Um caso, escolha o registro e pressione Usar seleção.')[('es','en','pt').index(body.locale)]
                 navigation = navigate_in_app('complaints','customer')
             selected_evidence = next((r['data'] for r in evidence['reads'] if r['tool']=='read-transaction-evidence'), None)
             if selected_evidence:
@@ -256,8 +267,8 @@ def chat_router(conversation_view, message_view):
         for question in ctx.get('questions', []):
             if question['field'] in ('transaction_id','request_id'):
                 question_text = {
-                    'transaction_id': ('Abre Detalles → Datos del caso y elige el movimiento que quieres revisar.', 'Open Details → Case details and choose the transaction to review.', 'Abra Detalhes → Dados do caso e escolha a movimentação que deseja revisar.'),
-                    'request_id': ('Abre Detalles → Datos del caso y elige el caso que quieres consultar.', 'Open Details → Case details and choose the case you want to check.', 'Abra Detalhes → Dados do caso e escolha o caso que deseja consultar.'),
+                    'transaction_id': ('Abre Detalles, activa Un movimiento, elige el registro y pulsa Usar selección.', 'Open Details, select A transaction, choose the record and press Use selection.', 'Abra Detalhes, marque Uma movimentação, escolha o registro e pressione Usar seleção.'),
+                    'request_id': ('Abre Detalles, activa Un caso, elige el registro y pulsa Usar selección.', 'Open Details, select A case, choose the record and press Use selection.', 'Abra Detalhes, marque Um caso, escolha o registro e pressione Usar seleção.'),
                 }[question['field']][('es','en','pt').index(body.locale)]
                 ctx['reply'] = ctx['reply'].replace(question['text'], question_text)
                 question['text'] = question_text

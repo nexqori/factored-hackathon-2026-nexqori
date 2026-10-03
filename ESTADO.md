@@ -553,3 +553,12 @@
 - [x] Abrir y adjuntar [PR #5](https://github.com/nexqori/nexqori/pull/5). Adoptar ramas por funcionalidad, PRs frecuentes, commits claros y versiones etiquetadas en AGENTS.md y docs/trabajo-en-github.md; paquete/API 0.2.0.
 - Último avance: implementado, desplegado en banco Docker :5180 versión 0.2.0 y validado localmente. CI inicial de aplicación y editor correcta; corrección de Security Lab lista para repetir CI antes del merge. Informes privados bank-chat-ShSCWm, document-context-nzsaaD y picker-mobile-SjyP9p bajo .local/verification. Interpretación de fechas acotada y local, sin registros bancarios enviados a modelos. Voz aplazada; otros frentes y archivos privados preservados.
 - Siguiente paso: terminar CI del PR #5, fusionar main, sincronizar bryan por avance rápido y publicar etiqueta v0.2.0. No reiniciar Andrea ni los cinco perfiles ya preparados.
+
+## Frente: Nexqori — detalles unificados y selección opcional
+- Fecha: 2026-10-03 14:55 -0500, America/Lima. E:/factoredai; rama codex/detalles-conversacion-unificados.
+- Pedido vigente: unir Seguimiento y Datos del caso en una vista y permitir movimiento, caso, ambos o ninguno; no obligar a seleccionar los dos.
+- [x] Implementar una vista sin pestañas, selección independiente y botón común de aplicación. Cancelar descarta cambios; el historial recupera el caso elegido.
+- [x] Validar 15 pruebas de selección/contexto y 30 frontend. Nueve conversaciones ES/EN/PT con cuatro combinaciones, cancelación y móvil; 59 axe sin infracciones (bank-chat-2nOi00). Compilación correcta; regresión completa y revisión visual final en curso.
+- [ ] Actualizar el banco local y entregar por PR.
+- Último avance: implementado y pruebas focales correctas. Banco actualizado; ajuste visual final en despliegue. Registros financieros y voz sin cambios. Investigación solicitada a subagente completada con OpenAI Docs: GPT-Live admite client delegation para conservar Jev/LangGraph; faltan conexión WebRTC, sesión/control del servidor y continuidad/idempotencia por intervención. No se activó voz ni se consumió API.
+- Siguiente paso: ejecutar pruebas, revisar la vista y publicar la corrección con sus comprobaciones.
