@@ -22,6 +22,7 @@ from .catalog import SERVICES
 from .assistant import answer
 from .navigation import navigate_in_app
 from .transaction_context import transaction_evidence, transaction_reply
+from .transaction_suggestions import FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experiments' / 'intent-lab'))
 from intent_lab import workflow_execution as execution, workflow_editor as editor
@@ -80,6 +81,7 @@ def flow_view(row):
     return {k: value[k] for k in ('execution','workflow_id','workflow_revision','triage','jev','state','reply','questions',
             'missing_fields','contract','trace','latency_ms','verified_facts','bank_evidence','activation_plan')} | {
         'state': 'registered' if row.request_id else value['state'],
+        'suggestedTransaction': row.state.get('transaction_suggestion'),
         'requestId': row.request_id, 'canRegister': not row.request_id and value['state'] in ('review_in_bank','human_review')
                        and value['jev'].get('intent') in editor.PROBLEM_PORTS}
 
@@ -123,7 +125,21 @@ def chat_router(conversation_view, message_view):
             db.add(conv); db.flush()
             db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action='conversation_started'))
         row = db.get(ConversationFlow, conv.id)
-        if body.transactionId: conv.transaction_id = body.transactionId
+        proposed = row.state.get('transaction_suggestion') if row else None
+        dismissed = list(row.state.get('dismissed_transaction_ids', [])) if row else []
+        selected_id = body.transactionId
+        reply_to_proposal = confirmation(body.message) if not body.pastedText.strip() else None
+        if proposed and not conv.transaction_id and not selected_id and not row.request_id:
+            if reply_to_proposal == 'yes':
+                selected_id = proposed['id']
+                transaction_evidence(db, user.id, selected_id)
+            elif reply_to_proposal == 'no':
+                dismissed = list(dict.fromkeys([*dismissed, proposed['id']]))[-20:]
+        if selected_id:
+            if not conv.transaction_id:
+                db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id,
+                                  transaction_id=selected_id, action='chat_transaction_selected'))
+            conv.transaction_id = selected_id
         selection = {'owner_id': user.id, 'transaction_id': conv.transaction_id, 'request_id': body.requestId or (row.state.get('bank_binding',{}).get('request_id') if row else None)}
         reader = SessionReader(db, user, conv)
         # Do not reclassify when the customer answers a pending context question.
@@ -135,6 +151,8 @@ def chat_router(conversation_view, message_view):
         state = copy.deepcopy(row.state) if continuing or registered else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
                     body.locale, thread_id=conv.id, bank_binding=selection, persist=lambda _: None)
         state['language'] = body.locale
+        state['transaction_suggestion'] = None
+        state['dismissed_transaction_ids'] = dismissed
         if registered:
             case = db.scalar(select(RequestCase).where(RequestCase.id == row.request_id, RequestCase.user_id == user.id))
             text = ('Tu mensaje queda en esta conversación vinculada al reclamo {id}. Puedes revisar su evolución en Mis reclamos. Para otro tema, inicia una conversación nueva.',
@@ -167,9 +185,9 @@ def chat_router(conversation_view, message_view):
                     labels = {'received': ('Recibido','Received','Recebido'), 'in_review': ('En revisión','Under review','Em análise'), 'handed_off': ('Derivado a atención','Referred to support','Encaminhado ao atendimento')}
                     ctx['reply'] = statuses[0]['id'] + ' · ' + labels[statuses[0]['status']][('es','en','pt').index(body.locale)]
                 else:
-                    ctx['reply'] = ('Selecciona el folio en Registros para esta conversación y envía tu consulta.',
-                                    'Select the reference in Records for this conversation and send your question.',
-                                    'Selecione o protocolo em Registros para esta conversa e envie sua pergunta.')[('es','en','pt').index(body.locale)]
+                    ctx['reply'] = ('Abre Detalles → Datos del caso, elige el caso y envía tu consulta.',
+                                    'Open Details → Case details, choose the case and send your question.',
+                                    'Abra Detalhes → Dados do caso, escolha o caso e envie sua pergunta.')[('es','en','pt').index(body.locale)]
                 navigation = navigate_in_app('complaints','customer')
             selected_evidence = next((r['data'] for r in evidence['reads'] if r['tool']=='read-transaction-evidence'), None)
             if selected_evidence:
@@ -188,10 +206,20 @@ def chat_router(conversation_view, message_view):
             if question['field'] in ('transaction_id','request_id'):
                 question_text = {
                     'transaction_id': ('Abre Detalles → Datos del caso y elige el movimiento que quieres revisar.', 'Open Details → Case details and choose the transaction to review.', 'Abra Detalhes → Dados do caso e escolha a movimentação que deseja revisar.'),
-                    'request_id': ('Abre Detalles → Datos del caso y elige el folio que quieres consultar.', 'Open Details → Case details and choose the reference you want to check.', 'Abra Detalhes → Dados do caso e escolha o protocolo que deseja consultar.'),
+                    'request_id': ('Abre Detalles → Datos del caso y elige el caso que quieres consultar.', 'Open Details → Case details and choose the case you want to check.', 'Abra Detalhes → Dados do caso e escolha o caso que deseja consultar.'),
                 }[question['field']][('es','en','pt').index(body.locale)]
                 ctx['reply'] = ctx['reply'].replace(question['text'], question_text)
                 question['text'] = question_text
+        if (not registered and not conv.transaction_id and ctx['triage'].get('family') == 'problem'
+                and ctx['jev'].get('status') == 'ok' and ctx['intent'] in FINANCIAL_PROBLEMS
+                and ctx['state'] == 'ask_customer'):
+            # Read-only, audited, same-owner search. It never fills verified facts
+            # or the bank binding until the customer explicitly chooses a record.
+            recent = reader.read('account-activity', 'read-transactions', body.locale)
+            candidate = choose(recent['data']['transactions'], state['messages'], dismissed, body.locale)
+            if candidate:
+                state['transaction_suggestion'] = candidate
+                ctx['reply'] = suggestion_reply(candidate, body.locale)
         row.state = copy.deepcopy(state)
         # Read tools can autoflush the row before query evidence/reply is attached.
         # Explicitly mark the JSON snapshot so the restored result matches this turn.

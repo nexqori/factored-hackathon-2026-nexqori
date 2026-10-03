@@ -540,7 +540,7 @@
   "chatFlow.follow": "Acompanhar minha reclamação",
   "chatFlow.cards": "Conferir e proteger meu cartão",
   "chatFlow.references": "Registros para esta conversa",
-  "chatFlow.case": "Protocolo para consultar",
+  "chatFlow.case": "Caso para consultar",
   "chatFlow.referenceHint": "Selecione a movimentação que deseja revisar. O assistente só consulta registros da sua conta.",
   "chatFlow.unconfigured": "Um provedor de atendimento ainda não está conectado. Pagamentos e reclamações continuam disponíveis nas suas seções.",
   "chatFlow.state.registered": "Reclamação registrada. Consulte o status e as ações disponíveis.",
@@ -563,5 +563,12 @@
   "chatDetails.selectRecords": "Escolher movimentação ou reclamação",
   "chatFlow.intent.needs-clarification": "Precisamos de mais um detalhe",
   "chatFlow.intent.multiple-intents": "Escolha qual assunto revisar primeiro",
-  "chatFlow.intent.out-of-scope": "Consulta indisponível"
+  "chatFlow.intent.out-of-scope": "Consulta indisponível",
+  "chatSending.thinking": "Pensando…",
+  "chatSending.failed": "Não consegui receber a resposta. Recuperei sua mensagem para você tentar novamente.",
+  "chatSending.suggestion": "Movimentação sugerida",
+  "chatSending.confirm": "Sim, é esse",
+  "chatSending.confirmMessage": "Sim, é esse",
+  "chatSending.another": "Escolher outra",
+  "auditActions.chat_transaction_selected": "Movimentação escolhida para a conversa"
 }

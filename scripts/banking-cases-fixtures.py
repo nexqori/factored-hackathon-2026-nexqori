@@ -18,6 +18,7 @@ from backend.models import (AuditEvent, CardProfile, Conversation, Message,
                             Product, Refund, RequestCase, Transaction, User, now)
 from backend.security import hasher
 from backend.models import PhoneBill, BillPayment
+from backend.catalog import SERVICES
 
 url = make_url(os.environ["DATABASE_URL"])
 if (os.getenv("NEXQORI_LOCAL_VERIFY") != "1" or url.host != "db"
@@ -82,7 +83,7 @@ def prepare():
             db.add(CardProfile(product_id=case["cardId"], user_id=case["userId"], provider_ref=case["cardId"],
                                expiry_month=12, expiry_year=now().year + 3, settlement_product_id=case["accountId"]))
             db.add(Transaction(id=case["transactionId"], user_id=case["userId"], product_id=case["cardId"],
-                               merchant="Verificación · " + case["id"], category="shopping", currency="MXN",
+                               merchant=SERVICES['phone-bill']['provider'] if payload.get('phoneCharge') and case['id']=='bloqueo' else "Verificación · " + case["id"], category="shopping", currency="MXN",
                                amount_minor=-case["amountMinor"], status=case["transactionStatus"], occurred_at=now()))
         db.commit()
         assert untouched(db, owners) == before, "Existing financial or case records changed during preparation"

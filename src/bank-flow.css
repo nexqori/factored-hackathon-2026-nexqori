@@ -5,3 +5,12 @@
 .assistant-panel>.chat-messages{flex:1 1 auto;min-height:180px}.assistant-panel>.chat-bottom,.assistant-panel>.assistant-header,.assistant-panel>.conversation-toolbar{flex-shrink:0}.chat-next-action{margin-top:12px;font-size:.8rem;max-width:100%}
 .chat-details-dialog{width:min(620px,calc(100% - 28px))}.chat-details-dialog .dialog-inner{padding:24px}.chat-details-tabs{display:flex;gap:6px;margin:22px 0 18px;padding:5px;background:var(--nq-soft);border-radius:12px}.chat-details-tabs button{flex:1;min-height:44px;border:0;border-radius:9px;background:transparent;color:var(--nq-muted)}.chat-details-tabs button[aria-selected=true]{background:var(--nq-background);color:var(--nq-primary);box-shadow:0 2px 8px #392c2710}.chat-details-content{min-height:150px;max-height:55dvh;overflow:auto;padding:2px}.chat-details-content .chat-flow{border:0;padding:0;background:transparent}.chat-details-content select{width:100%;min-width:0;text-overflow:ellipsis}.chat-details-content label{min-width:0}.chat-details-footer{display:flex;justify-content:flex-end;padding-top:20px}.chat-details-dialog .chat-flow .button{font-size:.9rem;margin-top:16px}
 @media(max-width:600px){.chat-details-dialog .dialog-inner{padding:20px}.chat-details-footer>.button{width:100%}.assistant-header{gap:7px}.chat-details-button{font-size:.72rem;padding:7px}}
+.chat-thinking{display:flex;align-items:center;gap:10px;padding:12px 4px;color:var(--color-text, #392C27);font-size:.875rem}
+.thinking-dots{display:flex;gap:4px;align-items:center}
+.thinking-dots i{width:6px;height:6px;background:#9A4B32;border-radius:50%;animation:chat-think 1.2s ease-in-out infinite}
+.thinking-dots i:nth-child(2){animation-delay:.15s}.thinking-dots i:nth-child(3){animation-delay:.3s}
+@keyframes chat-think{0%,70%,100%{transform:translateY(0);opacity:.45}35%{transform:translateY(-4px);opacity:1}}
+@media(prefers-reduced-motion:reduce){.thinking-dots i{animation:none;opacity:1}}
+.chat-transaction-choice{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
+.chat-transaction-choice .button{flex:1;padding:10px 12px;min-height:44px;font-size:.875rem}
+.chat-bubble{overflow-wrap:anywhere;white-space:pre-wrap}

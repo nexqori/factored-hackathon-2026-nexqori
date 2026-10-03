@@ -491,3 +491,16 @@
 - [ ] Publicar el frente en bryan/PR #3 y comprobar CI final.
 - Último avance: implementado, desplegado en banco y validado; pendiente publicación. La voz sigue aplazada y el editor no ejecuta operaciones financieras.
 - Siguiente paso: publicar la corrección; Bryan puede recargar el banco, continuar la conversación de transferencia y abrir Detalles cuando necesite revisar el caso.
+
+## Frente: Nexqori — envío inmediato y movimiento sugerido
+- Fecha: 2026-10-02 22:01 -05:00, America/Lima. E:/factoredai; rama bryan.
+- Pedido vigente: mensaje visible al enviar, animación mientras responde y propuesta de cobro reciente con fecha/referencia para confirmar. Corrección adicional: reemplazar «Folio a consultar» por lenguaje más claro.
+- [x] Mostrar el mensaje y vaciar el campo de inmediato; Pensando con movimiento reducido, recuperación de texto/pegado ante error y reintento con la misma clave. Mantener conversación dominante, sin JSON técnico.
+- [x] Proponer un débito relacionado de los últimos 20 movimientos propios mediante lectura auditada. Buscar proveedor/servicio, fecha o referencia; confirmar por botón o respuesta breve ES/EN/PT antes de vincular. Rechazar descarta la propuesta. Ninguna escritura financiera ni datos bancarios añadidos al modelo. Fecha igual a Movimientos (America/Mexico_City).
+- [x] Validar 21 escenarios/30 turnos con Jev/Luna, incluido el texto con errores de escritura del usuario y confirmación en tres idiomas; sin cambios en productos/movimientos/solicitudes. [Informe privado](.local/verification/chat-live/5e5a73bfe901/report.json). Error encontrado al confirmar en PostgreSQL: evento de auditoría excedía VARCHAR(32); corregido como chat_transaction_selected y repetidos los casos correctamente.
+- [x] Validar nueve conversaciones UI, 37 axe sin infracciones, espera antes de recibir respuesta, pérdida de respuesta después del commit, reintento sin duplicado, recuperación del texto pegado, confirmación, historial y móvil. [Informe privado](.local/verification/bank-chat-YBBIDK/report.json). 155 pruebas de la suite API más 26 específicas tras el ajuste; 184 LAB, 18 frontend y compilación. Navegación: 56 vistas/seis comandos/cinco axe; experiencia: cinco axe. Prueba de saldo ajustada al saldo persistido, ya que el usuario puede haber pagado su recibo. Pruebas que cambian el mismo perfil se ejecutan por separado.
+- [x] Cambiar el panel a Caso a consultar y las referencias de cliente a número de caso, con ES/EN/PT. Actualizar [guía](docs/chat-bancario-y-pagos.md) y escenarios repetibles.
+- [x] Desplegar los textos finales en :5180 y comprobar Caso a consultar visible, sin JSON ni llamadas a modelos al abrir Detalles. [Comprobación privada](.local/verification/chat-live/5e5a73bfe901/case-label.json). PostgreSQL y datos conservados.
+- [ ] Publicar en bryan/PR #3 y comprobar CI.
+- Último avance: implementado, desplegado localmente y validado; publicación en curso. Sin cambios de voz ni operaciones financieras en la aceptación del chat.
+- Siguiente paso: publicar sólo los archivos de este frente y revisar CI, conservando los demás cambios locales.

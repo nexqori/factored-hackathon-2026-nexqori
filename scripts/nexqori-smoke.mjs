@@ -97,11 +97,14 @@ try {
   await page.reload();
   await page.getByRole('heading',{name:'Mis reclamos',exact:true}).waitFor();
   assert.ok(await page.getByText(results.createdRequest,{exact:true}).count()>0,'Request persisted');
+  const currentData=await(await context.request.get(origin+'/api/bootstrap')).json();
+  const currentBalance=currentData.products.filter(p=>['account','savings'].includes(p.type)).reduce((sum,p)=>sum+(p.balanceMinor||0),0);
+  const expectedBalance=new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(currentBalance/100);
   await page.getByRole('textbox', {name:'Mensaje para Nexqori'}).fill('¿Cuál es mi saldo?');
   await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
   await page.getByRole('heading',{name:'Mis productos',exact:true}).waitFor();
   await page.locator('.chat-bubble.assistant').last().waitFor();
-  assert.ok((await page.locator('.chat-bubble.assistant').last().innerText()).includes('24,850.00'));
+  assert.ok((await page.locator('.chat-bubble.assistant').last().innerText()).includes(expectedBalance),'Chat must show the current persisted balance');
   for (const width of [1024,768,390,320]) {
     await page.setViewportSize({width,height:900});
     for (const route of ['/','/movements','/services','/requests','/help']) {

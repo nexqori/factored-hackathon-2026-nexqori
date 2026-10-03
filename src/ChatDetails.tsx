@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, formatMoney } from './components';
+import { Dialog, formatDate, formatMoney } from './components';
 import { ChatFlow, type FlowResult } from './ChatFlow';
 import type { Conversation, Dashboard } from './types';
 import type { Locale } from './i18n';
@@ -26,7 +26,7 @@ export function ChatDetails({ result, conversation, text, data, selectedTx, sele
       {tab === 'records' && <div className="form-stack">
         <p className="muted">{t('chatFlow.referenceHint')}</p>
         <label>{t('chooseTransaction')}<select disabled={busy || !!conversation?.transactionId} value={selectedTx} onChange={event => onTx(event.target.value)}>
-          <option value="">{t('noTransaction')}</option>{data.transactions.map(tx => <option key={tx.id} value={tx.id}>{tx.merchant} · {formatMoney(tx.amountMinor,locale,tx.currency)} · {tx.id}</option>)}
+          <option value="">{t('noTransaction')}</option>{data.transactions.map(tx => <option key={tx.id} value={tx.id}>{tx.merchant} · {formatMoney(tx.amountMinor,locale,tx.currency)} · {formatDate(tx.date,locale)} · {tx.id}</option>)}
         </select></label>
         {conversation?.transactionId && <p className="muted">{t('transactionContextHint')}</p>}
         <label>{t('chatFlow.case')}<select disabled={busy} value={selectedRequest} onChange={event => onRequest(event.target.value)}>

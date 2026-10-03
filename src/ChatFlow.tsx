@@ -7,6 +7,7 @@ import { catalogIds, serviceTitle } from './catalog';
 import type { Locale } from './i18n';
 
 export type FlowResult = { execution: {phase: string}; workflow_id: string; workflow_revision: number; state: string; reply: string;
+  suggestedTransaction?: {id:string} | null;
   jev: {intent?: string; status: string}; triage: {family?: string}; canRegister: boolean; requestId: string | null; latency_ms: number;
   missing_fields: string[]; verified_facts: {field: string; value: string; reference_id: string}[];
   trace: {node_id: string; label: Record<string,string>; kind: string; status: string; latency_ms: number}[] };

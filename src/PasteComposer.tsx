@@ -1,10 +1,11 @@
-import { useState, type ClipboardEvent } from 'react';
+import { useRef, useState, type ClipboardEvent } from 'react';
 import { FileText, Send, X } from 'lucide-react';
 import './paste-composer.css';
 
 type Copy = { text:string; preview:string; remove:string; placeholder:string; label:string; send:string; limit:string; failed:string };
 export function PasteComposer({ copy, busy=false, limit=8000, onSend }: { copy:Copy; busy?:boolean; limit?:number; onSend:(message:string,pastedText:string)=>Promise<unknown> }) {
   const [draft,setDraft]=useState(''); const [pasted,setPasted]=useState(''); const [error,setError]=useState('');
+  const submitting=useRef(false);
   const length=draft.length+pasted.length;
   function paste(event:ClipboardEvent<HTMLTextAreaElement>){
     const value=event.clipboardData.getData('text/plain');
@@ -15,9 +16,12 @@ export function PasteComposer({ copy, busy=false, limit=8000, onSend }: { copy:C
     setPasted(next);setError('');
   }
   async function submit(){
-    if(busy||length>limit||(!draft.trim()&&!pasted.trim()))return;
-    setError('');
-    try{await onSend(draft.trim(),pasted);setDraft('');setPasted('');}catch{setError(copy.failed);}
+    if(busy||submitting.current||length>limit||(!draft.trim()&&!pasted.trim()))return;
+    const original={draft,pasted}; submitting.current=true;
+    setError('');setDraft('');setPasted('');
+    try{await onSend(original.draft.trim(),original.pasted);}
+    catch{setDraft(original.draft);setPasted(original.pasted);setError(copy.failed);}
+    finally{submitting.current=false;}
   }
   return <form className="paste-composer" onSubmit={e=>{e.preventDefault();void submit();}}>
     {pasted&&<div className="pasted-card"><FileText size={22} aria-hidden="true"/><details><summary><strong>{pasted.trim().split('\n')[0].slice(0,45)||copy.text}</strong><span>{copy.text} · {pasted.length.toLocaleString()}</span><span className="sr-only">{copy.preview}</span></summary><pre tabIndex={0}>{pasted}</pre></details><button className="paste-remove" type="button" disabled={busy} aria-label={copy.remove} onClick={()=>{setPasted('');setError('');}}><X size={16}/></button></div>}

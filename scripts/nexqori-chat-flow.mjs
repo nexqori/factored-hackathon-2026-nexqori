@@ -23,18 +23,68 @@ try{
   const login=await context.request.post(origin+'/api/auth/login',{headers:{Origin:origin},data:{identifier:person.email,password:person.password}});assert.equal(login.status(),200);
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+person.locale+'"]').click();
   const panel=page.locator('.assistant-panel');
+  if(person.locale==='pt' && person.intent==='unrecognized-charge'){
+   const pasted='Relato colado para verificar a recuperação do texto.\n'.repeat(5);
+   await panel.locator('.paste-composer textarea').fill('Meu relato');
+   await panel.locator('.paste-composer textarea').evaluate((el,value)=>{const data=new DataTransfer();data.setData('text/plain',value);el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));},pasted);
+   await expect(panel.locator('.pasted-card')).toBeVisible();
+   await page.route('**/api/assistant/flow',route=>route.abort('failed'),{times:1});
+   await panel.locator('.paste-entry button').click();
+   await expect(panel.locator('.paste-composer [role=alert]')).toHaveText(copy['chatSending.failed']);
+   await expect(panel.locator('.paste-composer textarea')).toHaveValue('Meu relato');await expect(panel.locator('.pasted-card pre')).toHaveText(pasted);
+   await panel.locator('.paste-remove').click();
+  }
   await panel.locator('.paste-composer textarea').fill('Mi borrador');
   await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
   const details=page.locator('.chat-details-dialog');await details.getByRole('tab',{name:copy['chatDetails.records'],exact:true}).click();
-  await details.locator('select').first().selectOption(person.transactionId);
+  if(person.intent!=='unrecognized-charge')await details.locator('select').first().selectOption(person.transactionId);
   await expect(details.locator('pre')).toHaveCount(0);await axe('details-'+person.locale+'-'+person.intent);
   await page.keyboard.press('Escape');await expect(panel.locator('.paste-composer textarea')).toHaveValue('Mi borrador');
   await expect(panel.getByRole('button',{name:copy['chatDetails.open'],exact:true})).toBeFocused();
-  const message='Verificación ['+person.intent+'] '+{es:'Quiero revisar este movimiento.',en:'I need to review this transaction.',pt:'Quero revisar esta movimentação.'}[person.locale];
-  const post=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
+  const message='Verificación ['+person.intent+'] '+(person.intent==='unrecognized-charge'?{es:'no reconozco e lcobro del celualar',en:'I do not recognize the phone charge.',pt:'Não reconheço a cobrança do celular.'}[person.locale]:{es:'Quiero revisar este movimiento.',en:'I need to review this transaction.',pt:'Quero revisar esta movimentação.'}[person.locale]);
+  // Hold the network before the server answers: the outgoing bubble and empty
+  // composer must already be visible. A response lost after commit must reuse
+  // its original request key, rather than append a second turn or call models.
+  let release;const gate=new Promise(resolve=>{release=resolve;});let firstBody;
+  const loseResponse=person.intent==='unrecognized-charge'&&person.locale==='es';
+  await page.route('**/api/assistant/flow',async route=>{
+   firstBody=route.request().postDataJSON();await gate;
+   if(loseResponse){await route.fetch();await route.abort('failed');}else await route.continue();
+  },{times:1});
+  let post=loseResponse?null:page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
   await panel.locator('.paste-composer textarea').fill(message);await panel.locator('.paste-entry button').click();
+  await expect(panel.locator('.chat-pending')).toHaveText(message);await expect(panel.locator('.paste-composer textarea')).toHaveValue('');
+  await expect(panel.locator('.chat-thinking')).toHaveText(copy['chatSending.thinking']);await expect(panel.locator('.paste-entry button')).toBeDisabled();
+  if(person.intent==='unrecognized-charge'){await axe('thinking-'+person.locale);await page.screenshot({path:path.join(folder,'thinking-'+person.locale+'.png'),fullPage:true});}
+  release();
+  if(loseResponse){
+   await expect(panel.locator('.paste-composer textarea')).toHaveValue(message);await expect(panel.locator('.chat-pending')).toHaveCount(0);
+   await expect(panel.locator('.paste-composer [role=alert]')).toHaveText(copy['chatSending.failed']);
+   const counts=await(await context.request.get(origin+'/api/verification/summary')).json();
+   post=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
+   await panel.locator('.paste-entry button').click();const retried=await post;
+   assert.equal(retried.request().postDataJSON().requestKey,firstBody.requestKey);
+   await expect(panel.locator('.chat-bubble.user')).toHaveCount(1);await expect(panel.locator('.paste-composer textarea')).toHaveValue('');
+   assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),counts);
+  }
   const response=await post;assert.equal(response.status(),200);let result=await response.json();
   assert.equal(result.flow.jev.intent,person.intent);const cid=result.conversation.id;
+  if(person.intent==='unrecognized-charge'){
+   assert.equal(result.flow.suggestedTransaction.id,person.transactionId);assert.equal(result.conversation.transactionId,null);assert.equal(result.flow.canRegister,false);
+   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText(person.transactionId);
+   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText('Empresa Telefónica');await axe('suggestion-'+person.locale);
+   await page.screenshot({path:path.join(folder,'suggestion-'+person.locale+'.png'),fullPage:true});
+   if(person.locale==='es'){
+    await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    await panel.scrollIntoViewIfNeeded();await axe('suggestion-mobile');await page.screenshot({path:path.join(folder,'suggestion-mobile.png'),fullPage:true});await page.setViewportSize({width:1512,height:1050});
+   }
+   await panel.getByRole('button',{name:copy['chatSending.another'],exact:true}).click();await expect(details.locator('select').first()).toBeEnabled();await page.keyboard.press('Escape');
+   const confirmation=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
+   if(person.locale==='pt'){await panel.locator('.paste-composer textarea').fill(copy['chatSending.confirmMessage']);await panel.locator('.paste-entry button').click();}
+   else await panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true}).click();
+   result=await(await confirmation).json();assert.equal(result.conversation.transactionId,person.transactionId);assert.equal(result.flow.canRegister,true);
+   await expect(panel.locator('.chat-transaction-choice')).toHaveCount(0);
+  }
   if(person.intent==='incorrect-charge'){
    assert.deepEqual(result.flow.missing_fields,['difference']);
    const next=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
@@ -58,7 +108,7 @@ try{
   if(person.intent==='incorrect-charge'){await page.screenshot({path:path.join(folder,'chat-claim-'+person.locale+'.png'),fullPage:true});await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+person.locale);}
   report.cases.push({locale:person.locale,intent:person.intent,conversationId:cid,requestId:rid});await context.close();
  }
- const summary=await(await fetch(origin+'/api/verification/summary')).json();assert.deepEqual(summary.counts,{triage:9,jev:9,llm:12});assert.equal(summary.bankRecordsSentToModels,false);
+ const summary=await(await fetch(origin+'/api/verification/summary')).json();assert.deepEqual(summary.counts,{triage:9,jev:9,llm:15});assert.equal(summary.bankRecordsSentToModels,false);
  assert.deepEqual(report.errors,[]);assert(report.accessibility.every(r=>!r.violations.length),JSON.stringify(report.accessibility));
  await fs.writeFile(path.join(folder,'report.json'),JSON.stringify({...report,summary},null,2));console.log(JSON.stringify({folder,...report,summary},null,2));
 }catch(error){if(page){await page.screenshot({path:path.join(folder,'failure.png'),fullPage:true}).catch(()=>{});await fs.writeFile(path.join(folder,'failure.private.txt'),await page.locator('body').innerText().catch(()=>''));}throw error;}finally{await browser?.close();server.kill();await fs.writeFile(path.join(folder,'server.private.log'),diagnostics);}

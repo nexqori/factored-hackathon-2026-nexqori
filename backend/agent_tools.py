@@ -55,7 +55,7 @@ def _read(db, owner, p):
         return {'products': [{'id': r.id, 'type': r.type, 'last4': r.last4, 'balanceMinor': r.balance_minor, 'currency': r.currency} for r in rows[:20]], 'hasMore': len(rows) > 20, 'limit': 20}, {}
     if p.tool == 'read-transactions':
         rows = db.scalars(select(Transaction).where(Transaction.user_id == owner).order_by(Transaction.occurred_at.desc(), Transaction.id.desc()).limit(21)).all()
-        return {'transactions': [{'id': r.id, 'merchant': r.merchant, 'amountMinor': r.amount_minor, 'currency': r.currency, 'status': r.status, 'date': r.occurred_at.isoformat()} for r in rows[:20]], 'hasMore': len(rows) > 20, 'limit': 20}, {}
+        return {'transactions': [{'id': r.id, 'merchant': r.merchant, 'category': r.category, 'amountMinor': r.amount_minor, 'currency': r.currency, 'status': r.status, 'date': r.occurred_at.isoformat()} for r in rows[:20]], 'hasMore': len(rows) > 20, 'limit': 20}, {}
     if p.tool == 'read-cards':
         rows = db.execute(select(Product, CardProfile).join(CardProfile, (CardProfile.product_id == Product.id) & (CardProfile.user_id == Product.user_id)).where(Product.user_id == owner, Product.type == 'card').order_by(Product.id).limit(21)).all()
         return {'cards': [{'id': card.id, 'last4': card.last4, 'status': profile.status} for card, profile in rows[:20]], 'hasMore': len(rows) > 20, 'limit': 20}, {}

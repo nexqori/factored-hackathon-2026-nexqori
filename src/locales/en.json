@@ -540,7 +540,7 @@
   "chatFlow.follow": "Track my complaint",
   "chatFlow.cards": "Review and protect my card",
   "chatFlow.references": "Records for this conversation",
-  "chatFlow.case": "Reference to look up",
+  "chatFlow.case": "Case to review",
   "chatFlow.referenceHint": "Select the transaction to review. The assistant only reads your account records.",
   "chatFlow.unconfigured": "A support provider is not connected yet. Payments and complaints remain available in their sections.",
   "chatFlow.state.registered": "Complaint registered. Review its status and available actions.",
@@ -563,5 +563,12 @@
   "chatDetails.selectRecords": "Choose a transaction or complaint",
   "chatFlow.intent.needs-clarification": "We need one more detail",
   "chatFlow.intent.multiple-intents": "Choose which topic to review first",
-  "chatFlow.intent.out-of-scope": "Unsupported inquiry"
+  "chatFlow.intent.out-of-scope": "Unsupported inquiry",
+  "chatSending.thinking": "Thinking…",
+  "chatSending.failed": "I could not receive the reply. Your message has been restored so you can retry.",
+  "chatSending.suggestion": "Suggested transaction",
+  "chatSending.confirm": "Yes, this one",
+  "chatSending.confirmMessage": "Yes, this one",
+  "chatSending.another": "Choose another",
+  "auditActions.chat_transaction_selected": "Transaction selected for the conversation"
 }

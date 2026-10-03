@@ -1,6 +1,9 @@
 {
   "description": "Conversaciones de verificación redactadas; sin datos ni transcripciones de clientes.",
   "cases": [
+    {"id":"cobro-celular-es","locale":"es","turns":[{"text":"tengo un problema con un pago que hize","family":"problem","intent":"needs-clarification"},{"text":"no reconozco e lcobro del celualar","family":"problem","intent":"unrecognized-charge","suggestion":true},{"text":"Sí, es este","family":"problem","intent":"unrecognized-charge","confirmed":true}]},
+    {"id":"phone-charge-en","locale":"en","turns":[{"text":"I do not recognize the charge for my phone. I did not authorize it.","family":"problem","intent":"unrecognized-charge","suggestion":true},{"text":"Yes, this one","family":"problem","intent":"unrecognized-charge","confirmed":true}]},
+    {"id":"cobranca-celular-pt","locale":"pt","turns":[{"text":"Não reconheço a cobrança do celular. Não fui eu que fiz esse pagamento.","family":"problem","intent":"unrecognized-charge","suggestion":true},{"text":"Sim, é esse","family":"problem","intent":"unrecognized-charge","confirmed":true}]},
     {"id":"transferencia-vaga","locale":"es","turns":[{"text":"tengo un problema con una transferencia","family":"problem","intent":"needs-clarification","contains":"transferencia"},{"text":"No le llegó al destinatario, se descontó de mi cuenta y sigue pendiente desde ayer.","family":"problem","intent":"payment-status"}]},
     {"id":"transferencia-pendiente","locale":"es","turns":[{"text":"Mi transferencia sigue pendiente desde ayer y el dinero ya salió de mi cuenta.","family":"problem","intent":"payment-status"}]},
     {"id":"cargo-no-reconocido","locale":"es","turns":[{"text":"No reconozco un cobro de 185 pesos en mi tarjeta. Yo no hice esa compra.","family":"problem","intent":"unrecognized-charge"}]},
