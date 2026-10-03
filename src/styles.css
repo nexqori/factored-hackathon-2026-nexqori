@@ -8,3 +8,5 @@
 
 
 .skip-link{top:12px;transform:translateY(-200%);visibility:hidden}.skip-link:focus{transform:none;visibility:visible}.menu-close,.menu-backdrop{display:none}.service-detail h2{margin:20px 0 12px}.service-actions{display:flex;gap:12px;flex-wrap:wrap;margin:25px 0 5px}@media(max-width:720px){.menu-close{display:flex;position:absolute;right:12px;top:18px}.menu-backdrop{display:block;position:fixed;inset:0;z-index:59;background:#392c2755;border:0;border-radius:0}.sidebar.mobile-open:before{display:none}.service-actions .button{width:100%}}
+
+.sidebar{overflow-y:auto;overscroll-behavior:contain}

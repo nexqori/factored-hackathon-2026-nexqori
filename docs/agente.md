@@ -18,6 +18,10 @@ Ejemplos: “Llévame a transferencias”, “Show my cards”, “Abrir emprés
 
 Destinos: home, products, movements, requests, services, help, accounts, cards, transfers, payments, loans, investments, insurance, cash. Cuentas y tarjetas filtran productos; seis servicios tienen pantallas propias y solicitudes con servicio seleccionado. No hay destino admin ni URL externa. La auditoría registra que se emitió el comando; el navegador puede fallar después y ese registro no acredita apertura exitosa.
 
+### Mapeo provisional de intenciones
+
+Mientras no se conecte el LLM, `src/intent-router.ts` traduce las intenciones actuales del agente a destinos de la lista permitida: `movements` → `movements` (`/movements`), `requests` → `requests` (`/requests`), `report` → `requests` (`/requests`) y `cards` → `cards` (`/products?kind=cards`). Por ello, iniciar una solicitud o presentar un reclamo dirige a “Mis solicitudes”; esa pantalla permite comenzar el formulario. No hay una pantalla ni un destino independiente para reclamos. El helper usa React Router y contiene errores notificándolos a la interfaz. El mapeo puede reemplazarse cuando se conecte el modelo, manteniendo destinos permitidos.
+
 ## Incorporar un modelo después
 
 Añadir un adaptador en servidor que reciba mensaje, locale y contexto autorizado, y devuelva texto o una propuesta de herramienta. Registrar el esquema de `NAVIGATION_TOOL`, validar su salida con `NavigateInput` y resolver permisos desde la sesión. Mantener timeouts, error localizable y fallback guiado. Las claves del proveedor permanecen fuera de React y Git.

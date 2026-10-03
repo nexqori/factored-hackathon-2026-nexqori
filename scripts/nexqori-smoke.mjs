@@ -31,6 +31,9 @@ try {
   await page.getByLabel('Contraseña', { exact: true }).fill(credentials.CUSTOMER_PASSWORD);
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).click();
   await page.getByRole('heading', { name: 'Qué bueno tenerte aquí.' }).waitFor();
+  await page.setViewportSize({ width:1512, height:780 });
+  await page.getByRole('button', { name:'Cerrar sesión', exact:true }).waitFor({state:'visible'});
+  await page.setViewportSize({ width:1512, height:1050 });
   await snapshot('home-desktop');
   await axe('home');
   const labels = {
@@ -73,6 +76,34 @@ try {
       results.pages.push({locale,route:'/services/'+service,width:1512});
     }
   }
+  await page.locator('.language-picker select').selectOption('es');
+  await page.waitForFunction(() => document.documentElement.lang === 'es');
+  const intentRoutes = [
+    ['Ver mis movimientos', '/movements'],
+    ['Ver mis solicitudes', '/requests'],
+    ['No reconozco un cargo', '/requests'],
+    ['Ver mis tarjetas', '/products?kind=cards'],
+  ];
+  for (const [message, route] of intentRoutes) {
+    const previousMessages = await page.locator('.chat-bubble').count();
+    await page.locator('.chat-composer input').fill(message);
+    await page.locator('.chat-composer button').click();
+    await page.waitForFunction(previous => document.querySelectorAll('.chat-bubble').length >= previous + 2, previousMessages);
+    await page.waitForURL(origin + route);
+    assert.equal(page.url(), origin + route);
+    results.agentNavigation.push({locale:'es',message,route});
+  }
+  await page.locator('.language-picker select').selectOption('pt');
+  await page.waitForFunction(() => document.documentElement.lang === 'pt');
+  const previousMessages = await page.locator('.chat-bubble').count();
+  await page.locator('.chat-composer input').fill('Não reconheço uma compra');
+  await page.locator('.chat-composer button').click();
+  await page.waitForFunction(previous => document.querySelectorAll('.chat-bubble').length >= previous + 2, previousMessages);
+  await page.waitForURL(origin + '/requests');
+  const portugueseReply = page.locator('.chat-bubble.assistant').last();
+  await portugueseReply.getByText('Vamos por partes.').waitFor();
+  assert.equal(await portugueseReply.getAttribute('lang'), 'pt');
+  results.agentNavigation.push({locale:'pt',message:'Não reconheço uma compra',route:'/requests',replyLocale:await portugueseReply.getAttribute('lang')});
   await page.locator('.language-picker select').selectOption('es');
   await page.waitForFunction(() => document.documentElement.lang === 'es');
   await page.goto(origin + '/movements');

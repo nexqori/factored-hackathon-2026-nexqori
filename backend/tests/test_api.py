@@ -183,6 +183,22 @@ def test_navigation_is_audited_and_cannot_create_requests_or_move_money(setup):
     operator,_=login(app,'nora')
     assert operator.post('/api/assistant',json={'message':'open cards','locale':'en'}).status_code==403
 
+def test_assistant_replies_in_selected_portuguese_and_marks_message_locale(setup):
+    app,_=setup
+    client,_=login(app)
+    response=client.post('/api/assistant',json={
+        'message':'Não reconheço uma compra',
+        'locale':'pt',
+        'currentPage':'home',
+    })
+
+    assert response.status_code==200
+    assert response.json()['intent']=='report'
+    assert response.json()['text'].startswith('Vamos por partes.')
+    messages=client.get('/api/bootstrap').json()['messages']
+    assert [message['locale'] for message in messages[-2:]]==['pt','pt']
+    assert messages[-1]['text']==response.json()['text']
+
 def test_login_rate_limit(setup):
     _,engine=setup
     app=create_app(engine,[ORIGIN],False,login_limit=2)

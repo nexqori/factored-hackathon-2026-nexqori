@@ -6,6 +6,7 @@ import i18n, { locales, isLocale, type Locale } from './i18n';
 import { api, ApiError, setCsrf } from './api';
 import { Brand, Badge, Dialog, TransactionList, formatMoney, formatDate } from './components';
 import { destinations, currentDestination, safeNavigation, type NavigationCommand } from './navigation';
+import { intentDestinations, isRoutedIntent, navigateForIntent } from './intent-router';
 import type { User, Dashboard, AdminData, Transaction, RequestCase, Service } from './types';
 
 const languageLabels = { es: 'Español', en: 'English', pt: 'Português' };
@@ -62,7 +63,20 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   function focusChat() { document.querySelector('.assistant-panel')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); chatInput.current?.focus({ preventScroll: true }); }
   async function sendChat(message: string) {
     if (!message.trim() || chatBusy) return; setChatBusy(true); setActionError('');
-    try { const result = await api<{ destination: string | null; text: string; navigation: NavigationCommand | null }>('/assistant', 'POST', { message: message.trim(), locale, currentPage: currentDestination(location.pathname, location.search) }); setChat(''); await refresh(); if (result.destination === 'new-request') open({ type: 'create' }); else { const route = safeNavigation(result.navigation); if (route) { navigate(route); setNotice(t('navigationDone', { screen: t(result.navigation!.destination) })); } } }
+    try {
+      const result = await api<{ destination: string | null; intent: string; text: string; navigation: NavigationCommand | null }>('/assistant', 'POST', { message: message.trim(), locale, currentPage: currentDestination(location.pathname, location.search) });
+      setChat('');
+      await refresh();
+      if (isRoutedIntent(result.intent)) {
+        const destination = intentDestinations[result.intent];
+        const navigated = await navigateForIntent(result.intent, navigate, error => setActionError(errorText(error)));
+        if (navigated) setNotice(t('navigationDone', { screen: t(destination) }));
+      } else if (result.destination === 'new-request') open({ type: 'create' });
+      else {
+        const route = safeNavigation(result.navigation);
+        if (route) { navigate(route); setNotice(t('navigationDone', { screen: t(result.navigation!.destination) })); }
+      }
+    }
     catch (e) { setActionError(errorText(e)); } finally { setChatBusy(false); }
   }
   function readAnswer() {
@@ -83,7 +97,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   return <div className={'app-shell ' + (large ? 'large-text' : '')}>
     <a className="skip-link" href="#main">{t('skip')}</a>
     <aside className={'sidebar ' + (menu ? 'mobile-open' : '')}><button className="icon-button menu-close" aria-label={t('close')} onClick={() => setMenu(false)}><X size={22} /></button><NavLink className="brand-link" to={user.role === 'admin' ? '/admin' : '/'} aria-label="Nexqori"><Brand /></NavLink><p className="brand-tagline">{t('tagline')}</p><p className="nav-label">{t('workspace')}</p><nav aria-label={t('workspace')}>{(user.role === 'admin' ? [{ path: '/admin', label: 'admin', Icon: ShieldCheck }] : navigation).map(({ path, label, Icon }) => <NavLink key={path} to={path} end className={({ isActive }) => 'nav-link ' + (isActive ? 'active' : '')}><Icon size={20} /><span>{t(label)}</span>{label === 'requests' && data.requests.length > 0 && <span className="nav-count">{data.requests.length}</span>}</NavLink>)}</nav>
-    <div className="sidebar-bottom"><p className="nav-label">{t('support')}</p><NavLink to="/help" className="nav-link"><CircleHelp size={20} />{t('help')}</NavLink>{user.role === 'customer' && <button className="sidebar-help" onClick={() => { setMenu(false); focusChat(); }}><span className="round-icon small"><Headphones size={21} /></span><strong>{t('assistantHint')}</strong><span>{t('focusAssistant')} <ArrowUpRight size={15} /></span></button>}<button className="nav-link logout" onClick={() => { void signOut().catch(e => setActionError(errorText(e))); }}><LogOut size={19} />{t('logout')}</button><p className="sidebar-version">nexqori · v0.1</p></div></aside>
+    <div className="sidebar-bottom"><p className="nav-label">{t('support')}</p><NavLink to="/help" className="nav-link"><CircleHelp size={20} />{t('help')}</NavLink><button className="nav-link logout" onClick={() => { void signOut().catch(e => setActionError(errorText(e))); }}><LogOut size={19} />{t('logout')}</button>{user.role === 'customer' && <button className="sidebar-help" onClick={() => { setMenu(false); focusChat(); }}><span className="round-icon small"><Headphones size={21} /></span><strong>{t('assistantHint')}</strong><span>{t('focusAssistant')} <ArrowUpRight size={15} /></span></button>}<p className="sidebar-version">nexqori · v0.1</p></div></aside>
     {menu && <button className="menu-backdrop" aria-label={t('close')} onClick={() => setMenu(false)} />}<div className="workspace"><header className="topbar"><div className="topbar-left"><button className="icon-button menu-toggle" onClick={() => setMenu(!menu)} aria-label={t('menu')} aria-expanded={menu}><Menu size={22} /></button><span className="breadcrumb">nexqori <span>/</span> <strong>{pageTitle}</strong></span></div><div className="topbar-actions"><LanguagePicker onChange={value => { void changeLocale(value); }} /><button className={'icon-button text-size ' + (large ? 'selected' : '')} onClick={() => setLarge(!large)} aria-label={t('expandText')} aria-pressed={large}><Type size={19} /></button>{user.role === 'customer' && <button className="icon-button" aria-label={t('notifications')} onClick={() => navigate('/requests')}><Bell size={19} /></button>}<span className="avatar" title={user.name}>{user.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</span></div></header>
     <div className={'workspace-body ' + (user.role === 'admin' ? 'admin-layout' : '')}><main id="main" tabIndex={-1}>
       {actionError && !modal && <p className="error-banner" role="alert">{actionError}</p>}
