@@ -1,6 +1,6 @@
 # Nexqori
 
-Integración del 2 de octubre: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos y trámites, en Mis solicitudes; problemas, en Mis reclamos.
+Integración vigente: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; PDF, en Mis documentos; trámites, en Mis solicitudes; problemas, en Mis reclamos. Mis solicitudes conserva también acceso a los documentos por compatibilidad.
 
 Base bancaria local con **React + TypeScript, FastAPI y PostgreSQL**. Identidad Terracota suave, español/inglés/portugués, acceso de cliente y administrador, productos, movimientos, servicios, solicitudes y agente de navegación.
 
@@ -53,7 +53,7 @@ Detener contenedores conserva el volumen PostgreSQL. No uses opciones que borren
 - Inicio, cuentas, tarjetas, movimientos con búsqueda/filtros y detalle por producto.
 - Catálogo buscable de 20 servicios: telefonía, internet, cable, servicios públicos, transferencias, cuentas, tarjetas, préstamos, inversiones, seguros, efectivo y atención.
 - Facturas por número/código: importe fijado por el recibo, pago total o parcial permitido, revisión, débito y comprobante en Movimientos. Transferencias entre clientes Nexqori con destinatario validado y dos asientos atómicos. Sin liquidación externa.
-- PDF con selección de cuenta/período, descarga persistente en Mis solicitudes y acceso desde la conversación.
+- PDF con cuenta/período recuperados de la conversación, revisión antes de generar y descarga persistente en Mis documentos.
 - Solicitudes con confirmación, referencia, idempotencia, estado y solicitud de atención.
 - Panel admin para usuarios, cola, inicio de revisión y auditoría.
 - Agente: “Llévame a transferencias”, “Show my cards”, “Abrir empréstimos”. Navega por rutas permitidas, consulta el saldo propio y prepara un formulario; no ejecuta operaciones.
