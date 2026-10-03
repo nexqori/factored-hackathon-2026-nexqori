@@ -1,6 +1,6 @@
 # Integración del equipo
 
-Entrega preparada desde `bryan` para `main`, el 2 de octubre de 2026, America/Lima. Conserva React, FastAPI, PostgreSQL y las traducciones ES/EN/PT.
+Entrega integrada en `main` mediante [PR #3](https://github.com/nexqori/nexqori/pull/3), el 2 de octubre de 2026, America/Lima. Conserva React, FastAPI, PostgreSQL y las traducciones ES/EN/PT. La [CI final](https://github.com/nexqori/nexqori/actions/runs/37096855918) pasó: 247 pruebas API, 184 del editor, 22 frontend y 101 de Security Lab, además de las compilaciones.
 
 | Origen | Incorporación |
 | --- | --- |
