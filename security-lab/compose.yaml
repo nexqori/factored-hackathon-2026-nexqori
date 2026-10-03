@@ -1,0 +1,120 @@
+name: nexqori-security-lab
+services:
+  lab-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: security_lab
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: ${LAB_DB_PASSWORD:?Run node scripts/setup.mjs}
+    volumes: [lab_data:/var/lib/postgresql/data]
+    networks: [lab]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U lab -d security_lab]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  lab-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment: &lab_env
+      LAB_DATABASE_URL: postgresql+psycopg://lab:${LAB_DB_PASSWORD}@lab-db:5432/security_lab
+      LAB_ORIGINS: http://localhost:5190,http://127.0.0.1:5190
+      LAB_COOKIE_SECURE: "false"
+    command: [sh, -c, 'alembic upgrade head && python -m lab.cli seed-targets && uvicorn lab.api:create_app --factory --host 0.0.0.0 --port 8000 --workers 1 --no-proxy-headers']
+    networks: [lab]
+    depends_on:
+      lab-db: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    pids_limit: 100
+  lab-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      <<: *lab_env
+      TARGET_CUSTOMER_PASSWORD: ${TARGET_CUSTOMER_PASSWORD}
+      TARGET_SECOND_PASSWORD: ${TARGET_SECOND_PASSWORD}
+    command: [python, -m, lab.worker]
+    networks: [lab, target]
+    depends_on:
+      lab-api: {condition: service_healthy}
+      target-api: {condition: service_healthy}
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 100
+    restart: unless-stopped
+  lab-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports: ["127.0.0.1:5190:8080"]
+    networks: [lab, ingress]
+    depends_on:
+      lab-api: {condition: service_healthy}
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    mem_limit: 128m
+  target-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: nexqori_lab_target
+      POSTGRES_USER: target
+      POSTGRES_PASSWORD: ${TARGET_DB_PASSWORD}
+    volumes: [target_data:/var/lib/postgresql/data]
+    networks: [target]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U target -d nexqori_lab_target]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  target-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+psycopg://target:${TARGET_DB_PASSWORD}@target-db:5432/nexqori_lab_target
+      CUSTOMER_PASSWORD: ${TARGET_CUSTOMER_PASSWORD}
+      ADMIN_PASSWORD: ${TARGET_ADMIN_PASSWORD}
+      SECOND_CUSTOMER_PASSWORD: ${TARGET_SECOND_PASSWORD}
+      APP_ORIGINS: http://localhost:5191
+      COOKIE_SECURE: "false"
+      CHAT_AGENT_MODE: rules
+      CHAT_AGENT_ALLOW_EXTERNAL_DATA: "false"
+      INTENT_MODE: "off"
+      INTENT_PROVIDER: rules
+      INTENT_EXTERNAL_DATA_ALLOWED: "false"
+    networks: [target]
+    depends_on:
+      target-db: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 512m
+    pids_limit: 100
+networks:
+  lab: {internal: true}
+  target: {internal: true}
+  ingress: {}
+volumes:
+  lab_data:
+  target_data:

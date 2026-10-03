@@ -5,6 +5,6 @@ export type Transaction = { id: string; productId: string; merchant: string; cat
 export type Service = 'general' | 'accounts' | 'cards' | 'transfers' | 'payments' | 'loans' | 'investments' | 'insurance' | 'cash' | 'support';
 export type RequestCase = { id: string; userId: string; transactionId: string | null; service: Service; reason: 'unknown' | 'amount' | 'payment' | 'other'; details: string; status: 'received' | 'in_review' | 'handed_off'; createdAt: string; updatedAt: string; customerName?: string };
 export type AuditEvent = { id: string; userId: string; requestId: string | null; action: string; actorId: string; actorName: string; at: string };
-export type Message = { id: string; role: 'assistant' | 'user'; text: string; locale: Locale; at: string };
+export type Message = { id: string; role: 'assistant' | 'user'; text: string; locale: Locale; at: string; document?: {id: string; filename: string} };
 export type Dashboard = { products: Product[]; transactions: Transaction[]; requests: RequestCase[]; audit: AuditEvent[]; messages: Message[] };
 export type AdminData = { users: User[]; requests: RequestCase[]; audit: AuditEvent[] };

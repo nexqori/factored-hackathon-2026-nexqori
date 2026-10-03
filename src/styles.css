@@ -8,3 +8,19 @@
 
 
 .skip-link{top:12px;transform:translateY(-200%);visibility:hidden}.skip-link:focus{transform:none;visibility:visible}.menu-close,.menu-backdrop{display:none}.service-detail h2{margin:20px 0 12px}.service-actions{display:flex;gap:12px;flex-wrap:wrap;margin:25px 0 5px}@media(max-width:720px){.menu-close{display:flex;position:absolute;right:12px;top:18px}.menu-backdrop{display:block;position:fixed;inset:0;z-index:59;background:#392c2755;border:0;border-radius:0}.sidebar.mobile-open:before{display:none}.service-actions .button{width:100%}}
+
+/* Conversaciones humanas y documentos: mismo lenguaje visual que el chat. */
+.human-support { min-width: 0; margin: 12px; }
+.human-support h2 { font-size: 1.1rem; }
+.human-support .muted { font-size: .82rem; line-height: 1.5; overflow-wrap: anywhere; }
+.human-ticket { border-top: 1px solid #F2D8C8; padding: 12px 0; }
+.human-ticket summary { cursor: pointer; padding: 8px 0; }
+.human-transcript { max-height: 250px; overflow: auto; overflow-wrap: anywhere; }
+.human-transcript:focus-visible { outline: 3px solid var(--nq-primary); outline-offset: 4px; }
+.human-transcript p { white-space: pre-wrap; font-size: .9rem; line-height: 1.5; }
+.human-support textarea { width: 100%; min-height: 80px; resize: vertical; }
+.download-document { display: block; margin-top: 12px; }
+
+.assistant-panel:has(> .human-support) { height: auto; max-height: none; position: relative; top: 0; }
+.assistant-panel:has(> .human-support) > .chat-messages { flex: none; height: 350px; }
+.assistant-panel > .human-support { flex-shrink: 0; }

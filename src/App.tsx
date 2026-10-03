@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight, ArrowUpRight, Bell, ChevronDown, CreditCard, Eye, EyeOff, Headphones, Home, LayoutGrid, LogOut, Menu, MessageCircle, Plus, Search, Send, ShieldCheck, Sparkles, Wallet, FileText, CircleHelp, Volume2, Check, Globe2, LockKeyhole, ArrowLeftRight, Landmark, ChartNoAxesCombined, Umbrella, Banknote, Type, RefreshCw, X } from 'lucide-react';
 import i18n, { locales, isLocale, type Locale } from './i18n';
 import { api, ApiError, setCsrf } from './api';
+import { HumanSupport } from './HumanSupport';
 import { Brand, Badge, Dialog, TransactionList, formatMoney, formatDate } from './components';
-import { destinations, currentDestination, safeNavigation, type NavigationCommand } from './navigation';
-import type { User, Dashboard, AdminData, Transaction, RequestCase, Service } from './types';
+import { destinations, currentDestination } from './navigation';
+import type { User, Dashboard, AdminData, Transaction, RequestCase, Service, Message } from './types';
 
 const languageLabels = { es: 'Español', en: 'English', pt: 'Português' };
 const empty: Dashboard = { products: [], transactions: [], requests: [], audit: [], messages: [] };
@@ -43,11 +44,16 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale; const navigate = useNavigate(); const location = useLocation();
   const [data, setData] = useState<Dashboard>(empty); const [adminData, setAdminData] = useState<AdminData>({ users: [], requests: [], audit: [] }); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [notice, setNotice] = useState(''); const [actionError, setActionError] = useState(''); const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<Modal | null>(null); const [search, setSearch] = useState(''); const [filter, setFilter] = useState('all'); const [hidden, setHidden] = useState(false); const [large, setLarge] = useState(false); const [menu, setMenu] = useState(false); const [chat, setChat] = useState(''); const [chatBusy, setChatBusy] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [humanSignal, setHumanSignal] = useState(0);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const chatActive = useRef(true);
+  useEffect(() => { chatActive.current = true; return () => { chatActive.current = false; }; }, []);
   const chatInput = useRef<HTMLInputElement>(null); const chatLog = useRef<HTMLDivElement>(null);
   async function refresh() { const next = await api<Dashboard>('/bootstrap'); setData(next); if (user.role === 'admin') setAdminData(await api<AdminData>('/admin/overview')); setLoadError(''); return next; }
   useEffect(() => { let active = true; void refresh().catch(e => { if (active) setLoadError(errorText(e)); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [user.id]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 5500); return () => clearTimeout(timer); }, [notice]);
-  useEffect(() => { if (chatLog.current) chatLog.current.scrollTop = chatLog.current.scrollHeight; }, [data.messages.length]);
+  useEffect(() => { if (chatLog.current) chatLog.current.scrollTop = chatMessages.length ? chatLog.current.scrollHeight : 0; }, [chatMessages.length]);
   useEffect(() => { setMenu(false); setActionError(''); document.querySelector('main')?.focus(); }, [location.pathname, location.search]);
   const balance = data.products.reduce((total, p) => total + (p.balanceMinor || 0), 0);
   const productFilter = new URLSearchParams(location.search).get('product');
@@ -62,12 +68,35 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   function focusChat() { document.querySelector('.assistant-panel')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); chatInput.current?.focus({ preventScroll: true }); }
   async function sendChat(message: string) {
     if (!message.trim() || chatBusy) return; setChatBusy(true); setActionError('');
-    try { const result = await api<{ destination: string | null; text: string; navigation: NavigationCommand | null }>('/assistant', 'POST', { message: message.trim(), locale, currentPage: currentDestination(location.pathname, location.search) }); setChat(''); await refresh(); if (result.destination === 'new-request') open({ type: 'create' }); else { const route = safeNavigation(result.navigation); if (route) { navigate(route); setNotice(t('navigationDone', { screen: t(result.navigation!.destination) })); } } }
-    catch (e) { setActionError(errorText(e)); } finally { setChatBusy(false); }
+    const text = message.trim();
+    const messageId = crypto.randomUUID();
+    try {
+      const result = await api<{ text: string; status: string; conversationId: string | null; document?: {id: string; filename: string}; handoff?: {id: string} }>('/assistant', 'POST', {
+        message: text, locale, currentPage: currentDestination(location.pathname, location.search), conversationId, messageId
+      });
+      if (!chatActive.current) return;
+      setChat(''); setConversationId(result.conversationId); if (result.handoff) setHumanSignal(value => value + 1);
+      const at = new Date().toISOString();
+      setChatMessages(previous => [...previous, { id: messageId, role: 'user', text, locale, at },
+        { id: crypto.randomUUID(), role: 'assistant', text: result.text, locale, at, document: result.document }]);
+    } catch (e) {
+      if (chatActive.current) { setActionError(errorText(e)); if (e instanceof ApiError && e.status === 409) setConversationId(null); }
+    } finally { if (chatActive.current) setChatBusy(false); }
+  }
+
+  async function downloadDocument(id: string, filename: string) {
+    try {
+      if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error('invalid document');
+      const response = await fetch('/api/assistant/documents/' + id, {credentials: 'same-origin'});
+      if (!response.ok) { if (response.status === 401) window.dispatchEvent(new Event('nexqori-session-ended')); throw new ApiError('not_found', response.status); }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setActionError(errorText(e)); }
   }
   function readAnswer() {
     if (!('speechSynthesis' in window)) { setNotice(t('voiceUnavailable')); return; }
-    const text = [...data.messages].reverse().find(m => m.role === 'assistant');
+    const text = [...chatMessages].reverse().find(m => m.role === 'assistant');
     const utterance = new SpeechSynthesisUtterance(text?.text || t('assistantIntro'));
     utterance.lang = text?.locale || locale;
     utterance.onerror = () => setNotice(t('voiceError'));
@@ -101,15 +130,15 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
         {serviceItems.filter(item => item.id !== 'accounts' && item.id !== 'cards').map(({ id, Icon }) => <Route key={id} path={'/services/' + id} element={<><PageHeading title={t(id)} subtitle={t(id + 'Hint')} /><section className="panel service-detail"><span className="round-icon"><Icon size={25} /></span><h2>{t('serviceNextStep')}</h2><p className="muted">{t('serviceDetail')}</p><div className="service-actions"><button className="button primary" onClick={() => open({ type: 'create', service: id })}><Plus size={18} />{t('newRequest')}</button><button className="button secondary" onClick={() => navigate('/movements')}>{t('seeMovements')}<ArrowRight size={17} /></button></div></section><p className="info-banner"><ShieldCheck size={20} />{t('serviceNote')}</p><button className="text-link" onClick={() => navigate('/services')}>{t('allServices')}<ArrowRight size={17} /></button></>} />)}
         <Route path="/requests" element={<><PageHeading title={t('requests')} subtitle={t('requestHint')} /><button className="button primary new-request" onClick={() => open({ type: 'create' })}><Plus size={18} />{t('newRequest')}</button><div className="requests-grid">{data.requests.map(caseCard)}</div>{!data.requests.length && <div className="empty-panel"><FileText size={32} /><h2>{t('noRequests')}</h2><p>{t('createFirst')}</p></div>}</>} />
         <Route path="/help" element={<><PageHeading title={t('helpTitle')} subtitle={t('helpBody')} /><div className="help-list">{[1, 2, 3].map(n => <details key={n}><summary>{t('help' + n)}<ChevronDown size={18} /></summary><p>{t('answer' + n)}</p></details>)}</div>{user.role === 'customer' && <button className="button primary" onClick={focusChat}><MessageCircle size={19} />{t('focusAssistant')}</button>}</>} />
-        <Route path="/admin" element={user.role !== 'admin' ? <Navigate to="/" replace /> : <><PageHeading title={t('adminTitle')} subtitle={t('adminNote')} /><div className="requests-grid">{adminData.requests.map(caseCard)}</div><section className="panel admin-users"><h2>{t('users')}</h2><div className="table-scroll"><table><thead><tr><th>{t('customer')}</th><th>{t('email')}</th><th>{t('status')}</th><th>{t('language')}</th></tr></thead><tbody>{adminData.users.map(u => <tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td>{t(u.role === 'admin' ? 'agent' : 'customer')}</td><td>{languageLabels[u.locale]}</td></tr>)}</tbody></table></div></section><section className="panel"><h2>{t('audit')}</h2><ul className="audit-list">{adminData.audit.slice(0, 30).map(event => <li key={event.id}><span><strong>{auditLabel(event.action)}</strong><small>{event.actorName} · {event.requestId || '—'}</small></span><time>{formatDate(event.at, locale)}</time></li>)}</ul></section></>} />
+        <Route path="/admin" element={user.role !== 'admin' ? <Navigate to="/" replace /> : <><PageHeading title={t('adminTitle')} subtitle={t('adminNote')} /><HumanSupport operator /><div className="requests-grid">{adminData.requests.map(caseCard)}</div><section className="panel admin-users"><h2>{t('users')}</h2><div className="table-scroll"><table><thead><tr><th>{t('customer')}</th><th>{t('email')}</th><th>{t('status')}</th><th>{t('language')}</th></tr></thead><tbody>{adminData.users.map(u => <tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td>{t(u.role === 'admin' ? 'agent' : 'customer')}</td><td>{languageLabels[u.locale]}</td></tr>)}</tbody></table></div></section><section className="panel"><h2>{t('audit')}</h2><ul className="audit-list">{adminData.audit.slice(0, 30).map(event => <li key={event.id}><span><strong>{auditLabel(event.action)}</strong><small>{event.actorName} · {event.requestId || '—'}</small></span><time>{formatDate(event.at, locale)}</time></li>)}</ul></section></>} />
         <Route path="*" element={<Navigate to={user.role === 'admin' ? '/admin' : '/'} replace />} />
       </Routes>}
       <footer className="main-footer"><ShieldCheck size={14} />{t('footerNote')}<span>ES / EN / PT</span></footer>
     </main>
     {user.role === 'customer' && <aside className="assistant-panel" aria-label={t('assistant')}><div className="assistant-header"><span className="assistant-symbol"><Sparkles size={20} /></span><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div><button className="icon-button" onClick={readAnswer} aria-label={t('readAnswers')}><Volume2 size={19} /></button></div>
-      <div ref={chatLog} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions"><div className="assistant-welcome"><div className="nexqori-flower" aria-hidden="true">✳</div><h3>{t('assistantHello')}</h3><p>{t('assistantIntro')}</p></div>{!data.messages.length && <div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={chatBusy} onClick={() => { void sendChat(t(key)); }}>{t(key)}<ArrowUpRight size={15} /></button>)}</div>}
-      {data.messages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}</div>)}{chatBusy && <p className="chat-thinking" role="status">{t('loading')}</p>}</div>
-      <div className="chat-bottom"><form className="chat-composer" onSubmit={e => { e.preventDefault(); void sendChat(chat); }}><input ref={chatInput} aria-label={t('chatLabel')} placeholder={t('chatPlaceholder')} value={chat} onChange={e => setChat(e.target.value)} maxLength={1000} disabled={chatBusy} /><button type="submit" disabled={!chat.trim() || chatBusy} aria-label={t('send')}><Send size={18} /></button></form><button className="human-link" onClick={() => { void sendChat(t('talkHuman')); }} disabled={chatBusy}><Headphones size={15} />{t('talkHuman')}</button></div></aside>}
+      <div ref={chatLog} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions"><div className="assistant-welcome"><div className="nexqori-flower" aria-hidden="true">✳</div><h3>{t('assistantHello')}</h3><p>{t('assistantIntro')}</p></div>{!chatMessages.length && <div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={chatBusy} onClick={() => { void sendChat(t(key)); }}>{t(key)}<ArrowUpRight size={15} /></button>)}</div>}
+      {chatMessages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}{message.document && <button className="button secondary download-document" onClick={() => { void downloadDocument(message.document!.id, message.document!.filename); }}>{t('downloadPdf')}</button>}</div>)}{chatBusy && <p className="chat-thinking" role="status">{t('loading')}</p>}</div>
+      <div className="chat-bottom"><button className="human-link" disabled={chatBusy} onClick={() => { setConversationId(null); setChatMessages([]); setActionError(''); }}>{t('newConversation')}</button><form className="chat-composer" onSubmit={e => { e.preventDefault(); void sendChat(chat); }}><input ref={chatInput} aria-label={t('chatLabel')} placeholder={t('chatPlaceholder')} value={chat} onChange={e => setChat(e.target.value)} maxLength={1000} disabled={chatBusy} /><button type="submit" disabled={!chat.trim() || chatBusy} aria-label={t('send')}><Send size={18} /></button></form><button className="human-link" onClick={() => { void sendChat(t('talkHuman')); }} disabled={chatBusy}><Headphones size={15} />{t('talkHuman')}</button></div><HumanSupport signal={humanSignal} /></aside>}
     </div></div>
     {notice && <div className="toast" role="status"><Check size={18} />{notice}</div>}
     {modal?.type === 'create' && <CreateRequest key={modal.transactionId || modal.service || 'new'} modal={modal} data={data} close={() => setModal(null)} saved={async (id, duplicate) => { await refresh(); setNotice(t(duplicate ? 'duplicate' : 'saved')); navigate('/requests'); open({ type: 'request', id }); }} />}
@@ -126,6 +155,6 @@ function Root() {
   async function signOut() { await api('/auth/logout', 'POST', {}); if ('speechSynthesis' in window) speechSynthesis.cancel(); setCsrf(''); setUser(null); navigate('/', { replace: true }); }
   if (!ready) return <div className="loading-screen"><Brand /><p role="status">{t('loading')}</p></div>;
   if (!user) return <>{bootError && <div className="error-banner" role="alert">{bootError}</div>}<Login onLogin={next => { setUser(next); setBootError(''); navigate(next.role === 'admin' ? '/admin' : '/', { replace: true }); }} /></>;
-  return <Shell user={user} setUser={setUser} signOut={signOut} />;
+  return <Shell key={user.id} user={user} setUser={setUser} signOut={signOut} />;
 }
 export default function App() { return <BrowserRouter><Root /></BrowserRouter>; }
