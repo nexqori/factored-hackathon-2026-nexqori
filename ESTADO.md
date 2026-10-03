@@ -582,3 +582,24 @@
 - [x] Desplegar API en Docker :5180, sin migración ni cambios en usuarios manuales. Lectura por referencia validada en PostgreSQL; API/web/db saludables. Navegación: 56 vistas, nueve comandos, cinco axe. Experiencia: historial/ajustes y cinco axe; falló la preparación inicial del fixture y pasó al usar el paquete aislado ya validado. Pagos: ES/EN/PT, débito único, solicitudes intactas y 15 axe; .local/verification/payments/d68527dc1990/report.json. El ajuste final de cargo superior al recibo pasó las 14 pruebas específicas.
 - Último avance: implementado, desplegado y validado localmente. Documentación en docs/comparacion-historica-pagos.md. No se inventó historial ni se reiniciaron operaciones manuales. Sin PR ni publicación; main/bryan y base de voz conservados.
 - Siguiente paso: Bryan puede iniciar una conversación nueva, seleccionar el cobro y revisar su comparación. Con pocos antecedentes verá la limitación. Revisar la experiencia antes de entregar por PR.
+
+## Frente: Nexqori — integración de voz y primer pitch
+- Fecha: 2026-10-03 18:38 -0500, America/Lima. E:/factoredai; rama codex/voz-pitch, basada en 32fdec4.
+- Pedido vigente: conectar voz al flujo actual, dejar un documento inicial del pitch con la guía compartida y seleccionar tres casos de impacto. Sin PR todavía.
+- [x] Integrar la base 3e24e7d preservando resumen, selección confirmada y comparación histórica en run_chat_turn compartido. Validar 52 pruebas específicas, 411 API, 33 frontend y build. Dos advertencias previas Alembic/SQLite y aviso de tamaño de bundle.
+- [x] Crear docs/pitch-nexqori-v1.md con cobro excesivo, cargo desconocido y pago pendiente; PDF como alternativa, guion de video, ocho láminas y límites de las cifras del EDA. Documentar la ampliación futura de comportamiento y protección, sin presentarla como terminada.
+- [x] Comprobar acceso sin crear llamadas: clave válida para catálogo (200), gpt-live-1 devuelve 404 y no hay modelos de voz visibles. Scripts/check-voice-access.mjs permite repetir la consulta sin imprimir la clave. Falta acceso del proveedor; llamadas desactivadas, sin consumo ni micrófono.
+- [x] Respaldar PostgreSQL (.local/backups/before-voice-20261003-183422.dump, archivo pg_dump con listado pg_restore validado) y desplegar API/web en :5180. Migración f492b731e845 aplicada; servicios saludables. Sin reinicios de usuarios manuales.
+- [x] Validar voz con transporte falso en ES/EN/PT, nueve axe sin infracciones; .local/verification/voice-ui-tPuRmr/report.json, captura call-es.png revisada. Chat: nueve conversaciones, 59 axe y sin registros al modelo, .local/verification/bank-chat-dHy4VI/report.json. Navegación: 56 vistas/nueve comandos/cinco axe; experiencia: cinco axe. Pagos: débito único ES/EN/PT y 15 axe; .local/verification/payments/fd943002f127/report.json. Sólo titulares de verificación.
+- Último avance: integración implementada, desplegada y validada con proveedores controlados; llamada real bloqueada por disponibilidad del modelo. Documento inicial listo. Sin PR, push ni cambios a main/bryan.
+- Siguiente paso: ensayar los tres casos por chat. Cuando el proyecto OpenAI permita gpt-live-1, ejecutar el preflight, habilitar Compose de voz y validar audio/interrupciones/cierre antes de presentarlo como operativo.
+
+## Frente: Nexqori — siguiente flujo de comportamiento y protección
+- Fecha: 2026-10-03 18:38 -0500, America/Lima. Pedido añadido durante el cierre de voz/pitch; no sustituye la entrega anterior.
+- Objetivo: analizar gastos habituales y fuera de tendencia en los cinco usuarios; advertir y aplicar un bloqueo preventivo temporal de la tarjeta hasta el reconocimiento autenticado del gasto.
+- [x] Registrar alcance en docs/pitch-nexqori-v1.md: historial por titular, evaluación explicable, advertencia interna, política del servidor y reconocimiento/reclamo. Distinguir comparación puntual existente de flujo completo pendiente.
+- [ ] Revisar suficiencia y calidad del historial de los cinco perfiles y preparar casos normales/anómalos con resultados esperados. Comparar reglas estadísticas con ML si los datos permiten una evaluación útil; no inventar desempeño.
+- [ ] Construir advertencia y bloqueo reversible con confirmación de identidad para levantarlo, conservación de otras alertas/bloqueos, permisos, idempotencia y auditoría. No asociar cargos sin tarjeta a una tarjeta arbitraria. Correo/SMS/push quedan sin canal definido.
+- [ ] Validar falsos positivos, reconocimiento/rechazo, ausencia de respuesta, aislamiento entre usuarios y tiempos. No ejecutar devoluciones automáticamente.
+- Último avance: especificado, aún no implementado ni desplegado. No se alteró historial ni se bloquearon tarjetas manuales. El bloqueo actual no ofrece este ciclo reversible.
+- Siguiente paso: inspeccionar el historial disponible y diseñar una primera evaluación repetible para los cinco perfiles antes de activar protección automática.

@@ -1,0 +1,9 @@
+# Opt-in only, after local tests and explicit approval to try a real call.
+# docker compose -f compose.yaml -f compose.voice.yaml up --build -d api web
+services:
+  api:
+    environment:
+      BANK_VOICE_ENABLED: "true"
+  web:
+    volumes:
+      - ./docker/nginx.voice.conf:/etc/nginx/conf.d/default.conf:ro

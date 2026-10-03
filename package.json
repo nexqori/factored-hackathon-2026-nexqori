@@ -33,7 +33,8 @@
     "test:banking": "node scripts/nexqori-banking-integrated.mjs",
     "test:documents:context": "npm run build && node scripts/nexqori-document-context.mjs",
     "test:ux:prepare": "node scripts/prepare-ux-users.mjs --confirm-local --pack=equipo-ux",
-    "test:pdf": "python scripts/verify-query-pdfs.py"
+    "test:pdf": "python scripts/verify-query-pdfs.py",
+    "test:voice:ui": "npm run build && node scripts/nexqori-voice-ui.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

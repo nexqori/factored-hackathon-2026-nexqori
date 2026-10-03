@@ -228,6 +228,24 @@ class AssistantTurn(Base):
     response: Mapped[dict] = mapped_column(JSON)
 
 
+class VoiceSession(Base):
+    __tablename__ = 'voice_sessions'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), index=True)
+    auth_hash: Mapped[str] = mapped_column(String(64))
+    request_key: Mapped[str] = mapped_column(String(64))
+    provider_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default='connecting')
+    locale: Mapped[str] = mapped_column(String(2))
+    created_at: Mapped[int] = mapped_column(BigInteger)
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    heartbeat_at: Mapped[int] = mapped_column(BigInteger)
+    state: Mapped[dict] = mapped_column(JSON, default=dict)
+    __table_args__ = (ForeignKeyConstraint(['conversation_id','user_id'], ['conversations.id','conversations.user_id']),
+        UniqueConstraint('user_id','request_key'), CheckConstraint("status IN ('connecting','active','closing','closed','failed')"))
+
+
 class TransferQuote(Base):
     __tablename__ = "transfer_quotes"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

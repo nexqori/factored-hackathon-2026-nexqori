@@ -24,6 +24,7 @@ from .transfers import transfer_router
 from .query_documents import document_router, document_view
 from .models import BillPayment, BankTransfer, iso_utc
 from .workflow_chat import chat_router, flow_view
+from .voice import VoiceRuntime, voice_router
 from .models import ConversationFlow
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
@@ -68,7 +69,8 @@ class BodyLimit:
             message=await receive()
             if message["type"]=="http.disconnect": return
             chunk=message.get("body",b""); total+=len(chunk)
-            if total>self.maximum:
+            maximum=65536 if scope['path']=='/api/voice/sessions' else self.maximum
+            if total>maximum:
                 return await JSONResponse({"error":"payload_too_large"},413)(scope,receive,send)
             chunks.append(chunk)
             if not message.get("more_body"): break
@@ -88,10 +90,13 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     secure=secure_cookies if secure_cookies is not None else os.getenv("COOKIE_SECURE","true")=="true"
     @asynccontextmanager
     async def lifespan(_):
+        app.state.voice.recover()
         yield
+        app.state.voice.shutdown()
         if owned_engine: engine.dispose()
     app=FastAPI(title="Nexqori API",version="0.2.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
     app.state.sessions=make_sessions(engine)
+    app.state.voice=VoiceRuntime(app.state.sessions,conversation_view,message_view)
     limiter=LoginLimiter(login_limit)
     card_limiter=LoginLimiter(5)
     registration_limiter=LoginLimiter(10)
@@ -434,6 +439,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     app.include_router(transfer_router())
     app.include_router(document_router(message_view))
     app.include_router(chat_router(conversation_view, message_view))
+    app.include_router(voice_router())
     app.include_router(agent_tools_router())
     app.include_router(trace_router(request_view, audit_view, conversation_view))
     return app
