@@ -2,6 +2,7 @@
 import json
 import os
 import secrets
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 from fastapi.responses import FileResponse
@@ -28,7 +29,9 @@ with make_sessions(engine)() as db:
             db.add(User(id=uid,email=email,name='Verificación '+locale,password_hash=hasher.hash(password),role='customer',locale=locale));db.flush()
             db.add(Product(id=account,user_id=uid,type='account',last4='9001',balance_minor=150000));db.flush()
             db.add(Transaction(id=tx,user_id=uid,product_id=account,merchant='Empresa Telefónica' if intent=='unrecognized-charge' else 'Registro privado del banco',category='utilities',amount_minor=-18500,currency='MXN',occurred_at=now(),status='pending' if intent=='payment-status' else 'completed'))
-            people.append({'email':email,'password':password,'locale':locale,'intent':intent,'transactionId':tx})
+            alternate='alternate-'+uid
+            db.add(Transaction(id=alternate,user_id=uid,product_id=account,merchant='Comercio alternativo privado',category='shopping',amount_minor=-9900,currency='MXN',occurred_at=now()-timedelta(days=1),status='pending' if intent=='payment-status' else 'completed'))
+            people.append({'email':email,'password':password,'locale':locale,'intent':intent,'transactionId':tx,'alternateTransactionId':alternate})
     db.commit()
 (folder/'credentials.private.json').write_text(json.dumps(people),encoding='utf-8')
 calls=[]
@@ -48,7 +51,7 @@ app=create_app(engine,['http://127.0.0.1:5192'],False)
 @app.get('/api/verification/summary')
 def summary():
     return {'counts':{name:sum(c['model']==name for c in calls) for name in ('triage','jev','llm')},
-            'bankRecordsSentToModels':any(value in json.dumps(calls,ensure_ascii=False) for value in ('Registro privado del banco','Empresa Telefónica',*[p['transactionId'] for p in people]))}
+            'bankRecordsSentToModels':any(value in json.dumps(calls,ensure_ascii=False) for value in ('Registro privado del banco','Empresa Telefónica','Comercio alternativo privado',*[p['transactionId'] for p in people],*[p['alternateTransactionId'] for p in people]))}
 app.mount('/assets',StaticFiles(directory='dist/assets'))
 @app.get('/{path:path}')
 def frontend(path: str):

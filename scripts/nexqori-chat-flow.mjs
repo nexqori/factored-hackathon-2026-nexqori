@@ -37,10 +37,19 @@ try{
   await panel.locator('.paste-composer textarea').fill('Mi borrador');
   await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
   const details=page.locator('.chat-details-dialog');await details.getByRole('tab',{name:copy['chatDetails.records'],exact:true}).click();
-  if(person.intent!=='unrecognized-charge')await details.locator('select').first().selectOption(person.transactionId);
   await expect(details.locator('pre')).toHaveCount(0);await axe('details-'+person.locale+'-'+person.intent);
   await page.keyboard.press('Escape');await expect(panel.locator('.paste-composer textarea')).toHaveValue('Mi borrador');
   await expect(panel.getByRole('button',{name:copy['chatDetails.open'],exact:true})).toBeFocused();
+  if(person.intent!=='unrecognized-charge'){
+   const counts=await(await context.request.get(origin+'/api/verification/summary')).json();
+   await panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true}).click();
+   await details.getByLabel(copy.chooseTransaction,{exact:true}).selectOption(person.transactionId);
+   await expect(details.locator('[data-selected-movement]')).toContainText(person.transactionId);
+   await details.getByRole('button',{name:copy['chatMovement.apply'],exact:true}).click();
+   await expect(panel.locator('.paste-composer textarea')).toHaveValue('Mi borrador');
+   await expect(panel.locator('[data-chat-movement]')).toHaveAttribute('data-chat-movement',person.transactionId);
+   assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),counts,'Preparing a movement before conversation must not execute models');
+  }
   const message='Verificación ['+person.intent+'] '+(person.intent==='unrecognized-charge'?{es:'no reconozco e lcobro del celualar',en:'I do not recognize the phone charge.',pt:'Não reconheço a cobrança do celular.'}[person.locale]:{es:'Quiero revisar este movimiento.',en:'I need to review this transaction.',pt:'Quero revisar esta movimentação.'}[person.locale]);
   // Hold the network before the server answers: the outgoing bubble and empty
   // composer must already be visible. A response lost after commit must reuse
@@ -78,12 +87,36 @@ try{
     await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     await panel.scrollIntoViewIfNeeded();await axe('suggestion-mobile');await page.screenshot({path:path.join(folder,'suggestion-mobile.png'),fullPage:true});await page.setViewportSize({width:1512,height:1050});
    }
-   await panel.getByRole('button',{name:copy['chatSending.another'],exact:true}).click();await expect(details.locator('select').first()).toBeEnabled();await page.keyboard.press('Escape');
+   await panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true}).click();await expect(details.locator('select').first()).toBeEnabled();await page.keyboard.press('Escape');
    const confirmation=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
    if(person.locale==='pt'){await panel.locator('.paste-composer textarea').fill(copy['chatSending.confirmMessage']);await panel.locator('.paste-entry button').click();}
    else await panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true}).click();
    result=await(await confirmation).json();assert.equal(result.conversation.transactionId,person.transactionId);assert.equal(result.flow.canRegister,true);
-   await expect(panel.locator('.chat-transaction-choice')).toHaveCount(0);
+   await expect(panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true})).toHaveCount(0);
+   // Rebinding is explicit and persisted: selecting an option alone has no
+   // effect, while applying asks the server to invalidate old evidence.
+   const prior=await(await context.request.get(origin+'/api/verification/summary')).json();
+   await panel.locator('.paste-composer textarea').fill('Borrador que se conserva');
+   await panel.getByRole('button',{name:copy['chatMovement.change'],exact:true}).click();
+   await details.getByLabel(copy.chooseTransaction,{exact:true}).selectOption(person.alternateTransactionId);
+   const unchanged=await(await context.request.get(origin+'/api/conversations/'+cid)).json();assert.equal(unchanged.conversation.transactionId,person.transactionId);
+   assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),prior);
+   if(person.locale==='es'){
+    await page.setViewportSize({width:390,height:844});await axe('movement-picker-mobile');
+    await page.screenshot({path:path.join(folder,'movement-picker-mobile.png'),fullPage:true});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1512,height:1050});
+   }
+   const replacement=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
+   await details.getByRole('button',{name:copy['chatMovement.replace'],exact:true}).click();
+   const replaced=await replacement;assert.equal(replaced.status(),200);result=await replaced.json();
+   assert.equal(replaced.request().postDataJSON().replaceTransaction,true);
+   assert.equal(replaced.request().postDataJSON().message,copy['chatMovement.message']);
+   assert.equal(result.conversation.transactionId,person.alternateTransactionId);assert.equal(result.flow.canRegister,true);
+   assert.equal(result.flow.jev.intent,person.intent);assert(!JSON.stringify(result.flow.verified_facts).includes(person.transactionId));
+   await expect(panel.locator('.paste-composer textarea')).toHaveValue('Borrador que se conserva');
+   await expect(panel.locator('[data-chat-movement]')).toHaveAttribute('data-chat-movement',person.alternateTransactionId);
+   const following=await(await context.request.get(origin+'/api/verification/summary')).json();
+   assert.equal(following.counts.triage,prior.counts.triage);assert.equal(following.counts.jev,prior.counts.jev);
   }
   if(person.intent==='incorrect-charge'){
    assert.deepEqual(result.flow.missing_fields,['difference']);
@@ -99,16 +132,42 @@ try{
   await panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
   await expect(details).toContainText(copy['chatFlow.state.review_in_bank']);await expect(details.locator('pre')).toHaveCount(0);
   await expect(details).not.toContainText('needs-clarification');await expect(details).not.toContainText(' ms');
+  const previewResponse=page.waitForResponse(r=>r.url().includes('/claim-preview?')&&r.request().method()==='GET');
   await details.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
-  await page.locator('dialog input[type=checkbox]').check();await page.locator('dialog').last().getByRole('button',{name:copy.confirm,exact:true}).click();
+  const preview=await(await previewResponse).json();const review=page.locator('.chat-claim-review');
+  await expect(review.getByLabel(copy['chatClaim.summary'],{exact:true})).toHaveValue(preview.summary);
+  assert(preview.summary.length>=10);assert(!preview.summary.includes('Verificación ['),'Claim starts from a server summary, not the transcript');
+  assert.equal(preview.transactionId,person.intent==='unrecognized-charge'?person.alternateTransactionId:person.transactionId);
+  await expect(review.getByRole('button',{name:copy['chatClaim.register'],exact:true})).toBeDisabled();
+  await review.getByRole('checkbox').check();
+  const editedSummary=preview.summary+' '+{es:'Solicito revisar lo ocurrido.',en:'Please review what happened.',pt:'Peço a revisão do ocorrido.'}[person.locale];
+  await review.getByLabel(copy['chatClaim.summary'],{exact:true}).fill(editedSummary);await expect(review.getByRole('checkbox')).not.toBeChecked();
+  await review.getByRole('checkbox').check();await axe('claim-summary-'+person.locale+'-'+person.intent);
+  if(person.intent==='unrecognized-charge')await page.screenshot({path:path.join(folder,'claim-summary-'+person.locale+'.png'),fullPage:true});
+  let lostClaim;
+  if(person.locale==='es'&&person.intent==='unrecognized-charge'){
+   await page.route('**/api/conversations/'+cid+'/claim',async route=>{lostClaim=route.request().postDataJSON();await route.fetch();await route.abort('failed');},{times:1});
+   await review.getByRole('button',{name:copy['chatClaim.register'],exact:true}).click();await expect(review.getByRole('alert')).toBeVisible();
+   await expect(review.getByLabel(copy['chatClaim.summary'],{exact:true})).toHaveValue(editedSummary);
+  }
+  const registration=page.waitForResponse(r=>r.url().endsWith('/'+cid+'/claim')&&r.request().method()==='POST');
+  await review.getByRole('button',{name:copy['chatClaim.register'],exact:true}).click();
+  const registered=await registration;assert.equal(registered.status(),200);const receipt=await registered.json();
+  assert.equal(receipt.summary,editedSummary);assert.equal(registered.request().postDataJSON().previewToken,preview.previewToken);
+  if(lostClaim)assert.equal(registered.request().postDataJSON().requestKey,lostClaim.requestKey);
   await page.waitForURL(/\/complaints\?case=/);await expect(page.locator('.claim-choice')).toHaveCount(1);await page.locator('.trace-current').waitFor();
   const rid=new URL(page.url()).searchParams.get('case');await expect(page.locator('.claims-detail')).toContainText(rid);
+  await expect(panel.locator('.chat-bubble.assistant').filter({hasText:receipt.message.text})).toHaveCount(1);
+  await expect(panel.locator('.chat-bubble.assistant').last()).toContainText(rid);await expect(panel.locator('.chat-bubble.assistant').last()).toContainText(receipt.nextStep);
+  await expect(panel.getByRole('button',{name:copy['chatMovement.change'],exact:true})).toHaveCount(0);
+  const stored=await(await context.request.get(origin+'/api/conversations/'+cid)).json();assert.equal(stored.messages.filter(m=>m.id===receipt.message.id).length,1);
+  assert.equal(stored.messages.find(m=>m.id===receipt.message.id).text,receipt.message.text);
   await page.locator('.claims-detail .trace-conversation').first().click();await expect(page.locator('.claims-detail')).toContainText(copy['chatFlow.title']);
   await expect(page.locator('.claims-detail pre')).toHaveCount(0);await expect(page.locator('.claims-detail .trace-tabs')).toHaveCount(0);await axe('claim-'+person.locale+'-'+person.intent);
   if(person.intent==='incorrect-charge'){await page.screenshot({path:path.join(folder,'chat-claim-'+person.locale+'.png'),fullPage:true});await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+person.locale);}
   report.cases.push({locale:person.locale,intent:person.intent,conversationId:cid,requestId:rid});await context.close();
  }
- const summary=await(await fetch(origin+'/api/verification/summary')).json();assert.deepEqual(summary.counts,{triage:9,jev:9,llm:15});assert.equal(summary.bankRecordsSentToModels,false);
+ const summary=await(await fetch(origin+'/api/verification/summary')).json();assert.deepEqual(summary.counts,{triage:9,jev:9,llm:18});assert.equal(summary.bankRecordsSentToModels,false);
  assert.deepEqual(report.errors,[]);assert(report.accessibility.every(r=>!r.violations.length),JSON.stringify(report.accessibility));
  await fs.writeFile(path.join(folder,'report.json'),JSON.stringify({...report,summary},null,2));console.log(JSON.stringify({folder,...report,summary},null,2));
 }catch(error){if(page){await page.screenshot({path:path.join(folder,'failure.png'),fullPage:true}).catch(()=>{});await fs.writeFile(path.join(folder,'failure.private.txt'),await page.locator('body').innerText().catch(()=>''));}throw error;}finally{await browser?.close();server.kill();await fs.writeFile(path.join(folder,'server.private.log'),diagnostics);}

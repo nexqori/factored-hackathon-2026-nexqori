@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "provenance": "Personas y registros ficticios para UX. Familias inspiradas en el EDA y contratos Nexqori; no son clientes ni conversaciones extraídas del dataset.",
+  "cases": [
+    {
+      "id": "cargo", "name": "Camila Torres", "intent": "unrecognized-charge", "title": "Cargo no reconocido",
+      "merchant": "Empresa Telefónica", "amountMinor": 18500, "status": "completed", "product": "card",
+      "birthDate": "1992-04-18", "experience": "frequent", "digital": "confident",
+      "messages": {"es": "No reconozco este cobro de 185 pesos. Tengo mi tarjeta conmigo y quiero que lo revisen.", "en": "I do not recognize this 185 peso charge. I have my card with me and want it reviewed.", "pt": "Não reconheço esta cobrança de 185 pesos. Estou com meu cartão e quero que seja analisada."},
+      "expected": "Confirmar o cambiar el movimiento, revisar resumen y registrar reclamo. Proteger la tarjeta requiere una acción explícita independiente."
+    },
+    {
+      "id": "importe", "name": "Diego Medina", "intent": "incorrect-charge", "title": "Importe incorrecto",
+      "merchant": "Internet Plus", "amountMinor": 45900, "status": "completed", "product": "card",
+      "birthDate": "1964-07-11", "experience": "occasional", "digital": "learning",
+      "messages": {"es": "Me cobraron 459 pesos por internet y esperaba pagar 299 pesos. Quiero revisar la diferencia.", "en": "I was charged 459 pesos for internet but expected to pay 299 pesos. Please review the difference.", "pt": "Cobraram 459 pesos pela internet e eu esperava pagar 299 pesos. Quero analisar a diferença."},
+      "expected": "Combinar importe bancario y declaración del importe esperado; registrar para revisión. Ninguna devolución se aprueba automáticamente."
+    },
+    {
+      "id": "pendiente", "name": "Valeria Rojas", "intent": "payment-status", "title": "Teléfono pendiente",
+      "merchant": "Empresa Telefónica", "amountMinor": 29900, "status": "pending", "product": "account",
+      "birthDate": "1987-10-21", "experience": "frequent", "digital": "confident",
+      "messages": {"es": "Pagué 299 pesos de teléfono. El dinero se descontó, pero el pago sigue pendiente. ¿Puedes revisar qué pasó?", "en": "I paid 299 pesos for my phone. The money was debited but the payment is still pending. Can you check what happened?", "pt": "Paguei 299 pesos de telefone. O dinheiro foi debitado, mas o pagamento continua pendente. Pode verificar o que aconteceu?"},
+      "expected": "Consultar el débito y comprobante pendientes; no pagar otra vez el mismo importe ni afirmar liquidación. Puede solicitar revisión."
+    },
+    {
+      "id": "aplicacion", "name": "Lucas Costa", "intent": "app-support", "title": "Problema con la aplicación",
+      "merchant": "Empresa Telefónica", "amountMinor": 29900, "status": "declined", "product": "account",
+      "birthDate": "2001-03-09", "experience": "new", "digital": "learning",
+      "messages": {"es": "La app se cierra cuando intento pagar el teléfono. Ya reinicié la app y el teléfono y vuelve a pasar.", "en": "The app closes when I try to pay my phone bill. I restarted the app and the phone and it happens again.", "pt": "O aplicativo fecha quando tento pagar o telefone. Reiniciei o aplicativo e o telefone, mas acontece novamente."},
+      "expected": "Reunir síntoma e intentos, consultar sólo registros propios si se eligen y pedir evidencia adicional o atención. El movimiento rechazado no prueba la causa de una caída de la app."
+    },
+    {
+      "id": "documentos", "name": "Sofía Vega", "intent": "account-activity", "title": "Consulta de movimientos y PDF",
+      "merchant": "Servicios Públicos", "amountMinor": 19900, "status": "completed", "product": "account",
+      "birthDate": "1972-12-04", "experience": "occasional", "digital": "confident",
+      "messages": {"es": "Quiero consultar los movimientos del mes pasado y obtener un estado de cuenta en PDF.", "en": "I want to check last month's transactions and get a PDF account statement.", "pt": "Quero consultar as movimentações do mês passado e obter um extrato em PDF."},
+      "expected": "Consulta y documento informativo del periodo elegido. El PDF queda en el historial y Mis documentos; Mis solicitudes conserva acceso por compatibilidad. No crea un reclamo ni modifica el saldo."
+    }
+  ]
+}

@@ -181,6 +181,9 @@ try {
     for (const [docIndex, kind] of ['statement', 'products_summary', 'requests_summary'].entries()) {
       await page.getByRole('button', { name: copy['documents.prepare'], exact: true }).click();
       const dialog = page.locator('dialog');
+      await expect(dialog.getByRole('combobox', { name: copy['documents.type'], exact: true })).toBeEnabled();
+      await expect(dialog.getByRole('combobox', { name: copy['documents.type'], exact: true })).toHaveValue('');
+      await expect(dialog.getByRole('button', { name: copy['documents.generate'], exact: true })).toBeDisabled();
       await dialog.getByRole('combobox', { name: copy['documents.type'], exact: true }).selectOption(kind);
       if (kind === 'statement') {
         await dialog.getByLabel(copy['documents.from'], { exact: true }).fill('2024-01-01');
@@ -210,7 +213,7 @@ try {
       await expect(dialog).toHaveCount(0);
       const card = page.locator('.assistant-panel .chat-document').last(); await card.waitFor();
       const docId = await card.getAttribute('data-document-id');
-      await expect(page).toHaveURL(origin + '/requests?document=' + docId);
+      await expect(page).toHaveURL(origin + '/documents?document=' + docId);
       const documentRequest = page.locator('[data-document-request-id="' + docId + '"]');
       await expect(documentRequest).toBeVisible();
       await documentRequest.getByRole('button', { name: copy['documents.viewDetails'], exact: true }).click();

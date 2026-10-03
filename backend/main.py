@@ -90,7 +90,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     async def lifespan(_):
         yield
         if owned_engine: engine.dispose()
-    app=FastAPI(title="Nexqori API",version="0.1.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
+    app=FastAPI(title="Nexqori API",version="0.2.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
     app.state.sessions=make_sessions(engine)
     limiter=LoginLimiter(login_limit)
     card_limiter=LoginLimiter(5)

@@ -62,7 +62,7 @@ def test_chat_asks_then_continues_same_contract_registers_trace_without_financia
     registered=client.post('/api/conversations/'+cid+'/claim',json=claim)
     assert registered.status_code==200,registered.text
     rid=registered.json()['id']
-    assert client.post('/api/conversations/'+cid+'/claim',json=claim).json()=={'id':rid}
+    assert client.post('/api/conversations/'+cid+'/claim',json=claim).json()==registered.json()
     trace=client.get('/api/requests/'+rid+'/trace').json()
     assert any(c['id']==cid for c in trace['conversations'])
     assert any(e['action']=='tool_transaction_evidence' for e in trace['events'])
@@ -74,7 +74,7 @@ def test_chat_asks_then_continues_same_contract_registers_trace_without_financia
     with make_sessions(engine)() as db:
         assert db.get(ConversationFlow,cid).request_id==rid
         assert db.scalar(select(func.count()).select_from(AssistantTurn))==3
-        assert db.scalar(select(func.count()).select_from(Message).where(Message.conversation_id==cid))==6
+        assert db.scalar(select(func.count()).select_from(Message).where(Message.conversation_id==cid))==7
 
 
 def test_flow_ownership_idempotency_and_provider_failure(setup,models):

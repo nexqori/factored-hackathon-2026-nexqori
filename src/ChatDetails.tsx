@@ -1,19 +1,30 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, formatDate, formatMoney } from './components';
-import { ChatFlow, type FlowResult } from './ChatFlow';
+import { ChatFlow, type ClaimRegistration, type FlowResult } from './ChatFlow';
+import { ApiError } from './api';
 import type { Conversation, Dashboard } from './types';
 import type { Locale } from './i18n';
 
-export function ChatDetails({ result, conversation, text, data, selectedTx, selectedRequest, onTx, onRequest, busy, onClose, onRegistered, initialTab }: {
-  result: FlowResult | null; conversation: Conversation | null; text: string; data: Dashboard;
-  selectedTx: string; selectedRequest: string; onTx: (id: string) => void; onRequest: (id: string) => void;
-  busy: boolean; onClose: () => void; onRegistered: (id: string) => void; initialTab: 'progress' | 'records';
+export function ChatDetails({ result, conversation, data, selectedTx, selectedRequest, onTx, onRequest, busy, onClose, onRegistered, initialTab }: {
+  result: FlowResult | null; conversation: Conversation | null; data: Dashboard;
+  selectedTx: string; selectedRequest: string; onTx: (id: string) => Promise<void>; onRequest: (id: string) => void;
+  busy: boolean; onClose: () => void; onRegistered: (claim: ClaimRegistration) => void; initialTab: 'progress' | 'records';
 }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const [tab, setTab] = useState(initialTab); const id = useId();
+  const [candidate, setCandidate] = useState(selectedTx); const [applying, setApplying] = useState(false); const [error, setError] = useState('');
+  const locked = !!result?.requestId;
+  const transaction = data.transactions.find(tx => tx.id === candidate);
+  async function apply() {
+    if (!candidate || busy || applying || locked) return;
+    setApplying(true); setError('');
+    try { await onTx(candidate); onClose(); }
+    catch(e) { setError('error.' + (e instanceof ApiError ? e.code : 'generic')); }
+    finally { setApplying(false); }
+  }
   const tabs = ['progress', 'records'] as const;
-  return <Dialog title={t('chatDetails.title')} onClose={onClose} className="chat-details-dialog">
+  return <Dialog title={t('chatDetails.title')} onClose={onClose} busy={busy || applying} className="chat-details-dialog">
     <div className="chat-details-tabs" role="tablist" aria-label={t('chatDetails.title')}>
       {tabs.map((value, index) => <button key={value} id={id + '-' + value} role="tab" aria-selected={tab === value}
         aria-controls={id + '-panel'} tabIndex={tab === value ? 0 : -1} onClick={() => setTab(value)}
@@ -24,17 +35,23 @@ export function ChatDetails({ result, conversation, text, data, selectedTx, sele
     </div>
     <div id={id + '-panel'} role="tabpanel" aria-labelledby={id + '-' + tab} tabIndex={0} className="chat-details-content">
       {tab === 'records' && <div className="form-stack">
-        <p className="muted">{t('chatFlow.referenceHint')}</p>
-        <label>{t('chooseTransaction')}<select disabled={busy || !!conversation?.transactionId} value={selectedTx} onChange={event => onTx(event.target.value)}>
+        <p className="muted">{t(locked ? 'chatMovement.locked' : 'chatMovement.hint')}</p>
+        <label><span id={id + '-movement-label'}>{t('chooseTransaction')}</span><select aria-labelledby={id + '-movement-label'} disabled={busy || applying || locked} value={candidate} onChange={event => { setCandidate(event.target.value); setError(''); }}>
           <option value="">{t('noTransaction')}</option>{data.transactions.map(tx => <option key={tx.id} value={tx.id}>{tx.merchant} · {formatMoney(tx.amountMinor,locale,tx.currency)} · {formatDate(tx.date,locale)} · {tx.id}</option>)}
         </select></label>
-        {conversation?.transactionId && <p className="muted">{t('transactionContextHint')}</p>}
+        {transaction && <dl className="detail-list chat-movement-preview" data-selected-movement={transaction.id}>
+          <div><dt>{t('chatMovement.merchant')}</dt><dd>{transaction.merchant}</dd></div>
+          <div><dt>{t('chatMovement.date')}</dt><dd>{formatDate(transaction.date,locale)}</dd></div>
+          <div><dt>{t('chatMovement.amount')}</dt><dd>{formatMoney(transaction.amountMinor,locale,transaction.currency)}</dd></div>
+          <div><dt>{t('chatMovement.reference')}</dt><dd>{transaction.id}</dd></div>
+        </dl>}
+        {error && <p className="error-text" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}
         <label>{t('chatFlow.case')}<select disabled={busy} value={selectedRequest} onChange={event => onRequest(event.target.value)}>
           <option value="">—</option>{data.requests.map(request => <option key={request.id} value={request.id}>{request.id} · {t(request.status)}</option>)}
         </select></label>
       </div>}
-      {tab === 'progress' && (result && conversation ? <ChatFlow result={result} conversationId={conversation.id} text={text} onRegistered={onRegistered}/> : <p className="empty-copy">{t('chatDetails.empty')}</p>)}
+      {tab === 'progress' && (result && conversation ? <ChatFlow result={result} conversationId={conversation.id} onRegistered={onRegistered}/> : <p className="empty-copy">{t('chatDetails.empty')}</p>)}
     </div>
-    <div className="chat-details-footer"><button className="button secondary" onClick={onClose}>{t('chatDetails.back')}</button></div>
+    <div className="chat-details-footer">{tab === 'records' && !locked && <button className="button primary" disabled={!candidate || busy || applying} onClick={() => { void apply(); }}>{t(applying ? 'loading' : conversation?.transactionId && candidate !== conversation.transactionId ? 'chatMovement.replace' : 'chatMovement.apply')}</button>}<button className="button secondary" disabled={busy || applying} onClick={onClose}>{t('chatDetails.back')}</button></div>
   </Dialog>;
 }

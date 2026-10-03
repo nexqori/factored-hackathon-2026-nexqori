@@ -14,6 +14,10 @@
 .chat-transaction-choice{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
 .chat-transaction-choice .button{flex:1;padding:10px 12px;min-height:44px;font-size:.875rem}
 .chat-bubble{overflow-wrap:anywhere;white-space:pre-wrap}
+.chat-movement-context{margin:14px 0}.chat-selected-movement{display:flex;flex-direction:column;gap:5px;padding:12px 14px;background:var(--nq-soft);border-radius:12px;font-size:.82rem;overflow-wrap:anywhere}.chat-selected-movement small{font-size:.72rem;color:var(--nq-muted)}.chat-movement-context .chat-transaction-choice{margin-bottom:0}
+.chat-movement-preview{margin:0;padding:4px 0}.chat-movement-preview dd{overflow-wrap:anywhere}.chat-claim-review{width:min(620px,calc(100% - 28px))}.chat-claim-review textarea{min-width:0;resize:vertical;line-height:1.6}.chat-claim-operation{padding:14px;background:var(--nq-soft);border-radius:12px;overflow-wrap:anywhere}.chat-claim-review .checkbox-label{align-items:flex-start;line-height:1.6}
+.chat-details-footer{gap:10px;flex-wrap:wrap}.chat-details-footer .button{min-height:44px;white-space:normal}.chat-details-dialog .dialog-inner{max-height:calc(100dvh - 32px);display:flex;flex-direction:column}.chat-details-dialog .dialog-header,.chat-details-tabs,.chat-details-footer{flex-shrink:0}.chat-details-content{min-height:0}.chat-details-footer{padding-top:16px}
+@media(max-width:600px){.chat-details-footer{flex-direction:column}.chat-details-tabs{margin:16px 0 12px}.chat-movement-preview div{padding:10px 0}.chat-details-content .form-stack{gap:14px}}
 
 .saved-references{display:flex;flex-wrap:wrap;gap:8px}.saved-references p{width:100%;margin-bottom:0}.saved-references .button{font-size:.85rem}.payment-mode{border:1px solid var(--nq-border);padding:16px;border-radius:12px;display:flex;gap:16px;flex-wrap:wrap}.payment-mode label{display:flex;align-items:center;gap:8px}.payment-mode input{width:auto}.recipient-card{padding:20px;background:var(--nq-soft);border-radius:14px;margin:24px 0;overflow-wrap:anywhere}.payment-receipt>.button{margin:6px 8px 6px 0}
 

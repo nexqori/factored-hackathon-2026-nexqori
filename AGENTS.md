@@ -1,5 +1,7 @@
 # Nexqori
 
+Acuerdo Git desde el 3 de octubre de 2026: desarrollar en ramas de trabajo y fusionar mediante PR. Preferir mejoras pequeñas por caso de uso, commits descriptivos y etiquetas de versión sobre entregas verificadas. No trabajar directamente en main. Al sincronizar bryan, conservar sus cambios y usar avance rápido cuando sea posible. Ver docs/trabajo-en-github.md.
+
 Antes de trabajar, lee `ESTADO.md` en la raíz principal indicada por `git worktree list --porcelain`. Mantén un único estado por proyecto; relee antes de actualizar sólo el frente trabajado, preservando los demás. Registra fecha America/Lima, tareas concretas [ ]/[x], evidencia, bloqueos y siguiente paso. Distingue implementado, desplegado y validado. Los antecedentes no son un backlog autorizado.
 
 Para diseño, idioma o navegación usa [.agents/skills/nexqori-brand/SKILL.md](.agents/skills/nexqori-brand/SKILL.md). Conserva la paleta elegida y las traducciones ES/EN/PT con igual cobertura.

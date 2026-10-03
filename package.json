@@ -1,6 +1,6 @@
 {
   "name": "nexqori",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Nexqori â€” una forma mÃ¡s cercana de vivir tu banca",
@@ -31,6 +31,8 @@
     "test:chat:flow": "npm run build && node scripts/nexqori-chat-flow.mjs",
     "test:chat:live": "node scripts/nexqori-chat-live.mjs --live",
     "test:banking": "node scripts/nexqori-banking-integrated.mjs",
+    "test:documents:context": "npm run build && node scripts/nexqori-document-context.mjs",
+    "test:ux:prepare": "node scripts/prepare-ux-users.mjs --confirm-local --pack=equipo-ux",
     "test:pdf": "python scripts/verify-query-pdfs.py"
   },
   "engines": {

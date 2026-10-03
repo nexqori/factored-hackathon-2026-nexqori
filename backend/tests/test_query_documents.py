@@ -13,7 +13,8 @@ from backend.models import ChatDocument, AuditEvent, Transaction, Product
 
 def query(client, control, locale='es', intent='documents'):
     control.update(family='query',intent=intent)
-    r=client.post('/api/assistant/flow',json=message(message='Quiero un PDF de mi cuenta',locale=locale))
+    text='Muéstrame los movimientos de todas mis cuentas' if intent=='account-activity' else 'Quiero un PDF de mi cuenta'
+    r=client.post('/api/assistant/flow',json=message(message=text,locale=locale))
     assert r.status_code==200,r.text
     assert r.json()['flow']['canDocument']
     return r.json()['conversation']['id']

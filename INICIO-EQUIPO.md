@@ -2,7 +2,7 @@
 
 Motor compartido: [LangGraph, actualización y tres recorridos para probar](docs/langgraph-atencion.md). El chat bancario y el editor conservan sus conversaciones, contratos y ejecución por pasos.
 
-Integración del 2 de octubre: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos y trámites, en Mis solicitudes; problemas, en Mis reclamos.
+Integración vigente: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; PDF, en Mis documentos; trámites, en Mis solicitudes; problemas, en Mis reclamos. Mis solicitudes conserva también acceso a los documentos por compatibilidad.
 
 Administración: [panel de reclamos por usuario](docs/panel-reclamos.md). Desde Usuarios → Ver reclamos puedes revisar contexto, conversaciones, lecturas y decisiones con sus referencias. El cliente ve el detalle propio en Mis reclamos. `npm run test:claims` deja tres casos persistentes y accesos privados para revisarlos.
 
@@ -51,7 +51,7 @@ Las direcciones y documentos identifican cuentas locales; no verifican buzones n
 3. Indica el número de teléfono o código y consulta el recibo. Elige cuenta y pago total o parcial cuando esté permitido, revisa y confirma. Abre **Movimientos** para ver el pago y su comprobante. Puedes volver a consultar otro número o servicio. [Referencias locales y transferencias](docs/pagos-y-transferencias.md).
 4. Pide al asistente **quiero pagar celular**. Abre el mismo formulario. **Nueva** inicia una conversación vacía; **Conversaciones** recupera una anterior.
 5. Cambia entre Español, English y Português. En **Configuración**, prueba letra pequeña, mediana y grande. El perfil conserva esas preferencias.
-6. Pide al asistente un PDF. Elige el alcance y período; al generarlo se abre **Mis solicitudes → Documentos solicitados**. Allí puedes descargarlo y ver un resumen. Para un problema usa **Mis reclamos**; Nora puede revisar el caso desde administración. Mateo no ve documentos ni datos de Andrea.
+6. Consulta al asistente tus movimientos del mes pasado y pide un PDF. Revisa el alcance y período que se recuperan de la conversación; completa sólo los datos que falten. Al generarlo se abre **Mis documentos**, con descarga y resumen. Para un problema usa **Mis reclamos**; Nora puede revisar el caso desde administración. Mateo no ve documentos ni datos de Andrea.
 
 ## Dónde comenzar a desarrollar
 
@@ -88,6 +88,7 @@ npm run test:ui
 npm run test:experience
 npm run test:services
 npm run test:banking
+npm run test:documents:context
 ```
 
 Las pruebas de navegador usan Microsoft Edge instalado. Para Chromium de Playwright, instala su navegador con `npx playwright install chromium` y define `PLAYWRIGHT_CHANNEL=chromium` en tu terminal. Los recorridos integrales crean solicitudes identificadas como verificación y guardan capturas locales en `.local/verification/`. CI ejecuta pruebas de frontend, compilación y pruebas API; los recorridos Docker/navegador se ejecutan localmente.
@@ -109,6 +110,8 @@ Las devoluciones aprobadas por un administrador abonan el saldo local. Las trans
 Lecturas: [arquitectura y API](docs/arquitectura.md), [catálogo y evidencia](docs/catalogo-servicios.md), [acceso y conversaciones](docs/acceso-y-conversaciones.md), [contrato del agente](docs/agente.md), [README](README.md). OpenAPI: [contrato local](http://localhost:5180/api/openapi.json).
 
 ## Pruebas de la versión integrada
+
+Para pruebas manuales de UX hay [cinco perfiles con cuentas, movimientos y recibos](docs/usuarios-prueba-ux.md). Ejecuta `npm run test:ux:prepare` después de actualizar Docker y abre `.local/ux-users/equipo-ux/INICIAR.private.md` para los accesos. Repetir el comando conserva su actividad. Los casos cubren cargo no reconocido, importe incorrecto, pago pendiente, problema de la app y consulta con PDF; no alteran Andrea.
 
 `git switch main` y `docker compose up --build -d` aplican también la migración de metadatos de tarjetas sin reemplazar registros. Abre [Tarjetas](http://localhost:5180/cards). La consulta completa pide la contraseña y se oculta automáticamente. Ejecuta `npm run test:cards`; las pruebas de navegador deben correr en serie porque comparten perfiles locales.
 
