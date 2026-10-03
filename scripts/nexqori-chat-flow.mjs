@@ -23,6 +23,7 @@ try{
   const login=await context.request.post(origin+'/api/auth/login',{headers:{Origin:origin},data:{identifier:person.email,password:person.password}});assert.equal(login.status(),200);
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+person.locale+'"]').click();
   const panel=page.locator('.assistant-panel');
+  await expect(panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true})).toHaveCount(0);
   if(person.locale==='pt' && person.intent==='unrecognized-charge'){
    const pasted='Relato colado para verificar a recuperação do texto.\n'.repeat(5);
    await panel.locator('.paste-composer textarea').fill('Meu relato');
@@ -42,7 +43,8 @@ try{
   await expect(panel.getByRole('button',{name:copy['chatDetails.open'],exact:true})).toBeFocused();
   if(person.intent!=='unrecognized-charge'){
    const counts=await(await context.request.get(origin+'/api/verification/summary')).json();
-   await panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true}).click();
+   await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
+   await details.getByRole('tab',{name:copy['chatDetails.records'],exact:true}).click();
    await details.getByLabel(copy.chooseTransaction,{exact:true}).selectOption(person.transactionId);
    await expect(details.locator('[data-selected-movement]')).toContainText(person.transactionId);
    await details.getByRole('button',{name:copy['chatMovement.apply'],exact:true}).click();

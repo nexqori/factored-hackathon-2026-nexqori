@@ -119,7 +119,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
       {messages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}{message.document&&<DocumentDownload document={message.document}/>}</div>)}
       {pending && <div className="chat-bubble user chat-pending" lang={pending.locale}>{pending.text}</div>}
       {busy && <div className="chat-thinking" role="status"><span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span>{t(pending ? 'chatSending.thinking' : 'loading')}</div>}
-      {!busy && connected && !flow?.requestId && <div className="chat-movement-context">
+      {!busy && connected && !flow?.requestId && (messages.length > 0 || !!selectedTx) && <div className="chat-movement-context">
         {selectedTransaction && <div className="chat-selected-movement" data-chat-movement={selectedTx}><strong>{selectedTransaction.merchant}</strong><span>{formatMoney(selectedTransaction.amountMinor,locale,selectedTransaction.currency)} · {formatDate(selectedTransaction.date,locale)}</span><small>{t('chatMovement.reference')}: {selectedTx}</small></div>}
         <div className="chat-transaction-choice" aria-label={t('chatSending.suggestion')}>
           {flow?.suggestedTransaction && !selectedTx && <button className="button primary" onClick={() => { void send(t('chatSending.confirmMessage'),undefined,'',flow.suggestedTransaction!.id).catch(fail); }}>{t('chatSending.confirm')}</button>}
