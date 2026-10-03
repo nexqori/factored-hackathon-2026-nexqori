@@ -30,6 +30,8 @@ def test_registered_catalog_service_routes_are_permitted(service):
     reply('products', '//untrusted.invalid/products'), reply('products', '/products/../admin'),
     reply('products', '/products?redirect=https://untrusted.invalid'),
     reply('products', '/requests'), reply('services', '/services/catalog/unknown'),
+    reply('documents', '/admin'), reply('documents', 'https://untrusted.invalid/documents'),
+    reply('documents', '/documents?redirect=https://untrusted.invalid'),
     {'destination': 'products', 'navigation': {'tool': 'transfer_money', 'destination': 'products', 'route': '/products'}},
     {'destination': 'products', 'navigation': {'tool': 'navigate_in_app', 'destination': 'cards', 'route': '/products?kind=cards'}},
     {'destination': 'services', 'navigation': {'tool': 'navigate_in_app', 'destination': 'services', 'route': '/services/catalog/unknown', 'serviceId': 'unknown'}},

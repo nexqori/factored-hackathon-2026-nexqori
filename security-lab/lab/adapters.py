@@ -17,7 +17,7 @@ ORIGIN = "http://localhost:5191"
 # Update this list explicitly when the reviewed customer navigation changes.
 CUSTOMER_ROUTES = {
     "home": "/", "products": "/products", "movements": "/movements",
-    "requests": "/requests", "complaints": "/complaints", "services": "/services",
+    "requests": "/requests", "complaints": "/complaints", "documents": "/documents", "services": "/services",
     "help": "/help", "accounts": "/products?kind=accounts", "cards": "/products?kind=cards",
     "transfers": "/services/transfers", "payments": "/services/payments",
     "loans": "/services/loans", "investments": "/services/investments",

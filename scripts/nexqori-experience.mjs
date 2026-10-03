@@ -1,10 +1,10 @@
 // Browser contracts for conversations, settings in the banking workspace.
 import { chromium } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { parseEnv } from 'node:util';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
-const credentials = parseEnv(readFileSync('.env', 'utf8'));
+import { verificationUser } from './verification-user.mjs';
+const testUser = verificationUser();
 const origin = process.env.NEXQORI_URL || 'http://localhost:5180';
 const output = '.local/verification'; mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', headless: true });
@@ -24,8 +24,8 @@ try {
   await page.waitForFunction(() => document.documentElement.lang === 'en');
   await choose('es');
   await page.getByRole('radio', { name: 'Documento', exact: true }).check();
-  await page.getByLabel('Número de identidad').fill('00000001');
-  await page.getByLabel('Contraseña', { exact: true }).fill(credentials.CUSTOMER_PASSWORD);
+  await page.getByLabel('Número de identidad').fill(testUser.identityNumber);
+  await page.getByLabel('Contraseña', { exact: true }).fill(testUser.password);
   await page.getByRole('button', { name: 'Mostrar contraseña' }).click();
   assert.equal(await page.getByLabel('Contraseña', { exact: true }).getAttribute('type'), 'text');
   await page.getByRole('button', { name: 'Ocultar contraseña' }).click();

@@ -24,6 +24,7 @@ jobs:
           cache-dependency-path: backend/requirements.lock
       - run: npm ci
       - run: npm test
+      - run: node --test scripts/verification-user.test.mjs
       - run: npm run build
       - run: python -m pip install -r backend/requirements.lock
       - run: python -m pytest backend/tests -q

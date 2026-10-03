@@ -4,8 +4,10 @@ import AxeBuilder from '@axe-core/playwright';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import { strict as assert } from 'node:assert';
+import { verificationUser } from './verification-user.mjs';
 
 const credentials = parseEnv(readFileSync('.env', 'utf8'));
+const testUser = verificationUser();
 const origin = process.env.NEXQORI_URL || 'http://localhost:5180';
 const output = '.local/verification'; mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', headless: true });
@@ -27,7 +29,7 @@ async function login(email, password) {
   await page.locator('.sidebar').waitFor();
 }
 try {
-  await login('andrea@nexqori.com', credentials.CUSTOMER_PASSWORD);
+  await login(testUser.email, testUser.password);
   const before = (await (await page.request.get(origin + '/api/bootstrap')).json()).products;
   await page.goto(origin + '/services'); await ready();
   await expect(page.locator('.catalog-card')).toHaveCount(20);

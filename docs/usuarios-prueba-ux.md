@@ -49,3 +49,15 @@ node --check scripts/prepare-ux-users.mjs
 ```
 
 Estas pruebas usan SQLite aislado. Comprueban los cinco perfiles, la coherencia del pendiente, los meses, las traducciones, el rechazo de manifiestos alterados, el rollback y la repetición sin restablecer actividad posterior. La creación manual del paquete se hace contra PostgreSQL local con el comando de preparación anterior.
+
+## Usuarios de la regresión automática
+
+`npm run test:ui`, `npm run test:experience` y `npm run test:services` crean por defecto un paquete aparte llamado `verificacion-ui-<identificador>`. Usan a Camila de ese paquete para crear conversaciones, cambiar preferencias y registrar los casos de comprobación. No usan Andrea ni los cinco clientes de `equipo-ux`. Las lecturas administrativas conservan la cuenta configurada en `.env`.
+
+Al comenzar, cada comando muestra la ruta privada `verificationUserFile`. Para ejecutar varias pruebas sobre el mismo grupo, asigna esa ruta a `NEXQORI_TEST_USER_FILE` antes del siguiente comando y retira la variable al terminar. El archivo debe ser `records.private.json` de un paquete `verificacion-ui`; el helper rechaza `equipo-ux` y otros titulares. No publiques el manifiesto ni las contraseñas.
+
+La validación del helper se puede ejecutar sin Docker ni proveedores:
+
+```powershell
+node --test scripts/verification-user.test.mjs
+```
