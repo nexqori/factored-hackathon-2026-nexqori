@@ -36,7 +36,7 @@ try {
     await page.setViewportSize({width:i===2?390:1440,height:1100});
     await page.goto(base+'/?view=flows&mode=inspector');
     await page.locator('#flow-case').waitFor();
-    assert.equal(await page.locator('#flow-intent option').count(),24);
+    assert.equal(await page.locator('#flow-intent option').count(),25);
     assert.equal(await page.locator('[data-flow-node]').count(),12);
     assert.equal(calls,i*5,'Loading does not call providers');
     await page.locator('#flow-case').selectOption('custom');

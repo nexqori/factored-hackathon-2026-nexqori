@@ -1,5 +1,7 @@
 # Agente de navegación
 
+El chat y el editor usan [LangGraph para planificar el flujo](langgraph-atencion.md). Cada bloque es un nodo; preguntas, continuidad y herramientas conservan los contratos y checkpoints existentes. El framework no autoriza operaciones financieras.
+
 Integración del 2 de octubre: [pagos y transferencias](pagos-y-transferencias.md), [consultas y PDF](consultas-y-documentos.md) y [continuidad de conversación](contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos y trámites, en Mis solicitudes; problemas, en Mis reclamos.
 
 El chat interpreta consultas, problemas y servicios en español, inglés y portugués. Usa Jev y Luna con configuración privada del servidor, además del recorrido guiado disponible sin proveedores. Los mensajes y el idioma se guardan por conversación y titular. El frontend envía la pantalla permitida y, al elegir Preguntar por este movimiento, su ID; el servidor valida titularidad y conserva el movimiento en esa conversación. El historial seguro conserva el tema y las aclaraciones. Las respuestas visibles con saldos o transacciones no se copian al contexto del modelo.

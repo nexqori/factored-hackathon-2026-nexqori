@@ -13,6 +13,23 @@ La integración adapta capacidades de las ramas, no sustituye el banco por sus p
 
 `araceli` partía de la base inicial y llevaba los reclamos a Mis solicitudes. Aquí se conserva la separación actual: el flujo conectado continúa en el chat y un reclamo confirmado va a Mis reclamos. Las rutas proceden del comando validado, no de un segundo mapeo de intención que lo sustituya. Se conserva el HTML de EDA vigente; la regeneración incluida en esa rama no cambia estos recorridos.
 
+## Revisión funcional de ramas — 3 de octubre de 2026
+
+Se compararon los commits de la tabla con el código integrado, además de verificar su ascendencia. Catálogo (`30df4b4`), laboratorio (`dd053f1`) y Araceli (`6c6766e`) están incorporados al historial. Las capacidades de Santiago y Security Lab se adaptaron; sus puntas originales no son antecesores del banco. No se encontró una omisión que impida las pruebas acordadas, pero **no hay paridad completa con el prototipo de chat humano**.
+
+| Capacidad de las ramas | Resultado y evidencia |
+| --- | --- |
+| Consulta/problema, aclaraciones y memoria | Adaptadas al flujo compartido, [contexto seguro](contexto-conversacion.md) y PostgreSQL. [LangGraph](langgraph-atencion.md) planifica los bloques. |
+| Saldos, movimientos, tarjetas y seguimiento | Lecturas propias en [herramientas](../backend/agent_tools.py) y [respuestas](../backend/query_answers.py). No se importó el RAG que enviaba registros bancarios al modelo. |
+| Tres PDF, plantillas ES/EN/PT y descarga | Incorporados con [procedencia](../backend/document_templates/provenance.json). El [formulario de parámetros](consultas-y-documentos.md) sustituye la extracción automática desde lenguaje natural. Documentos persistentes del titular sustituyen el almacenamiento temporal de 15 minutos del prototipo. |
+| Derivación, trazabilidad y revisión administrativa | Disponibles en [reclamos](panel-reclamos.md), con confirmación y auditoría. |
+| Chat bidireccional cliente–operador | **No incorporado:** tampoco asignación automática ni consulta periódica de mensajes del operador. El prototipo usaba `chat_actions.py` y rutas `chat-handoffs` con almacén en memoria. La derivación actual no conecta con un operador ni equivale a ese chat. Implementarlo requeriría un flujo persistente propio. |
+| Security Lab | Catálogo, ejecuciones, revisión, hallazgos, retest, exportaciones y roles incorporados en [su módulo](../security-lab/README.md). No se eliminaron archivos del módulo original; puertos, sondas y aislamiento se adaptaron al banco. Las pruebas bloqueadas siguen identificadas como bloqueadas. |
+| Navegación y Cerrar sesión de Araceli | Incorporados y probados; comando validado y logout visible. Se omitieron el segundo mapa de rutas obsoleto y el EDA regenerado, conforme al alcance indicado. |
+| Voz | Aplazada. La rama original tampoco contiene un motor de llamada/transcripción que pueda activarse mediante este merge. |
+
+Esta revisión documenta diferencias; no convierte las capacidades omitidas en un nuevo backlog. La propuesta de especialista del editor continúa mostrando qué se activaría.
+
 ## Qué probar
 
 1. Actualiza `main`, instala dependencias y reconstruye Docker como indica [INICIO-EQUIPO](../INICIO-EQUIPO.md). Las migraciones conservan registros; no borres el volumen.

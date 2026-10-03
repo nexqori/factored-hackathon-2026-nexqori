@@ -13,6 +13,7 @@ from .decision import INSTRUCTIONS
 from .providers import save_run
 from .workflow_previews import activation_plan, QUERY_REPLY
 from .workflow_routing import clarification_reply
+from . import langgraph_runtime
 
 BOOT_ID = str(uuid.uuid4())
 MAX_REPLIES = 10
@@ -87,6 +88,7 @@ def view(state):
             'messages': state['messages'],
             'replayable_nodes': list(state.get('node_inputs', {})),
             'replayed_from': state.get('replayed_from'),
+            'runtime': state.get('runtime', {'name': 'legacy', 'checkpoint_schema': 1}),
             'execution': {key: state[key] for key in ('id', 'phase', 'version', 'next_node_id', 'awaiting_node_id', 'last_edge_id', 'turn')}})
 
 
@@ -144,6 +146,8 @@ def replay(state, version, node_id):
 
 
 def advance(state, mode='step', reply=None, on_event=None, bank_reader=None, bank_selection=None, *, persist=None, record_run=True):
+    if mode not in ('step', 'full'): raise ValueError('invalid_mode')
+    if state['phase'] not in ('paused', 'waiting_reply'): raise RuntimeError('execution_not_paused')
     checkpoint = persist or write
     def emit(event):
         if on_event: on_event(event)
@@ -166,12 +170,7 @@ def advance(state, mode='step', reply=None, on_event=None, bank_reader=None, ban
     state.update(phase='running', worker=BOOT_ID)
     checkpoint(state)  # Hosts choose file checkpoints or an atomic database turn.
     try:
-        for _ in range(1 if mode == 'step' else 40):
-            _one(state, emit,bank_reader,checkpoint)
-            state['version'] += 1
-            checkpoint(state)
-            if state['phase'] in ('completed', 'waiting_reply'): break
-        if state['phase'] == 'running': state['phase'] = 'paused'
+        langgraph_runtime.run(state, mode, _one, checkpoint, emit, bank_reader)
         checkpoint(state)
         result = view(state)
         if record_run and state['phase'] in ('completed', 'waiting_reply'):

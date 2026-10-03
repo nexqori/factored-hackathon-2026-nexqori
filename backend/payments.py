@@ -26,6 +26,8 @@ class BillLookup(BaseModel):
 
 class ServicePayment(PayBill):
     mode: Literal['total','partial'] = 'total'
+    # This selects a supported local processing path, never an arbitrary status.
+    processingMode: Literal['immediate','pending'] = 'immediate'
     amountMinor: int | None = Field(default=None, strict=True, gt=0, le=100_000_000)
     expectedOutstandingMinor: int = Field(strict=True, gt=0)
 
@@ -37,17 +39,28 @@ class ServicePayment(PayBill):
 
 
 def fingerprint(body):
-    return hashlib.sha256(json.dumps(body.model_dump(exclude={'requestKey'}), sort_keys=True).encode()).hexdigest()
+    values = body.model_dump(exclude={'requestKey'})
+    # Immediate is the historical behavior. Preserve fingerprints of receipts
+    # created before this optional field existed, including lost-response retries.
+    if values.get('processingMode') == 'immediate':
+        values.pop('processingMode')
+    return hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
 
 
 def bill_view(db, bill):
     rows = db.scalars(select(BillPayment).where(BillPayment.bill_id == bill.id, BillPayment.user_id == bill.user_id).order_by(BillPayment.created_at, BillPayment.id)).all()
-    paid = sum(p.receipt['amountMinor'] for p in rows)
+    pending_rows = [p for p in rows if p.receipt.get('status') == 'pending']
+    paid = sum(p.receipt['amountMinor'] for p in rows if p.receipt.get('status', 'completed') == 'completed')
+    pending = sum(p.receipt['amountMinor'] for p in pending_rows)
+    outstanding = max(0, bill.amount_minor-paid-pending)
+    status = 'pending' if pending else 'completed' if outstanding == 0 else 'partial' if paid else 'unpaid'
     return {'id': bill.id, 'serviceId': bill.service_id, 'reference': bill.reference,
             'provider': SERVICES[bill.service_id]['provider'], 'period': bill.period, 'dueDate': bill.due_date,
-            'amountMinor': bill.amount_minor, 'paidMinor': paid, 'outstandingMinor': max(0, bill.amount_minor-paid),
+            'amountMinor': bill.amount_minor, 'paidMinor': paid, 'pendingMinor': pending, 'outstandingMinor': outstanding,
+            'paymentStatus': status, 'pendingPaymentId': pending_rows[-1].id if pending_rows else None,
+            'processingOptions': ['immediate', 'pending'] if bill.service_id == 'phone-bill' else ['immediate'],
             'allowPartial': bill.allow_partial, 'currency': bill.currency,
-            'paymentId': rows[-1].id if rows and paid >= bill.amount_minor else None}
+            'paymentId': rows[-1].id if rows and outstanding == 0 else None}
 
 
 def pay_bill(db, user, bill_id, body, *, legacy=False):
@@ -61,12 +74,16 @@ def pay_bill(db, user, bill_id, body, *, legacy=False):
         if previous.bill_id != bill_id or previous.account_id != body.accountId or (previous.fingerprint and previous.fingerprint != digest):
             raise HTTPException(409, 'conflict')
         return previous.receipt
+    pending = not legacy and body.processingMode == 'pending'
+    # All receipts here belong to the local fixture ledger, without a collector.
+    # Only the telephone path offers this explicit test scenario.
+    if pending and bill.service_id != 'phone-bill': raise HTTPException(422, 'processing_not_available')
     view = bill_view(db, bill)
     if view['outstandingMinor'] == 0:
         if legacy:
             previous = db.get(BillPayment, view['paymentId'])
             if previous.account_id == body.accountId: return previous.receipt
-        raise HTTPException(409, 'bill_already_paid')
+        raise HTTPException(409, 'bill_in_processing' if view['pendingMinor'] else 'bill_already_paid')
     if not legacy and body.expectedOutstandingMinor != view['outstandingMinor']: raise HTTPException(409, 'bill_changed')
     partial = not legacy and body.mode == 'partial'
     if partial and not bill.allow_partial: raise HTTPException(422, 'partial_not_allowed')
@@ -76,19 +93,20 @@ def pay_bill(db, user, bill_id, body, *, legacy=False):
                                               Product.type.in_(('account','savings')), Product.currency == bill.currency).with_for_update())
     if not account: raise HTTPException(404, 'not_found')
     if account.balance_minor is None or account.balance_minor < amount: raise HTTPException(409, 'insufficient_funds')
+    status = 'pending' if pending else 'completed'
     at = now(); payment_id = 'PAY-' + uuid4().hex[:16].upper(); transaction_id = 'TX-' + uuid4().hex[:16].upper()
     receipt = {'id': payment_id, 'billId': bill.id, 'transactionId': transaction_id,
                'serviceId': bill.service_id, 'provider': view['provider'], 'reference': bill.reference, 'period': bill.period,
                'amountMinor': amount, 'billAmountMinor': bill.amount_minor, 'remainingMinor': view['outstandingMinor']-amount,
-               'currency': bill.currency, 'accountLast4': account.last4, 'date': at.isoformat(), 'status': 'completed'}
+               'currency': bill.currency, 'accountLast4': account.last4, 'date': at.isoformat(), 'status': status}
     account.balance_minor -= amount
     db.add(Transaction(id=transaction_id, user_id=user.id, product_id=account.id, merchant=view['provider'],
-                       category='utilities', amount_minor=-amount, currency=bill.currency, occurred_at=at, status='completed'))
+                       category='utilities', amount_minor=-amount, currency=bill.currency, occurred_at=at, status=status))
     db.flush()
     db.add(BillPayment(id=payment_id, user_id=user.id, bill_id=bill.id, account_id=account.id, transaction_id=transaction_id,
                        request_key=body.requestKey, fingerprint=digest, receipt=receipt, created_at=at))
     db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id,
-                      action='phone_bill_paid' if bill.service_id == 'phone-bill' else 'service_bill_paid',
+                      action='phone_bill_pending' if pending else 'phone_bill_paid' if bill.service_id == 'phone-bill' else 'service_bill_paid',
                       transaction_id=transaction_id, product_id=account.id, created_at=at))
     db.commit()
     return receipt

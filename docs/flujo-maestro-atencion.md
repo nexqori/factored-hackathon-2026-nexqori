@@ -1,5 +1,7 @@
 # Flujo maestro de atención de Nexqori
 
+El planificador actual es [LangGraph](langgraph-atencion.md). El grafo editable, las reglas siguientes y los checkpoints existentes conservan su contrato; cada bloque se compila como un nodo del runtime.
+
 El [chat del banco](chat-bancario-y-pagos.md) reutiliza este motor desde el 2 de octubre. El editor conserva sólo propuestas; la app añade confirmación explícita para registrar el reclamo y un pago local separado del flujo.
 
 Referencia acordada con Bryan el 1 de octubre de 2026 (America/Lima): diagrama compartido en esta conversación y sus correcciones posteriores. Este documento conserva el recorrido funcional; es la referencia para las siguientes ediciones del editor.
@@ -43,7 +45,7 @@ flowchart LR
 - **Un solo flujo para todos los casos**. Elegir un caso cambia conversación y parámetros, no sustituye el diagrama ni crea un flujo por categoría. El bloque Contrato carga la configuración correspondiente a la clasificación real.
 - **Flujo completo** guarda, valida y ejecuta desde el punto pendiente; **Paso a paso** usa ese mismo estado. Los errores de conexión se muestran explícitamente.
 - Seleccionar un bloque muestra su último resultado, sin recalcular ni perder el avance. Mover, renombrar, guardar el diseño o inspeccionar otra rama tampoco ejecuta pasos. Sólo **▶** recalcula el bloque solicitado con sus entradas guardadas; conserva los resultados previos y continúa desde su nueva derivación. La ejecución anterior permanece consultable.
-- Los 24 casos se muestran subdivididos dentro de la clasificación: seis problemas, ocho consultas, siete servicios y tres aclaraciones. Ver o buscar una categoría no cambia el caso en ejecución. La selección inicial de consulta/problema y los alcances de cada clasificador permanecen separados.
+- Los 25 casos se muestran subdivididos dentro de la clasificación: seis problemas, nueve consultas, siete servicios y tres aclaraciones. Ver o buscar una categoría no cambia el caso en ejecución. La selección inicial de consulta/problema y los alcances de cada clasificador permanecen separados.
 - Clasificar **consulta o problema antes de identificar el problema concreto**. Sólo la rama de problema carga el procedimiento de problemas. Las solicitudes de servicios conservan sus herramientas propias dentro de consultas/gestiones.
 - Recibir el mensaje y su conversación previa antes de clasificar. El caso de ejemplo elegido no impone la respuesta de Jev.
 - En **Preguntar lo que falta**, detener la ejecución para recibir un mensaje real o seleccionar la referencia bancaria pendiente. Actualizar el contexto y volver a comprobar lo que falta; nunca avanzar por un bucle automático sin respuesta ni repetir Jev por cada dato.

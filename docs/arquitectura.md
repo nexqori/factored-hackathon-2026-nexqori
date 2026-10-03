@@ -4,6 +4,8 @@ Integración del 2 de octubre: [pagos y transferencias](pagos-y-transferencias.m
 
 Stack elegido por Bryan: **React + FastAPI + PostgreSQL**. TypeScript, Vite y react-i18next en interfaz; SQLAlchemy y Alembic en API. Las versiones efectivas están fijadas en `package-lock.json` y `backend/requirements.lock`.
 
+El flujo de atención usa [LangGraph](langgraph-atencion.md) como planificador de los bloques compartidos por el chat y el editor. React Flow conserva la edición visual. Los checkpoints siguen en PostgreSQL/JSON del anfitrión para conservar la atomicidad del turno bancario.
+
 ```mermaid
 flowchart LR
   C[Cliente: ES / EN / PT] --> W[Nginx + React :5180]
