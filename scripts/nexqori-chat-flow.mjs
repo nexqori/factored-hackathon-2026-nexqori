@@ -126,8 +126,10 @@ try{
   }
   if(person.intent==='incorrect-charge'){
    assert.deepEqual(result.flow.missing_fields,['difference']);
+   assert(result.text.includes('100') && result.text.includes('85.0'));
    const next=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
    await panel.locator('.paste-composer textarea').fill('100 MXN');await panel.locator('.paste-entry button').click();result=await(await next).json();assert(result.flow.canRegister);
+   assert(result.text.includes('100') && result.text.includes('85.0'));
   }
   await expect(panel.locator(':scope > .chat-flow')).toHaveCount(0);await expect(panel.locator('pre')).toHaveCount(0);
   assert(await panel.locator('.chat-messages').evaluate(el=>el.clientHeight>300));await axe(person.locale+'-'+person.intent);

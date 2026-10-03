@@ -72,6 +72,8 @@ La migración `e2715ba946c0` agrega tablas sin modificar saldos, mensajes ni cas
 
 ## Pruebas repetibles
 
+El resumen del movimiento incluye una [comparación histórica de pagos](comparacion-historica-pagos.md) cuando hay antecedentes comparables. Es una ayuda para revisar diferencias, no una confirmación automática de error.
+
 ```powershell
 npm test
 npm run build

@@ -30,6 +30,11 @@ with make_sessions(engine)() as db:
             db.add(Product(id=account,user_id=uid,type='account',last4='9001',balance_minor=150000));db.flush()
             db.add(Transaction(id=tx,user_id=uid,product_id=account,merchant='Empresa Telefónica' if intent=='unrecognized-charge' else 'Registro privado del banco',category='utilities',amount_minor=-18500,currency='MXN',occurred_at=now(),status='pending' if intent=='payment-status' else 'completed'))
             alternate='alternate-'+uid
+            if intent == 'incorrect-charge':
+                for month in range(1,4):
+                    db.add(Transaction(id=f'history-{month}-{uid}',user_id=uid,product_id=account,
+                        merchant='Registro privado del banco',category='utilities',amount_minor=-10000,
+                        currency='MXN',occurred_at=now()-timedelta(days=30*month),status='completed'))
             db.add(Transaction(id=alternate,user_id=uid,product_id=account,merchant='Comercio alternativo privado',category='shopping',amount_minor=-9900,currency='MXN',occurred_at=now()-timedelta(days=1),status='pending' if intent=='payment-status' else 'completed'))
             people.append({'email':email,'password':password,'locale':locale,'intent':intent,'transactionId':tx,'alternateTransactionId':alternate})
     db.commit()

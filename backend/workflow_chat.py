@@ -27,6 +27,7 @@ from .query_documents import can_document
 from .query_answers import query_answer
 from .query_context import apply_query_context
 from .claim_summary import claim_preview, confirmation_text, preview_token, review_message, NEXT as CLAIM_NEXT
+from .payment_history import context_comparison, comparison_text
 from .conversation_selection import replace_transaction_context
 from .conversation_context import (changes_topic, provider_history, reviewed_problem, resume_review,
                                    safe_query_reply, safe_suggestion_reply, remember_safe_reply)
@@ -253,6 +254,11 @@ def chat_router(conversation_view, message_view):
             remember_safe_reply(state, safe_query_reply(ctx['intent'], body.locale,
                 reference_needed=ctx['intent'] == 'request-status' and not any(
                     r['tool'] in ('read-request-status', 'read-transaction-evidence') for r in evidence['reads'])))
+        if not registered and ctx['state'] == 'ask_customer' and ctx['intent'] == 'incorrect-charge':
+            history = comparison_text(context_comparison(state, conv.transaction_id), body.locale)
+            if history:
+                remember_safe_reply(state, ctx['reply'])
+                ctx['reply'] = history + '\n\n' + ctx['reply']
         if not registered and ctx['state'] in ('review_in_bank', 'human_review') and ctx['intent'] in editor.PROBLEM_PORTS:
             replies = {
                 'review_in_bank': ('Ya reuní el contexto de tu caso. Revisa el relato y confirma el reclamo para darle seguimiento.',

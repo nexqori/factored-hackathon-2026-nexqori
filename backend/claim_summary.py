@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from .catalog import normalize
 from .models import Transaction
+from .payment_history import context_comparison, comparison_text
 
 
 TITLES = {
@@ -89,6 +90,8 @@ def claim_preview(db, conversation, state, locale):
                   'declined': ('rechazado', 'declined', 'recusado')}[tx.status][i]
         operation = f'{tx.merchant} · {tx.currency} {amount} · {date} · {tx.id}'
         lines.append(('Movimiento registrado: ', 'Recorded transaction: ', 'Movimentação registrada: ')[i] + operation + f' · {status}.')
+    history = comparison_text(context_comparison(state, reference), locale)
+    if history: lines.append(history)
     for field, quote in useful_observations(state).items():
         line = FIELDS[field][i] + ': ' + quote
         if len('\n\n'.join([*lines, line])) <= 1000:
@@ -118,6 +121,11 @@ def review_message(db, conversation, state, locale):
     }
     lines = [('Esto es lo que encontré:', 'Here is what I found:', 'Veja o que encontrei:')[i],
              problems[preview['intent']][i], *preview['summary'].split('\n\n')[1:]]
+    comparison = context_comparison(state, conversation.transaction_id)
+    if comparison and comparison.get('unusualIncrease'):
+        lines.append(('¿Hubo un cambio de plan o un cargo adicional que esperabas? Puedes aclararlo antes de confirmar.',
+                      'Was there a plan change or an extra charge you expected? You can clarify this before confirming.',
+                      'Houve uma mudança de plano ou uma cobrança adicional que você esperava? Você pode esclarecer antes de confirmar.')[i])
     lines.append(('¿Todo está correcto? Revisa y confirma el resumen para registrar el reclamo. Quedará pendiente de revisión por el equipo de atención y podrás seguirlo en Mis reclamos.',
                   'Is everything correct? Review and confirm the summary to register the complaint. It will await review by the support team, and you can track it in My complaints.',
                   'Está tudo correto? Revise e confirme o resumo para registrar a reclamação. Ela ficará aguardando análise da equipe de atendimento e você poderá acompanhá-la em Minhas reclamações.')[i])
