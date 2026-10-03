@@ -59,5 +59,5 @@ Al comenzar, cada comando muestra la ruta privada `verificationUserFile`. Para e
 La validación del helper se puede ejecutar sin Docker ni proveedores:
 
 ```powershell
-node --test scripts/verification-user.test.mjs
+npm test -- scripts/verification-user.test.mjs
 ```
