@@ -6,7 +6,7 @@ Esta guía corresponde a **[Recorridos anteriores](http://localhost:5190/?view=f
 
 | Etapa | Responsable | Resultado |
 | --- | --- | --- |
-| Identificar el caso | Jev | Una de las 24 categorías interactivas y su distribución de probabilidades. |
+| Identificar el caso | Jev | Una de las 25 categorías interactivas y su distribución de probabilidades. |
 | Elegir el flujo | Regla del servidor | Consulta, problema, servicio o aclaración. Sólo los seis problemas tienen contrato. |
 | Revisar el contexto | Luna high | Campos declarados con cita exacta del cliente; contexto consistente, contradictorio o que requiere atención humana. |
 | Decidir el siguiente paso | Regla del servidor | Preguntar, revisar en el banco, proponer revisión humana, detener o mostrar error de proveedor. |
@@ -31,7 +31,7 @@ Al ejecutar se envía la conversación visible a los proveedores configurados. N
 
 ## Editar, guardar y comparar
 
-En **Preguntas e instrucciones**, selecciona una de las 24 categorías y edita la redacción en el idioma activo. Las instrucciones adicionales ayudan a interpretar el contexto; los campos requeridos, destinos y permisos siguen fijados en código. Guarda antes de ejecutar para aplicar los cambios al siguiente turno.
+En **Preguntas e instrucciones**, selecciona una de las 25 categorías y edita la redacción en el idioma activo. Las instrucciones adicionales ayudan a interpretar el contexto; los campos requeridos, destinos y permisos siguen fijados en código. Guarda antes de ejecutar para aplicar los cambios al siguiente turno.
 
 Cada guardado incrementa una revisión global. Si otra edición cambió esa revisión, el servidor devuelve conflicto; **Recargar reglas** trae la versión actual. Las ejecuciones conservan una copia de la definición y sus hashes: editar no cambia resultados históricos. Compara variantes iniciando conversaciones nuevas con la misma entrada. Este panel aún no agrega métricas de variantes ni publica reglas al banco.
 

@@ -27,6 +27,7 @@
     "test:lab:master": "node experiments/intent-lab/check-master-ui.mjs",
     "test:lab:bank": "node experiments/intent-lab/check-bank-context-ui.mjs",
     "test:payments": "node scripts/nexqori-payments.mjs",
+    "test:payments:pending": "node scripts/nexqori-deferred-payments.mjs",
     "test:chat:flow": "npm run build && node scripts/nexqori-chat-flow.mjs",
     "test:chat:live": "node scripts/nexqori-chat-live.mjs --live",
     "test:banking": "node scripts/nexqori-banking-integrated.mjs",

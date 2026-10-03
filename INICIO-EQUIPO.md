@@ -1,5 +1,7 @@
 # Empezar con Nexqori
 
+Motor compartido: [LangGraph, actualización y tres recorridos para probar](docs/langgraph-atencion.md). El chat bancario y el editor conservan sus conversaciones, contratos y ejecución por pasos.
+
 Integración del 2 de octubre: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos y trámites, en Mis solicitudes; problemas, en Mis reclamos.
 
 Administración: [panel de reclamos por usuario](docs/panel-reclamos.md). Desde Usuarios → Ver reclamos puedes revisar contexto, conversaciones, lecturas y decisiones con sus referencias. El cliente ve el detalle propio en Mis reclamos. `npm run test:claims` deja tres casos persistentes y accesos privados para revisarlos.

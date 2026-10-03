@@ -20,7 +20,7 @@ Evaluación del 30 de septiembre de 2026, `jev-1.13.0` y `gpt-6-luna` con razona
 
 Los JSON completos antes/después, con entradas, respuestas, modelos, consumo y referencias de ejecución, quedan en `.local/intent-lab/followup-evaluation*.json`. Los casos personalizados permanecen en `.local/intent-lab/conversations.json`; el selector los muestra como “Comisión sin resolver · segunda atención (reconstruido)” y sus traducciones. `?case=<id-local>` abre directamente un caso guardado sin ejecutar proveedores automáticamente.
 
-La taxonomía interactiva tiene 24 etiquetas; el benchmark NLP conserva su lote congelado de 345 ejemplos y 23 etiquetas. `request-status` y este caso de regresión no entran a las particiones reservadas. Las traducciones de un mismo caso no son muestras independientes.
+La taxonomía interactiva tiene 25 etiquetas; el benchmark NLP conserva su lote congelado de 345 ejemplos y 23 etiquetas. `request-status`, `documents` y este caso de regresión no entran a las particiones reservadas. Las traducciones de un mismo caso no son muestras independientes.
 
 ## Recorrido de validación
 

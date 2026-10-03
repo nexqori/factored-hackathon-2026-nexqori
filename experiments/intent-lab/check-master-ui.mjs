@@ -44,6 +44,7 @@ try{
     const checkpoint=new URL(page.url()).searchParams.get('execution');assert.ok(checkpoint);
     const paused=await api('executions/'+checkpoint);
     assert.equal(paused.execution.next_node_id,'case_route');
+    assert.equal(paused.runtime.name,'langgraph');
     if(await editor.locator('.editor-palette').count())await editor.locator('.editor-palette').getByRole('button',{name:words.close[i],exact:true}).click();
     const executionsBeforeInspection=executionRequests.length;
     for(const id of ['context','jev','contract_0']){
@@ -66,8 +67,8 @@ try{
     await editor.locator('.react-flow__node[data-id="jev"] .editor-node-tile').click();
     await editor.locator('.editor-inspector-tabs button').first().click();
     const catalog=editor.locator('.case-taxonomy');
-    await expect(catalog.locator('[data-classification-case]')).toHaveCount(24);
-    for(const [family,count] of Object.entries({problem:6,query:8,service:7,clarification:3}))await expect(catalog.locator('[data-case-family="'+family+'"] [data-classification-case]')).toHaveCount(count);
+    await expect(catalog.locator('[data-classification-case]')).toHaveCount(25);
+    for(const [family,count] of Object.entries({problem:6,query:9,service:7,clarification:3}))await expect(catalog.locator('[data-case-family="'+family+'"] [data-classification-case]')).toHaveCount(count);
     await expect(catalog.locator('.is-classified')).toHaveAttribute('data-classification-case','unrecognized-charge');
     await catalog.locator('.catalog-filters button').nth(1).click();await expect(catalog.locator('[data-classification-case]')).toHaveCount(9);
     await catalog.locator('[data-classification-case="unrecognized-charge"] summary').click();
@@ -98,12 +99,13 @@ try{
     assert.deepEqual(await api('executions/'+checkpoint),paused);
     await page.reload();await expect(editor.locator('.editor-trace li')).toHaveCount(3);assert.equal(new URL(page.url()).searchParams.get('execution'),childId);
     assert.equal(executionRequests.length,executionsBeforeInspection+1);
-    inspections.push({language,checkpoint:'preserved',steps:3,categories:24,cachedSteps:2,explicitReplay:1});
+    inspections.push({language,checkpoint:'preserved',steps:3,categories:25,cachedSteps:2,explicitReplay:1});
    }
    await editor.locator('.editor-toolbar').getByRole('button',{name:words.full[i],exact:true}).click();
    const stateSelector=scenario==='charge'?'waiting_reply':'completed';
    await expect(editor.locator('[data-execution-phase="'+stateSelector+'"]')).toBeVisible();
    let value=await api('executions/'+new URL(page.url()).searchParams.get('execution'));
+   assert.equal(value.runtime.name,'langgraph');
    assert.equal(value.contract.intent||value.jev.intent,{charge:'unrecognized-charge',app:'app-support',human:'service-feedback'}[scenario]);
    if(scenario==='charge'){
     const id=value.execution.id;
