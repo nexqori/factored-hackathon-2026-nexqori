@@ -21,14 +21,16 @@ for(const [i,locale] of ['es','en','pt'].entries()){
  const session=await login.json(),headers={Origin:origin,'X-CSRF-Token':session.csrfToken};
  await context.request.patch(origin+'/api/profile/locale',{headers,data:{locale}});
  await page.goto(origin+'/services/catalog/phone-bill');await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();
- await expect(page.locator('.bill-total')).toContainText(/299[.,]00/);assert.equal(await page.locator('.phone-bill input:not([type=checkbox])').count(),0);
+ await page.getByRole('textbox',{name:copy.catalogReference_phone,exact:true}).fill('550000000'+(i+1));
+ await page.getByRole('button',{name:copy['bills.lookup'],exact:true}).click();
+ await expect(page.locator('.bill-total')).toContainText(/299[.,]00/);assert.equal(await page.locator('.bill-result input[inputmode=decimal]').count(),0);
  const before=await(await context.request.get(origin+'/api/bootstrap')).json();
  await axe('bill-'+locale);await page.getByRole('button',{name:copy['pay.review'],exact:true}).click();await page.getByRole('checkbox').check();
  await axe('review-'+locale);
  // Lose the first response only after the server has committed it. Retry keeps
  // the same UI idempotency key, and must recover the original payment receipt.
- if(i===0){await page.route('**/api/phone-bills/*/pay',async route=>{await route.fetch();await route.abort('failed');},{times:1});}
- if(i===2){await page.route('**/api/phone-bills/*/pay',async route=>{const responses=await Promise.all([route.fetch(),route.fetch()]);assert.deepEqual(await responses[0].json(),await responses[1].json());await route.fulfill({response:responses[0]});},{times:1});}
+ if(i===0){await page.route('**/api/service-bills/*/pay',async route=>{await route.fetch();await route.abort('failed');},{times:1});}
+ if(i===2){await page.route('**/api/service-bills/*/pay',async route=>{const responses=await Promise.all([route.fetch(),route.fetch()]);assert.deepEqual(await responses[0].json(),await responses[1].json());await route.fulfill({response:responses[0]});},{times:1});}
  await page.getByRole('button',{name:copy['pay.confirm'],exact:true}).click();
  if(i===0){await page.getByRole('alert').waitFor();await page.getByRole('button',{name:copy['pay.confirm'],exact:true}).click();}
  await page.getByRole('heading',{name:copy['pay.done'],exact:true}).waitFor();

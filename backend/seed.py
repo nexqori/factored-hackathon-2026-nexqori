@@ -4,11 +4,13 @@ from sqlalchemy import select
 from .db import make_engine, make_sessions
 from .models import User, Product, Transaction, RequestCase, AuditEvent, CardProfile
 from .security import hasher
-from .payments import seed_phone_bill
+from .payments import seed_service_bills
+from .transfers import assign_account_references
 
 def seed(session, passwords):
     if session.scalar(select(User.id).limit(1)):
-        seed_phone_bill(session)
+        seed_service_bills(session)
+        assign_account_references(session)
         return
     if any(not isinstance(p, str) or len(p) < 14 for p in passwords):
         raise RuntimeError("Run npm run setup: initial passwords require at least 14 characters.")
@@ -45,7 +47,8 @@ def seed(session, passwords):
         AuditEvent(id="seed-02",user_id="andrea",request_id="NQ-1021",action="reviewed",actor_id="nora",created_at=at)
     ])
     session.commit()
-    seed_phone_bill(session)
+    seed_service_bills(session)
+    assign_account_references(session)
 
 if __name__ == "__main__":
     engine=make_engine()

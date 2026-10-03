@@ -52,18 +52,19 @@ def bill_payload(client,**overrides):
 
 def test_specific_request_persists_without_debit_and_is_idempotent(setup):
     app,engine=setup; client,_=login(app)
-    before=client.get('/api/bootstrap').json()['products']; body=bill_payload(client)
-    result=client.post('/api/services/internet-bill/requests',json=body)
+    before=client.get('/api/bootstrap').json()['products']
+    body={'requestKey':str(uuid4()),'locale':'es','confirmed':True,'notes':'Quiero conocer los requisitos del crédito.'}
+    result=client.post('/api/services/personal-loan/requests',json=body)
     assert result.status_code==201,result.text
-    assert client.post('/api/services/internet-bill/requests',json=body).json()=={'id':result.json()['id'],'duplicate':True}
-    assert client.post('/api/services/internet-bill/requests',json={**body,'amountMinor':45991}).status_code==409
-    assert client.post('/api/services/tv-bill/requests',json=body).status_code==409
+    assert client.post('/api/services/personal-loan/requests',json=body).json()=={'id':result.json()['id'],'duplicate':True}
+    assert client.post('/api/services/personal-loan/requests',json={**body,'notes':'Quiero otros requisitos para el préstamo.'}).status_code==409
+    assert client.post('/api/services/mortgage/requests',json=body).status_code==409
     after=client.get('/api/bootstrap').json()
     assert before==after['products']
     case=next(c for c in after['requests'] if c['id']==result.json()['id'])
-    assert case['status']=='received' and case['catalogServiceId']=='internet-bill'
-    assert case['serviceData']['amountMinor']==45990 and case['serviceData']['reference']=='5512345678'
-    assert case['serviceData']['provider']=='Internet Plus'
+    assert case['status']=='received' and case['catalogServiceId']=='personal-loan'
+    assert case['serviceData']['amountMinor'] is None and case['serviceData']['reference']==''
+    assert case['serviceData']['notes']==body['notes']
     other,_=login(app,'mateo')
     assert all(c['id']!=case['id'] for c in other.get('/api/bootstrap').json()['requests'])
     with make_sessions(engine)() as db:
@@ -71,26 +72,36 @@ def test_specific_request_persists_without_debit_and_is_idempotent(setup):
 
 
 @pytest.mark.parametrize('override',[
-    {'confirmed':False},{'accountId':None},{'amountMinor':0},{'amountMinor':1.25},{'amountMinor':True},
+    {'confirmed':False},{'accountId':'account-01'},{'amountMinor':0},{'amountMinor':1.25},{'amountMinor':True},
     {'amountMinor':100000001},{'reference':'ab'},{'beneficiary':'Unexpected recipient'},
     {'transactionId':'TX-1002'},{'provider':'Invented company'}])
-def test_bill_validation_is_server_side(setup,override):
+def test_inquiry_validation_is_server_side(setup,override):
     app,_=setup; client,_=login(app)
-    assert client.post('/api/services/internet-bill/requests',json=bill_payload(client,**override)).status_code==422
+    body={'confirmed':True,'locale':'es','requestKey':str(uuid4()),'notes':'Consulta de requisitos del crédito',**override}
+    assert client.post('/api/services/personal-loan/requests',json=body).status_code==422
+
+
+@pytest.mark.parametrize('service,error',[
+    ('phone-bill','use_bill_payment'),('internet-bill','use_bill_payment'),
+    ('tv-bill','use_bill_payment'),('utilities-bill','use_bill_payment'),('bank-transfer','use_transfer')])
+def test_money_operations_cannot_be_recorded_as_new_service_requests(setup,service,error):
+    app,engine=setup; client,_=login(app)
+    before=client.get('/api/bootstrap').json()
+    response=client.post(f'/api/services/{service}/requests',json=bill_payload(client))
+    assert response.status_code==409 and response.json()['error']==error
+    after=client.get('/api/bootstrap').json()
+    assert all(before[key]==after[key] for key in ('products','transactions','requests'))
 
 
 def test_accounts_ownership_permissions_and_csrf(setup):
     app,engine=setup; client,_=login(app); other,_=login(app,'mateo'); admin,_=login(app,'nora')
     foreign=other.get('/api/bootstrap').json()['products'][0]['id']
-    card=next(p['id'] for p in client.get('/api/bootstrap').json()['products'] if p['type']=='card')
-    for account in [foreign,card,'not-found']:
-        assert client.post('/api/services/internet-bill/requests',json=bill_payload(client,accountId=account)).status_code==404
-    body=bill_payload(client)
-    assert admin.post('/api/services/internet-bill/requests',json=body).status_code==403
+    body={'confirmed':True,'locale':'es','requestKey':str(uuid4()),'notes':'Consulta de requisitos del crédito'}
+    assert admin.post('/api/services/personal-loan/requests',json=body).status_code==403
     client.headers.pop('X-CSRF-Token')
-    assert client.post('/api/services/internet-bill/requests',json=body).status_code==403
+    assert client.post('/api/services/personal-loan/requests',json=body).status_code==403
     with make_sessions(engine)() as db:
-        own=db.scalar(select(Product).where(Product.id==body['accountId']))
+        own=db.scalar(select(Product).where(Product.id=='account-01'))
         db.add(RequestCase(id='invalid-owner-source',user_id=own.user_id,source_product_id=foreign,request_key=str(uuid4()),service='payments',reason='payment',details='Should fail at the database boundary'))
         with pytest.raises(IntegrityError): db.commit()
 

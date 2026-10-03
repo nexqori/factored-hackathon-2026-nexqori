@@ -23,6 +23,10 @@ from .assistant import answer
 from .navigation import navigate_in_app
 from .transaction_context import transaction_evidence, transaction_reply
 from .transaction_suggestions import FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply
+from .query_documents import can_document
+from .query_answers import query_answer
+from .conversation_context import (changes_topic, provider_history, reviewed_problem, resume_review,
+                                   safe_query_reply, safe_suggestion_reply, remember_safe_reply)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experiments' / 'intent-lab'))
 from intent_lab import workflow_execution as execution, workflow_editor as editor
@@ -82,6 +86,7 @@ def flow_view(row):
             'missing_fields','contract','trace','latency_ms','verified_facts','bank_evidence','activation_plan')} | {
         'state': 'registered' if row.request_id else value['state'],
         'suggestedTransaction': row.state.get('transaction_suggestion'),
+        'canDocument': can_document(row),
         'requestId': row.request_id, 'canRegister': not row.request_id and value['state'] in ('review_in_bank','human_review')
                        and value['jev'].get('intent') in editor.PROBLEM_PORTS}
 
@@ -142,23 +147,38 @@ def chat_router(conversation_view, message_view):
             conv.transaction_id = selected_id
         selection = {'owner_id': user.id, 'transaction_id': conv.transaction_id, 'request_id': body.requestId or (row.state.get('bank_binding',{}).get('request_id') if row else None)}
         reader = SessionReader(db, user, conv)
-        # Do not reclassify when the customer answers a pending context question.
-        continuing = row is not None and row.state['phase'] == 'waiting_reply'
         registered = bool(row and row.request_id)
+        # A clarification keeps the active case. An explicit change of topic is
+        # classified again rather than swallowed as an answer to the old case.
+        new_topic = bool(row and not registered and changes_topic(body.message))
+        if new_topic:
+            dismissed = []
+        continuing = row is not None and row.state['phase'] == 'waiting_reply' and not new_topic
+        reviewing = bool(row and not registered and not new_topic and reviewed_problem(row.state))
         # Reclassification after an unresolved subtype must retain the conversation.
         # Use interpreter messages, never bank-enriched replies from the Message table.
-        prior_messages = copy.deepcopy(row.state.get('messages', [])[-28:]) if row else []
-        state = copy.deepcopy(row.state) if continuing or registered else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
+        prior_messages = provider_history(row.state if row else None)
+        state = copy.deepcopy(row.state) if continuing or registered or reviewing else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
                     body.locale, thread_id=conv.id, bank_binding=selection, persist=lambda _: None)
         state['language'] = body.locale
         state['transaction_suggestion'] = None
         state['dismissed_transaction_ids'] = dismissed
+        state['conversation_context'] = {'mode': 'registered_case' if registered else 'new_topic' if new_topic else
+                                        'continue_question' if continuing else 'continue_review' if reviewing else 'classify',
+                                        'source': 'provider_safe_history'}
         if registered:
             case = db.scalar(select(RequestCase).where(RequestCase.id == row.request_id, RequestCase.user_id == user.id))
             text = ('Tu mensaje queda en esta conversación vinculada al reclamo {id}. Puedes revisar su evolución en Mis reclamos. Para otro tema, inicia una conversación nueva.',
                     'Your message is saved in this conversation linked to complaint {id}. Track its progress in My complaints. Start a new conversation for a different topic.',
                     'Sua mensagem fica nesta conversa vinculada à reclamação {id}. Acompanhe o andamento em Minhas reclamações. Para outro assunto, inicie uma nova conversa.')
             state['context']['reply'] = text[('es','en','pt').index(body.locale)].format(id=case.id)
+        elif reviewing and not resume_review(state, message, execution.MAX_REPLIES):
+            # Preserve the review and its limits. Starting the interpreter from
+            # scratch here would silently lose the contract and reset the limit.
+            state['messages'] = provider_history(state) + [{'role':'user','content':message},
+                {'role':'assistant','content':('El caso sigue pendiente de revisión y confirmación.',
+                    'The case still needs review and confirmation.',
+                    'O caso ainda precisa de revisão e confirmação.')[('es','en','pt').index(body.locale)]}]
         else:
             execution.advance(state, 'full', reply=message if continuing else None, bank_reader=reader, bank_selection=selection,
                               persist=lambda _: None, record_run=False)
@@ -174,11 +194,13 @@ def chat_router(conversation_view, message_view):
             # must still answer the balance instead of merely navigating to accounts.
             guided = answer('balance' if ctx['intent'] == 'account-balance' else message, body.locale, balance, body.currentPage)
             ctx['reply'] = guided['text']; navigation = guided['navigation']
+            read_reply = query_answer(ctx['intent'], evidence, body.locale)
+            if read_reply: ctx['reply'] = read_reply
             item = SERVICES.get(ctx['intent'])
             if item and item['kind'] != 'claim':
                 navigation = navigate_in_app(item['target'] if item['kind'] == 'navigate' else 'services', 'customer',
                                              None if item['kind'] == 'navigate' else item['id'])
-                ctx['reply'] = guided['text'] if ctx['intent']=='account-balance' else item['copy'][body.locale]['summary']
+                ctx['reply'] = read_reply or (guided['text'] if ctx['intent']=='account-balance' else item['copy'][body.locale]['summary'])
             if ctx['intent'] == 'request-status':
                 statuses = [r['data']['request'] for r in evidence['reads'] if r['tool']=='read-request-status']
                 if statuses:
@@ -192,6 +214,9 @@ def chat_router(conversation_view, message_view):
             selected_evidence = next((r['data'] for r in evidence['reads'] if r['tool']=='read-transaction-evidence'), None)
             if selected_evidence:
                 ctx['reply'] = transaction_reply(selected_evidence,body.locale)['text']
+            remember_safe_reply(state, safe_query_reply(ctx['intent'], body.locale,
+                reference_needed=ctx['intent'] == 'request-status' and not any(
+                    r['tool'] in ('read-request-status', 'read-transaction-evidence') for r in evidence['reads'])))
         if not registered and ctx['state'] in ('review_in_bank', 'human_review') and ctx['intent'] in editor.PROBLEM_PORTS:
             replies = {
                 'review_in_bank': ('Ya reuní el contexto de tu caso. Revisa el relato y confirma el reclamo para darle seguimiento.',
@@ -202,6 +227,7 @@ def chat_router(conversation_view, message_view):
                                  'Seu caso precisa de análise do atendimento. Revise o relato e confirme a reclamação para solicitá-la.'),
             }
             ctx['reply'] = replies[ctx['state']][('es','en','pt').index(body.locale)]
+            remember_safe_reply(state, ctx['reply'])
         for question in ctx.get('questions', []):
             if question['field'] in ('transaction_id','request_id'):
                 question_text = {
@@ -220,6 +246,7 @@ def chat_router(conversation_view, message_view):
             if candidate:
                 state['transaction_suggestion'] = candidate
                 ctx['reply'] = suggestion_reply(candidate, body.locale)
+                remember_safe_reply(state, safe_suggestion_reply(body.locale))
         row.state = copy.deepcopy(state)
         # Read tools can autoflush the row before query evidence/reply is attached.
         # Explicitly mark the JSON snapshot so the restored result matches this turn.

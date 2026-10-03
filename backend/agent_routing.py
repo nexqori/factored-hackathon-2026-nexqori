@@ -38,7 +38,7 @@ TOOLS = {
 def route_family(intent):
     if intent in PROBLEMS:
         return 'problem'
-    if intent == 'request-status':
+    if intent in {'request-status','documents'}:
         return 'query'
     item = SERVICES.get(intent)
     if item:
@@ -55,6 +55,7 @@ def tools_for(intent):
             'account-activity': ['read-transactions', 'read-transaction-evidence'],
             'my-cards': ['read-cards'],
             'request-status': ['read-request-status', 'read-transaction-evidence'],
+            'documents': [],  # Prepared in the bank after explicit document parameters.
         }.get(intent, ['read-service-info'])
     if family == 'problem':
         ids = ['read-problem-contract', 'read-request-status']
@@ -77,7 +78,7 @@ def tools_for(intent):
 def route_plan(classification, *, source='jev'):
     """Propose a route from a validated intent. No lookup, network or operation."""
     candidate = classification.get('intent')
-    valid = classification.get('status') == 'ok' and isinstance(candidate, str) and candidate in (SERVICES.keys() | FALLBACKS | {'request-status'})
+    valid = classification.get('status') == 'ok' and isinstance(candidate, str) and candidate in (SERVICES.keys() | FALLBACKS | {'request-status','documents'})
     intent = candidate if valid else None
     family = route_family(intent)
     steps = []

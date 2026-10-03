@@ -15,3 +15,16 @@ export async function api<T>(path: string, method = 'GET', body?: unknown, signa
   }
   return data as T;
 }
+
+export async function downloadDocument(id: string, filename: string): Promise<void> {
+  let response: Response;
+  try { response = await fetch('/api/documents/' + encodeURIComponent(id), {credentials:'same-origin'}); }
+  catch { throw new ApiError('network', 0); }
+  if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event('nexqori-session-ended'));
+    const body = await response.json().catch(()=>({})); throw new ApiError(body.error || 'generic', response.status);
+  }
+  const blob = await response.blob(); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}

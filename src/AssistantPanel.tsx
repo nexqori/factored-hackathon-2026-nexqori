@@ -5,6 +5,7 @@ import { api, ApiError } from './api';
 import { Dialog } from './components';
 import { type FlowResult } from './ChatFlow';
 import { ChatDetails } from './ChatDetails';
+import { ChatDocuments, DocumentDownload } from './ChatDocuments';
 import type { Dashboard } from './types';
 import { PasteComposer } from './PasteComposer';
 import { localeTags, type Locale } from './i18n';
@@ -32,6 +33,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   const [error, setError] = useState('');
   const [history, setHistory] = useState(false);
   const [voice, setVoice] = useState(false);
+  const [documentsOpen,setDocumentsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsTab, setDetailsTab] = useState<'progress' | 'records'>('progress');
   function openDetails(tab: 'progress' | 'records') { setDetailsTab(tab); setDetailsOpen(true); }
@@ -76,7 +78,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
     finally { setHistoryBusy(false); }
   }
   const [composerKey,setComposerKey]=useState(0);
-  function fresh() { setDetailsOpen(false); setFlow(null); setSelectedTx(''); setSelectedRequest(''); attempt.current = null; conversationId.current = null; setConversation(null); setMessages([]); setBefore(null); setComposerKey(k=>k+1); setError(''); setHistory(false); }
+  function fresh() { setDocumentsOpen(false); setDetailsOpen(false); setFlow(null); setSelectedTx(''); setSelectedRequest(''); attempt.current = null; conversationId.current = null; setConversation(null); setMessages([]); setBefore(null); setComposerKey(k=>k+1); setError(''); setHistory(false); }
   useEffect(() => {
     if (!transactionQuestion || busy || historyBusy || handledTransaction.current === transactionQuestion.nonce) return;
     handledTransaction.current = transactionQuestion.nonce;
@@ -106,15 +108,17 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
     <div ref={log} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions">
       {!messages.length && !pending && <><div className="assistant-welcome"><Bot large /><h3>{t('assistantHello')}</h3><p>{t(guided ? 'guidedConversationWelcome' : 'conversationWelcome')}</p></div><div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={busy} onClick={() => submit(t(key))}>{t(key)}<ArrowUpRight size={15} /></button>)}</div></>}
       {before && <button className="text-link older-messages" disabled={busy} onClick={() => { void older(); }}>{t('olderMessages')}</button>}
-      {messages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}</div>)}
+      {messages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}{message.document&&<DocumentDownload document={message.document}/>}</div>)}
       {pending && <div className="chat-bubble user chat-pending" lang={pending.locale}>{pending.text}</div>}
       {busy && <div className="chat-thinking" role="status"><span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span>{t(pending ? 'chatSending.thinking' : 'loading')}</div>}
       {!busy && flow?.suggestedTransaction && !selectedTx && <div className="chat-transaction-choice" aria-label={t('chatSending.suggestion')}><button className="button primary" onClick={() => { void send(t('chatSending.confirmMessage'),undefined,'',flow.suggestedTransaction!.id).catch(fail); }}>{t('chatSending.confirm')}</button><button className="button secondary" onClick={() => openDetails('records')}>{t('chatSending.another')}</button></div>}
+      {!busy && flow?.canDocument && conversation && <button className="button secondary chat-next-action" onClick={()=>setDocumentsOpen(true)}>{t('documents.prepare')}</button>}
       {!busy && flow?.canRegister && <button className="button secondary chat-next-action" onClick={() => openDetails('progress')}>{t('chatFlow.prepareClaim')}<ArrowUpRight size={16}/></button>}
       {!busy && !flow?.suggestedTransaction && flow?.missing_fields.some(field => field === 'transaction_id' || field === 'request_id') && <button className="text-link chat-next-action" onClick={() => openDetails('records')}>{t('chatDetails.selectRecords')}<ArrowUpRight size={16}/></button>}
     </div>
     {error && !history && <p className="error-text assistant-error" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}
     {connected && !configured && <p className="flow-provider-warning">{t('chatFlow.unconfigured')}</p>}
+    {documentsOpen && conversation && <ChatDocuments conversationId={conversation.id} data={data} onClose={()=>setDocumentsOpen(false)} onMessage={m=>setMessages(items=>items.some(x=>x.id===m.id)?items:[...items,m])}/>}
     {detailsOpen && <ChatDetails initialTab={detailsTab} result={flow} conversation={conversation} text={messages.filter(m => m.role === 'user').map(m => m.text).join('\n')} data={data} selectedTx={selectedTx} selectedRequest={selectedRequest} onTx={setSelectedTx} onRequest={setSelectedRequest} busy={busy} onClose={() => setDetailsOpen(false)} onRegistered={id => { if (flow) setFlow({...flow,state:'registered',requestId:id,canRegister:false}); setDetailsOpen(false); onClaim(id); }}/>}
     <div className="chat-bottom"><PasteComposer key={composerKey} busy={busy} onSend={(message,pasted)=>send(message,undefined,pasted)} copy={{text:t('pastedText'),preview:t('previewPasted'),remove:t('removePasted'),placeholder:t('chatPlaceholder'),label:t('chatLabel'),send:t('send'),limit:t('pasteLimit'),failed:t('chatSending.failed')}}/><button className="human-link" disabled={busy} onClick={() => submit(t('talkHuman'))}><Headphones size={15} />{t('talkHuman')}</button></div>
     {history && <Dialog title={t('conversations')} onClose={() => setHistory(false)} busy={historyBusy}><p className="muted">{t('historyIntro')}</p><button className="button secondary wide history-new" disabled={historyBusy} onClick={fresh}><Plus size={18} />{t('newConversation')}</button>{error && <p className="error-text" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}<div className="conversation-list">{historyItems.map(item => <button className={item.id === conversationId.current ? 'current' : ''} key={item.id} disabled={historyBusy} onClick={() => { void select(item); }}><MessageCircle size={18} /><span><strong lang={item.title ? item.locale : locale}>{item.title || t('previousConversation')}</strong><time>{formatTime(item.updatedAt)}</time></span><ArrowUpRight size={17} /></button>)}</div>{!historyItems.length && !historyBusy && !error && <p className="empty-copy">{t('noConversations')}</p>}{historyBusy && <p role="status">{t('loading')}</p>}{nextOffset !== null && <button className="text-link" disabled={historyBusy} onClick={() => { void fetchHistory(nextOffset); }}>{t('loadMore')}</button>}</Dialog>}

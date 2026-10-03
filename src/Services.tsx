@@ -6,7 +6,8 @@ import { api, ApiError } from './api';
 import { Badge, formatMoney } from './components';
 import { destinations, type Destination } from './navigation';
 import { localService, parseAmount, serviceTitle } from './catalog';
-import { PhonePayment } from './PhonePayment';
+import { ServicePayment } from './ServicePayment';
+import { TransferForm } from './Transfers';
 import type { Locale } from './i18n';
 import type { Dashboard, RequestCase, Service, ServiceItem } from './types';
 
@@ -75,7 +76,8 @@ export function ServicePage({ data, saved }: { data: Dashboard; saved: (id: stri
   useEffect(() => { const c = new AbortController(); setLoadError(''); setItem(previous => previous?.id === serviceId ? previous : null); void api<ServiceItem>('/services/' + encodeURIComponent(serviceId) + '?locale=' + locale, 'GET', undefined, c.signal).then(value => { if (!c.signal.aborted) setItem(value); }).catch(e => { if (!c.signal.aborted) setLoadError(failure(e)); }); return () => c.abort(); }, [serviceId, locale, retry]);
   if (loadError) return <div className="empty-panel"><p role="alert">{t(loadError)}</p><button className="button secondary" onClick={() => setRetry(retry + 1)}>{t('retry')}</button><Link className="text-link" to="/services">{t('allServices')}</Link></div>;
   if (!item) return <p role="status">{t('loading')}</p>;
-  if (item.id === 'phone-bill') return <PhonePayment data={data} saved={saved} />;
+  if (item.kind === 'bill') return <ServicePayment key={item.id} item={item} data={data} saved={saved} />;
+  if (item.kind === 'transfer') return <TransferForm data={data} saved={saved} />;
   if (item.kind === 'navigate' && item.target && Object.hasOwn(destinations, item.target)) return <Link className="button primary" to={destinations[item.target as Destination]}>{item.title}<ArrowRight size={18} /></Link>;
   return <ServiceForm key={item.id} item={item} data={data} saved={saved} />;
 }

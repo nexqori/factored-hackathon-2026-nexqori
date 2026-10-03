@@ -50,7 +50,7 @@ def test_templates_and_reads_have_no_provider_calls(private_config, monkeypatch,
     monkeypatch.setattr(editor, 'extract', lambda *args: pytest.fail('Unexpected extraction'))
     client = TestClient(api.app)
     template = client.get('/lab-api/editor/template', params={'kind': kind}).json()
-    assert len(template['taxonomy']) == 24
+    assert len(template['taxonomy']) == 25
     assert editor.validate_graph(template['graph']) == {'valid': True, 'errors': []}
     record = create(client, kind)
     assert record['revision'] == 1

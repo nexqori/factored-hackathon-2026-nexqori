@@ -18,7 +18,7 @@ def test_case_catalog_and_templates(private_config, monkeypatch, language):
     response = client.get('/lab-api/editor/cases', params={'language': language})
     assert response.status_code == 200
     rows = response.json()['cases']
-    assert len(rows) == 24 and len({r['intent'] for r in rows}) == 24
+    assert len(rows) == 25 and len({r['intent'] for r in rows}) == 25
     problems = [r for r in rows if r['family'] == 'problem']
     assert len(problems) == 6 and all(r['contract']['steps'] for r in problems)
     sourced = {r['intent']: r['evidence']['records'] for r in problems if r['evidence']}

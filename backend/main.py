@@ -20,7 +20,9 @@ from .operations import operations_router
 from .agent_tools import agent_tools_router
 from .claim_trace import trace_router
 from .payments import payment_router
-from .models import BillPayment
+from .transfers import transfer_router
+from .query_documents import document_router, document_view
+from .models import BillPayment, BankTransfer, iso_utc
 from .workflow_chat import chat_router, flow_view
 from .models import ConversationFlow
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
@@ -37,7 +39,8 @@ def conversation_view(c):
     return {"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
 
 def message_view(m):
-    return {"id":m.id,"role":m.role,"text":present_message(m.content,m.role),"locale":m.locale,"at":m.created_at.isoformat()}
+    document = m.document if m.document and m.document.user_id == m.user_id and m.document.conversation_id == m.conversation_id else None
+    return {"id":m.id,"role":m.role,"text":present_message(m.content,m.role),"locale":m.locale,"at":iso_utc(m.created_at),"document":document_view(document) if document else None}
 
 def request_view(r, name=None, refund=None):
     operation = None
@@ -221,12 +224,13 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         card_status={c.product_id:c.status for c in db.scalars(select(CardProfile).where(CardProfile.user_id==user.id))}
         txs=db.scalars(select(Transaction).where(Transaction.user_id==user.id).order_by(Transaction.occurred_at.desc())).all()
         payments={p.transaction_id:p.id for p in db.scalars(select(BillPayment).where(BillPayment.user_id==user.id))}
+        transfers={t.debit_transaction_id if t.user_id==user.id else t.credit_transaction_id:t.id for t in db.scalars(select(BankTransfer).where(or_(BankTransfer.user_id==user.id,BankTransfer.recipient_user_id==user.id)))}
         cases=db.scalars(select(RequestCase).where(RequestCase.user_id==user.id).order_by(RequestCase.created_at.desc())).all()
         refunds={r.request_id:r for r in db.scalars(select(Refund).where(Refund.user_id==user.id))}
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).where(AuditEvent.user_id==user.id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
         return {
-            "products":[{"id":p.id,"type":p.type,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency,"status":card_status.get(p.id,"active")} for p in products],
-            "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status,"paymentId":payments.get(t.id)} for t in txs],
+            "products":[{"id":p.id,"type":p.type,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency,"status":card_status.get(p.id,"active"),"transferReference":p.transfer_reference} for p in products],
+            "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status,"paymentId":payments.get(t.id),"transferId":transfers.get(t.id)} for t in txs],
             "requests":[request_view(r,refund=refunds.get(r.id)) for r in cases],
             "audit":[audit_view(e,name) for e,name in events]
         }
@@ -267,7 +271,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def request_service(service_id: str,payload: ServiceRequestInput,user=Depends(customer),db=Depends(db_session)):
         item=SERVICES.get(service_id)
         if not item: raise HTTPException(404,"not_found")
-        if service_id == 'phone-bill': raise HTTPException(409, 'use_bill_payment')
+        if SERVICES.get(service_id,{}).get('kind') == 'bill': raise HTTPException(409, 'use_bill_payment')
+        if SERVICES.get(service_id,{}).get('kind') == 'transfer': raise HTTPException(409, 'use_transfer')
         if item["kind"]=="navigate": raise HTTPException(422,"validation")
         reference=payload.reference.strip(); beneficiary=payload.beneficiary.strip(); notes=payload.notes.strip()
         account=None
@@ -426,6 +431,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         return {"ok":True}
     app.include_router(operations_router())
     app.include_router(payment_router())
+    app.include_router(transfer_router())
+    app.include_router(document_router(message_view))
     app.include_router(chat_router(conversation_view, message_view))
     app.include_router(agent_tools_router())
     app.include_router(trace_router(request_view, audit_view, conversation_view))

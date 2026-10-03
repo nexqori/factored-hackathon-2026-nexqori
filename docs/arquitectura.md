@@ -1,6 +1,6 @@
 # Arquitectura de Nexqori
 
-Actualización del 2 de octubre: [chat conectado al banco, pago de teléfono con comprobante y sección Mis reclamos](chat-bancario-y-pagos.md). Esta ampliación sustituye las limitaciones anteriores que indicaban que el chat sólo navegaba y que teléfono sólo registraba solicitudes. Los demás servicios conservan su alcance.
+Integración del 2 de octubre: [pagos y transferencias](pagos-y-transferencias.md), [consultas y PDF](consultas-y-documentos.md) y [continuidad de conversación](contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos y trámites, en Mis solicitudes; problemas, en Mis reclamos.
 
 Stack elegido por Bryan: **React + FastAPI + PostgreSQL**. TypeScript, Vite y react-i18next en interfaz; SQLAlchemy y Alembic en API. Las versiones efectivas están fijadas en `package-lock.json` y `backend/requirements.lock`.
 
@@ -9,7 +9,8 @@ flowchart LR
   C[Cliente: ES / EN / PT] --> W[Nginx + React :5180]
   W --> A[FastAPI :8000]
   A --> P[(PostgreSQL 17)]
-  A --> N[Agente guiado y herramientas permitidas]
+  A --> N[Jev y Luna: contexto seguro]
+  A --> Q[Lecturas propias y PDF determinista]
   N --> R[Comando de navegación validado por React]
 ```
 
@@ -29,12 +30,16 @@ Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Com
 | audit_events | Actor, fecha y acción: login, logout, solicitud, revisión, derivación, navegación propuesta. |
 | conversations | Titular, título, idioma original y fechas. |
 | messages | FK compuesta de conversación y titular; contenido e idioma original. |
+| conversation_flows | Checkpoint del flujo y memoria segura por conversación. |
+| phone_bills / bill_payments | Recibos por servicio/referencia/período, pagos parciales y comprobantes inmutables. |
+| transfer_quotes / bank_transfers | Destinatario validado temporalmente y débito/crédito atómico con idempotencia. |
+| chat_documents | PDF persistente, resumen, titular y mensaje; lista propia en Mis solicitudes. |
 
-No es un libro mayor: no hay contabilidad de doble partida, liquidación ni conciliación externa. Las devoluciones aprobadas sí generan un movimiento de abono y actualizan el saldo local atómicamente. El saldo inicial del seed es ilustrativo y no se calcula sumando el historial de ejemplo. Moneda y fecha de presentación pertenecen al escenario de México; elegir portugués o inglés no convierte MXN.
+Las transferencias conservan dinero con un débito y un crédito en una transacción de base de datos. No hay libro contable bancario completo, liquidación ni conciliación externa. Las devoluciones aprobadas sí generan un movimiento de abono y actualizan el saldo local atómicamente. El saldo inicial del seed es ilustrativo y no se calcula sumando el historial de ejemplo. Moneda y fecha de presentación pertenecen al escenario de México; elegir portugués o inglés no convierte MXN.
 
 ## API
 
-Contrato completo en `/api/openapi.json`.
+Contrato completo en `/api/openapi.json`. Los endpoints de [recibos y transferencias](pagos-y-transferencias.md), [PDF](consultas-y-documentos.md) y `/api/assistant/flow` amplían la tabla inicial siguiente. La migración `f381a620d734` conserva saldos, movimientos, pagos, mensajes y solicitudes previas.
 
 | Ruta | Permiso y efecto |
 | --- | --- |
@@ -48,7 +53,7 @@ Contrato completo en `/api/openapi.json`.
 | GET /api/conversations | Cliente: conversaciones propias, páginas de 20. |
 | GET /api/conversations/{id} | Cliente titular: mensajes, páginas de 50 con cursor anterior. |
 | GET /api/services y /api/services/{id} | Cliente: catálogo, búsqueda, categoría y ES/EN/PT. |
-| POST /api/services/{id}/requests | Cliente, CSRF, confirmación y titularidad: registra solicitud específica. No debita ni liquida. |
+| POST /api/services/{id}/requests | Cliente, CSRF, confirmación y titularidad: registra trámites/reclamos; rechaza pagos y transferencias, que usan sus endpoints propios. |
 | POST /api/requests | Cliente, confirmación, idempotencia y movimiento propio si existe. |
 | POST /api/requests/{id}/handoff | Cliente titular y confirmación; derivación simulada idempotente. |
 | POST /api/assistant | Cliente, mensaje ES/EN/PT, página permitida; respuesta guiada y navegación opcional. |
@@ -71,7 +76,7 @@ Se rechazan cuerpos mayores a 16 KB. Los intentos de login se limitan por cuenta
 
 Las pruebas API usan SQLite temporal para aislar casos y validar reglas; la ejecución integral y la persistencia se comprueban sobre PostgreSQL de Docker. Las pruebas de interfaz verifican idiomas, acceso, navegación, solicitudes, derivación, responsive y accesibilidad automatizada. Esto no equivale a una auditoría de seguridad bancaria ni a accesibilidad certificada.
 
-Para producción se necesitan decisiones y servicios específicos: identidad/MFA y recuperación, TLS, gestión de secretos, límites distribuidos, copias/restauración, trazas y alertas, auditoría protegida, integraciones y políticas operativas. El modelo de IA y sus credenciales se conectarán mediante el [contrato de agente](agente.md), sin cambiar la autorización de las APIs.
+Para producción se necesitan decisiones y servicios específicos: identidad/MFA y recuperación, TLS, gestión de secretos, límites distribuidos, copias/restauración, trazas y alertas, auditoría protegida, integraciones y políticas operativas. Los proveedores de IA usan el [contrato de agente](agente.md) y configuración privada del servidor, sin cambiar la autorización de las APIs.
 
 El catálogo versionado en `backend/service_catalog.json` es compartido por API y validación de navegación del cliente. Cambiarlo requiere validación y reconstrucción; no es un CMS. La búsqueda tolera acentos, nombres y sinónimos ES/EN/PT. La documentación de [catálogo](catalogo-servicios.md) conserva la procedencia y los límites. La voz no forma parte de esta implementación.
 

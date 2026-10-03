@@ -43,7 +43,7 @@ REQUIREMENTS = {
     'cash-deposit': ['symptom', 'date'],
     'personal-loan': ['goal'], 'mortgage': ['goal'],
     'investment-inquiry': ['goal'], 'insurance-inquiry': ['goal'],
-    'account-balance': [], 'account-activity': [], 'my-cards': [],
+    'account-balance': [], 'account-activity': [], 'my-cards': [], 'documents': [],
     'needs-clarification': ['need'], 'multiple-intents': ['need'], 'out-of-scope': [],
 }
 COPY = {

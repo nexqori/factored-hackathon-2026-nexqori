@@ -1,6 +1,6 @@
 # Nexqori
 
-Actualización del 2 de octubre: [chat conectado al banco, pago de teléfono con comprobante y sección Mis reclamos](docs/chat-bancario-y-pagos.md). Esta ampliación sustituye las limitaciones anteriores que indicaban que el chat sólo navegaba y que teléfono sólo registraba solicitudes. Los demás servicios conservan su alcance.
+Integración del 2 de octubre: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos y trámites, en Mis solicitudes; problemas, en Mis reclamos.
 
 Base bancaria local con **React + TypeScript, FastAPI y PostgreSQL**. Identidad Terracota suave, español/inglés/portugués, acceso de cliente y administrador, productos, movimientos, servicios, solicitudes y agente de navegación.
 
@@ -8,7 +8,7 @@ Para incorporarte al desarrollo, comienza por [INICIO-EQUIPO.md](INICIO-EQUIPO.m
 
 Para probar acciones completas, usa la [guía de tres casos reproducibles](docs/pruebas-tres-casos.md): `npm run test:cases` verifica bloqueo, devolución aprobada y derivación en ES/EN/PT; `npm run test:cases:prepare` deja usuarios nuevos para repetirlos manualmente.
 
-La base tiene autenticación y persistencia reales en el servidor local. Los datos son ficticios; no ejecuta operaciones bancarias. El asistente usa reglas guiadas, sin LLM ni operador humano conectado.
+La base tiene autenticación y persistencia en PostgreSQL local. Los pagos, transferencias, bloqueos y devoluciones tienen efectos en sus registros ficticios; no hay liquidación externa. El chat conecta Jev y Luna cuando se configuran sus claves privadas; conserva un recorrido guiado si esa conexión no está disponible. No hay operador humano conectado ni audio activo.
 
 El [LAB independiente](experiments/intent-lab/README.md), en localhost:5190, sí conecta Jev y GPT-6 Luna high para comparar clasificación y probar respuestas guiadas por contrato. La base del banco incorpora registro adulto, preferencias de experiencia, auditoría administrativa, texto pegado y presentación visual de llamada. Consulta la [guía de estos recorridos](docs/registro-auditoria-y-conversacion.md).
 
@@ -34,9 +34,9 @@ El setup genera contraseñas aleatorias en `.env` y conserva el archivo si ya ex
 | admin@nexqori.com | 00000002 | Administrador | ADMIN_PASSWORD |
 | mateo@nexqori.com | 00000003 | Segundo cliente para probar aislamiento | SECOND_CUSTOMER_PASSWORD |
 
-Puedes entrar con cualquiera de los dos identificadores y la misma contraseña. Los documentos conservan los ceros iniciales. Son identificadores locales: no se verifica un documento oficial ni se envía correo. Una cuenta registrada puede usar Gmail u otro proveedor; esta base aún no tiene registro público ni recuperación por email. La migración actualiza las direcciones iniciales anteriores y conserva contraseñas, sesiones y mensajes.
+Puedes entrar con cualquiera de los dos identificadores y la misma contraseña. Los documentos conservan los ceros iniciales. Son identificadores locales: no se verifica un documento oficial ni se envía correo. Crear mi perfil admite Gmail u otro proveedor; aún no hay verificación ni recuperación por email. La migración actualiza las direcciones iniciales anteriores y conserva contraseñas, sesiones y mensajes.
 
-Nunca compartas `.env`; cada integrante genera el suyo. El seed se ejecuta sólo sobre una base vacía. Editar contraseñas en `.env` después del primer arranque no cambia los hashes existentes ni la clave del rol PostgreSQL. Para cambiar claves persistidas se requiere una migración de credenciales específica; evita desincronizar el archivo y la base.
+Nunca compartas `.env`; cada integrante genera el suyo. El seed crea clientes sólo en una base vacía y añade referencias/recibos locales faltantes sin reponer saldos ni recibos pagados. Editar contraseñas en `.env` después del primer arranque no cambia los hashes existentes ni la clave del rol PostgreSQL. Para cambiar claves persistidas se requiere una migración de credenciales específica; evita desincronizar el archivo y la base.
 
 ```sh
 docker compose ps
@@ -52,7 +52,8 @@ Detener contenedores conserva el volumen PostgreSQL. No uses opciones que borren
 - Selector de idioma accesible y Configuración con letra pequeña, mediana o grande guardada en la cuenta.
 - Inicio, cuentas, tarjetas, movimientos con búsqueda/filtros y detalle por producto.
 - Catálogo buscable de 20 servicios: telefonía, internet, cable, servicios públicos, transferencias, cuentas, tarjetas, préstamos, inversiones, seguros, efectivo y atención.
-- Formularios específicos con cuenta propia, referencia, importe, revisión y confirmación; registran solicitudes con seguimiento, sin débito ni liquidación.
+- Facturas por número/código: importe fijado por el recibo, pago total o parcial permitido, revisión, débito y comprobante en Movimientos. Transferencias entre clientes Nexqori con destinatario validado y dos asientos atómicos. Sin liquidación externa.
+- PDF con selección de cuenta/período, descarga persistente en Mis solicitudes y acceso desde la conversación.
 - Solicitudes con confirmación, referencia, idempotencia, estado y solicitud de atención.
 - Panel admin para usuarios, cola, inicio de revisión y auditoría.
 - Agente: “Llévame a transferencias”, “Show my cards”, “Abrir empréstimos”. Navega por rutas permitidas, consulta el saldo propio y prepara un formulario; no ejecuta operaciones.
@@ -70,7 +71,7 @@ Detener contenedores conserva el volumen PostgreSQL. No uses opciones que borren
 | notebooks/SERVICIOS_NEXQORI.ipynb | Análisis ejecutado con tablas, gráficos y denominadores. |
 | notebooks/servicios_nexqori/ | Agregados, consultas y comprobaciones del análisis de servicios. |
 
-Lee [catálogo y evidencia](docs/catalogo-servicios.md), [acceso y conversaciones](docs/acceso-y-conversaciones.md), [arquitectura y API](docs/arquitectura.md), [agente y conexión futura de un modelo](docs/agente.md), [servicios basados en datos](docs/servicios-basados-en-datos.md) y [guía del dataset y EDA previo](docs/dataset.md). El contrato OpenAPI está en http://localhost:5180/api/openapi.json. El [objetivo](OBJETIVO-APP.md) es contexto de producto; las capacidades futuras no están implícitamente implementadas.
+Lee [catálogo y evidencia](docs/catalogo-servicios.md), [acceso y conversaciones](docs/acceso-y-conversaciones.md), [arquitectura y API](docs/arquitectura.md), [agente y contexto conversacional](docs/agente.md), [servicios basados en datos](docs/servicios-basados-en-datos.md) y [guía del dataset y EDA previo](docs/dataset.md). El contrato OpenAPI está en http://localhost:5180/api/openapi.json. El [objetivo](OBJETIVO-APP.md) es contexto de producto; las capacidades futuras no están implícitamente implementadas.
 
 ## Verificación
 
@@ -81,11 +82,16 @@ docker compose exec api python -m pytest backend/tests -q
 npm run test:ui
 npm run test:experience
 npm run test:services
+npm run test:banking
 ```
 
 La prueba UI requiere Docker activo y Microsoft Edge; para Chromium instalado con Playwright usa `PLAYWRIGHT_CHANNEL=chromium`. Crea solicitudes ficticias con marcador `UI verification` y conserva las capturas en `.local/verification/`. Las pruebas API usan bases SQLite temporales; el recorrido UI y la persistencia se verifican en PostgreSQL de Docker. Los resultados no equivalen a una certificación bancaria.
 
 Para desarrollo de frontend con recarga automática, usa `npm run dev` y abre http://localhost:5173 con Docker activo. Vite reenvía `/api` al origen local de Docker. Reconstruye Docker después de modificar el backend.
+
+## Módulo de seguridad
+
+La rama de Santiago `security-lab-module` se incorpora como [módulo aislado](security-lab/README.md), con interfaz en `http://localhost:5200`. El editor de atención conserva `5190`. Su Compose usa otra base y una copia del banco como objetivo; no reutiliza clientes, claves ni conversaciones del banco principal. Consulta [integración y límites](docs/integracion-equipo.md).
 
 ## Skill compartible
 

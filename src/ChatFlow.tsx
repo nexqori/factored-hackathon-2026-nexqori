@@ -6,7 +6,7 @@ import { Dialog } from './components';
 import { catalogIds, serviceTitle } from './catalog';
 import type { Locale } from './i18n';
 
-export type FlowResult = { execution: {phase: string}; workflow_id: string; workflow_revision: number; state: string; reply: string;
+export type FlowResult = { canDocument?: boolean; execution: {phase: string}; workflow_id: string; workflow_revision: number; state: string; reply: string;
   suggestedTransaction?: {id:string} | null;
   jev: {intent?: string; status: string}; triage: {family?: string}; canRegister: boolean; requestId: string | null; latency_ms: number;
   missing_fields: string[]; verified_facts: {field: string; value: string; reference_id: string}[];

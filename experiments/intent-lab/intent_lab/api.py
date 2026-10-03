@@ -284,6 +284,7 @@ def editor_cases(language: Literal['es','en','pt']='es'):
     for row in corpus():
         if row['language']==language and row['slice']=='standard': examples.setdefault(row['expected'],row['text'])
     examples['request-status']={'es':'Quiero saber cómo va mi solicitud con folio NQ-123456.','en':'I want to check my request with reference NQ-123456.','pt':'Quero consultar minha solicitação com protocolo NQ-123456.'}[language]
+    examples['documents']={'es':'Quiero descargar mi estado de cuenta en PDF.','en':'I want to download my account statement as a PDF.','pt':'Quero baixar meu extrato em PDF.'}[language]
     rows=flow_engine.flow_map(language)['definitions']
     for row in rows:
         row['evidence']=next((p for p in evidence['problems'] if p['intent']==row['intent']),None)

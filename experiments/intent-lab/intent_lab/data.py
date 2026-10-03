@@ -28,6 +28,12 @@ LAB_QUERIES = [{"id": "request-status", "copy": {
     "pt": {"title": "Consultar uma solicitação existente", "summary": "Consultar apenas o andamento ou status de um protocolo ou reclamação existente. Não revisar novamente o valor de uma cobrança nem diagnosticar um pagamento."},
 }}]
 
+LAB_QUERIES.append({'id':'documents','copy':{
+    'es':{'title':'Obtener un documento PDF','summary':'Descargar un estado de cuenta informativo, un resumen de productos o seguimiento de solicitudes propios en PDF. No es un reclamo ni un certificado firmado.'},
+    'en':{'title':'Get a PDF document','summary':'Download an informational account statement, own product summary or request tracking PDF. This is not a complaint or a signed certificate.'},
+    'pt':{'title':'Obter um documento PDF','summary':'Baixar um extrato informativo, resumo de produtos próprios ou acompanhamento de solicitações em PDF. Não é uma reclamação nem um certificado assinado.'},
+}})
+
 
 def taxonomy(*, include_lab_queries=True):
     items = json.loads(CATALOG.read_text(encoding="utf-8"))["items"]

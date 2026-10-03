@@ -1,10 +1,13 @@
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Integer, BigInteger, Date, DateTime, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint, JSON
+from sqlalchemy import String, Text, Integer, BigInteger, Boolean, Date, DateTime, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint, JSON, LargeBinary
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from datetime import date
 
 def now():
     return datetime.now(timezone.utc)
+
+def iso_utc(value):
+    return (value if value.tzinfo else value.replace(tzinfo=timezone.utc)).astimezone(timezone.utc).isoformat()
 
 class Base(DeclarativeBase):
     pass
@@ -54,6 +57,7 @@ class Product(Base):
     last4: Mapped[str] = mapped_column(String(4))
     balance_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), default="MXN")
+    transfer_reference: Mapped[str | None] = mapped_column(String(18), unique=True, nullable=True)
     __table_args__ = (UniqueConstraint("id","user_id"), CheckConstraint("type IN ('account','savings','card')"), CheckConstraint("currency = 'MXN'"))
 
 class CardProfile(Base):
@@ -177,29 +181,34 @@ class Message(Base):
     content: Mapped[str] = mapped_column(Text)
     locale: Mapped[str] = mapped_column(String(2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    document: Mapped["ChatDocument | None"] = relationship(lazy="selectin", uselist=False)
     __table_args__ = (ForeignKeyConstraint(["conversation_id", "user_id"], ["conversations.id", "conversations.user_id"]), CheckConstraint("role IN ('user','assistant')"), CheckConstraint("locale IN ('es','en','pt')"))
 
 class PhoneBill(Base):
     __tablename__ = "phone_bills"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    reference: Mapped[str] = mapped_column(String(24))
+    # Historical table name retained so existing receipts keep their references.
+    service_id: Mapped[str] = mapped_column(String(64), default="phone-bill", server_default="phone-bill")
+    allow_partial: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    reference: Mapped[str] = mapped_column(String(64))
     period: Mapped[str] = mapped_column(String(7))
     due_date: Mapped[str] = mapped_column(String(10))
     amount_minor: Mapped[int] = mapped_column(BigInteger)
     currency: Mapped[str] = mapped_column(String(3), default="MXN")
-    __table_args__ = (UniqueConstraint("id", "user_id"), UniqueConstraint("user_id", "reference", "period"), CheckConstraint("amount_minor > 0 AND currency = 'MXN'"))
+    __table_args__ = (UniqueConstraint("id", "user_id"), UniqueConstraint("user_id", "service_id", "reference", "period", name="uq_bill_service_period"), CheckConstraint("amount_minor > 0 AND currency = 'MXN'"))
 
 class BillPayment(Base):
     __tablename__ = "bill_payments"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    bill_id: Mapped[str] = mapped_column(String(64), unique=True)
+    bill_id: Mapped[str] = mapped_column(String(64), index=True)
     account_id: Mapped[str] = mapped_column(String(64))
     transaction_id: Mapped[str] = mapped_column(String(64), unique=True)
     request_key: Mapped[str] = mapped_column(String(64))
     # Immutable receipt, independent of later changes to the bill or account.
     receipt: Mapped[dict] = mapped_column(JSON)
+    fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (ForeignKeyConstraint(["bill_id", "user_id"], ["phone_bills.id", "phone_bills.user_id"]), ForeignKeyConstraint(["account_id", "user_id"], ["products.id", "products.user_id"]), ForeignKeyConstraint(["transaction_id", "user_id"], ["transactions.id", "transactions.user_id"]), UniqueConstraint("user_id", "request_key"))
 
@@ -217,3 +226,53 @@ class AssistantTurn(Base):
     request_key: Mapped[str] = mapped_column(String(64), primary_key=True)
     fingerprint: Mapped[str] = mapped_column(String(64))
     response: Mapped[dict] = mapped_column(JSON)
+
+
+class TransferQuote(Base):
+    __tablename__ = "transfer_quotes"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    recipient_user_id: Mapped[str] = mapped_column(String(64))
+    recipient_product_id: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    __table_args__ = (ForeignKeyConstraint(["recipient_product_id", "recipient_user_id"], ["products.id", "products.user_id"]),)
+
+
+class BankTransfer(Base):
+    __tablename__ = "bank_transfers"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    recipient_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    source_product_id: Mapped[str] = mapped_column(String(64))
+    recipient_product_id: Mapped[str] = mapped_column(String(64))
+    debit_transaction_id: Mapped[str] = mapped_column(String(64), unique=True)
+    credit_transaction_id: Mapped[str] = mapped_column(String(64), unique=True)
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    request_key: Mapped[str] = mapped_column(String(64))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    receipt: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        ForeignKeyConstraint(["source_product_id", "user_id"], ["products.id", "products.user_id"]),
+        ForeignKeyConstraint(["recipient_product_id", "recipient_user_id"], ["products.id", "products.user_id"]),
+        ForeignKeyConstraint(["debit_transaction_id", "user_id"], ["transactions.id", "transactions.user_id"]),
+        ForeignKeyConstraint(["credit_transaction_id", "recipient_user_id"], ["transactions.id", "transactions.user_id"]),
+        UniqueConstraint("user_id", "request_key"), CheckConstraint("amount_minor > 0 AND user_id <> recipient_user_id"),
+    )
+
+
+class ChatDocument(Base):
+    __tablename__ = "chat_documents"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), index=True)
+    message_id: Mapped[str] = mapped_column(ForeignKey("messages.id"), unique=True)
+    kind: Mapped[str] = mapped_column(String(32))
+    locale: Mapped[str] = mapped_column(String(2))
+    filename: Mapped[str] = mapped_column(String(100))
+    request_key: Mapped[str] = mapped_column(String(64))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    content: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (ForeignKeyConstraint(["conversation_id", "user_id"], ["conversations.id", "conversations.user_id"]), UniqueConstraint("user_id", "request_key"))

@@ -13,17 +13,17 @@
       "copy": {
         "es": {
           "title": "Pagar celular o teléfono",
-          "summary": "Gestiona el pago de tu línea con Empresa Telefónica.",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
           "keywords": "celular teléfono telefonía móvil linea factura empresa telefonica"
         },
         "en": {
           "title": "Pay a phone bill",
-          "summary": "Arrange a bill payment for your Empresa Telefónica line.",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
           "keywords": "phone mobile cell telephone bill empresa telefonica"
         },
         "pt": {
           "title": "Pagar celular ou telefone",
-          "summary": "Solicite o pagamento da sua linha com Empresa Telefónica.",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
           "keywords": "celular telefone telefonia móvel linha fatura empresa telefonica"
         }
       },
@@ -44,17 +44,17 @@
       "copy": {
         "es": {
           "title": "Pagar internet",
-          "summary": "Encuentra tu servicio de Internet Plus y prepara el pago.",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
           "keywords": "internet wifi fibra recibo internet plus"
         },
         "en": {
           "title": "Pay an internet bill",
-          "summary": "Find your Internet Plus service and prepare a payment.",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
           "keywords": "internet broadband wifi bill internet plus"
         },
         "pt": {
           "title": "Pagar internet",
-          "summary": "Encontre seu serviço de Internet Plus e prepare o pagamento.",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
           "keywords": "internet wifi fibra boleto internet plus"
         }
       },
@@ -75,17 +75,17 @@
       "copy": {
         "es": {
           "title": "Pagar televisión",
-          "summary": "Consulta los datos de tu contrato de Cable TV para continuar.",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
           "keywords": "televisión television cable tv recibo"
         },
         "en": {
           "title": "Pay a TV bill",
-          "summary": "Use your Cable TV contract details to continue.",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
           "keywords": "television cable tv bill"
         },
         "pt": {
           "title": "Pagar televisão",
-          "summary": "Use os dados do seu contrato de Cable TV para continuar.",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
           "keywords": "televisão televisao tv cabo fatura"
         }
       },
@@ -106,17 +106,17 @@
       "copy": {
         "es": {
           "title": "Pagar servicios públicos",
-          "summary": "Prepara una solicitud con la referencia de tu recibo.",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
           "keywords": "servicios públicos luz agua electricidad gas recibo"
         },
         "en": {
           "title": "Pay a utility bill",
-          "summary": "Prepare a request using your utility bill reference.",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
           "keywords": "utilities electricity water gas public services bill"
         },
         "pt": {
           "title": "Pagar serviços públicos",
-          "summary": "Prepare uma solicitação com a referência da sua conta.",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
           "keywords": "serviços públicos luz água eletricidade gás conta boleto"
         }
       },
@@ -137,17 +137,17 @@
       "copy": {
         "es": {
           "title": "Transferir dinero",
-          "summary": "Indica el destinatario, la cuenta de origen y el importe.",
+          "summary": "Envía dinero a una cuenta Nexqori. Comprueba el destinatario antes de confirmar.",
           "keywords": "transferir transferencia enviar dinero beneficiario"
         },
         "en": {
           "title": "Transfer money",
-          "summary": "Enter the recipient, source account and amount.",
+          "summary": "Send money to a Nexqori account. Check the recipient before confirming.",
           "keywords": "transfer send money recipient"
         },
         "pt": {
           "title": "Transferir dinheiro",
-          "summary": "Informe o destinatário, a conta de origem e o valor.",
+          "summary": "Envie dinheiro para uma conta Nexqori. Confira o destinatário antes de confirmar.",
           "keywords": "transferir transferência enviar dinheiro destinatário"
         }
       },

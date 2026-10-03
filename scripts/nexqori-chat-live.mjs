@@ -38,6 +38,7 @@ try {
    if(intent!==turn.intent) errors.push('intent: '+intent+' expected '+turn.intent);
    if(turn.contains&&!value.text.toLowerCase().includes(turn.contains.toLowerCase())) errors.push('Missing targeted clarification');
    if(turn.route&&value.navigation?.route!==turn.route) errors.push('Unexpected navigation');
+   if(turn.document && !value.flow.canDocument) errors.push('Expected document preparation in this query');
    if(value.flow.state==='provider_unavailable') errors.push('Provider unavailable');
    if(/consultar información o reportar|information or to report|informações ou relatar/.test(value.text)) errors.push('Generic family question repeated');
    if(value.flow.canRegister && !value.conversation.transactionId && ['unrecognized-charge','incorrect-charge','payment-status'].includes(intent)) errors.push('Missing bank reference must not permit claim registration');

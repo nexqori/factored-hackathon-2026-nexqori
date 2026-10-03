@@ -34,7 +34,7 @@ def test_all_routes_and_questions_exist_without_provider_calls(private_config, m
     monkeypatch.setattr(flow, 'classify_jev', lambda *args: pytest.fail('Map must not call a provider'))
     client = TestClient(api.app)
     result = client.get('/lab-api/flow-map', params={'language': language}).json()
-    assert len(result['definitions']) == 24
+    assert len(result['definitions']) == 25
     assert {d['intent'] for d in result['definitions']} == set(flow.REQUIREMENTS)
     for item in result['definitions']:
         assert set(item['fields']) == set(item['questions'])
