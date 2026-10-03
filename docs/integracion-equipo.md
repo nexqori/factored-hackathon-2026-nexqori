@@ -7,8 +7,11 @@ Entrega preparada desde `bryan` para `main`, el 2 de octubre de 2026, America/Li
 | `bryan` | Banco persistente, editor de atención, contratos, reclamos, auditoría y confirmaciones. |
 | Santiago: `codex/bank-intent-es-pt` (`3d85c57`) | Consultas y PDF adaptados al chat existente. Generador y plantillas con [procedencia](../backend/document_templates/provenance.json). |
 | Santiago: `security-lab-module` (`b878472`) | Módulo independiente `security-lab/`, adaptado al contrato actual del banco y al puerto 5200. |
+| `araceli` (`6c6766e`, autoría SofiaEscalant1) | Acceso visible a Cerrar sesión, desplazamiento del menú en ventanas bajas, manejo de errores de navegación y comprobaciones de rutas/idioma PT adaptadas al historial actual. |
 
 La integración adapta capacidades de las ramas, no sustituye el banco por sus prototipos. El motor alternativo de chat y el panel de atención en memoria se reemplazan por las conversaciones, reclamos y panel administrativo persistentes ya disponibles. Los notebooks y documentos privados no se publican. Los subagentes usados durante el trabajo pertenecen a Codex, no al aplicativo.
+
+`araceli` partía de la base inicial y llevaba los reclamos a Mis solicitudes. Aquí se conserva la separación actual: el flujo conectado continúa en el chat y un reclamo confirmado va a Mis reclamos. Las rutas proceden del comando validado, no de un segundo mapeo de intención que lo sustituya. Se conserva el HTML de EDA vigente; la regeneración incluida en esa rama no cambia estos recorridos.
 
 ## Qué probar
 

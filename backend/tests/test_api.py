@@ -183,6 +183,26 @@ def test_navigation_is_audited_and_cannot_create_requests_or_move_money(setup):
     operator,_=login(app,'nora')
     assert operator.post('/api/assistant',json={'message':'open cards','locale':'en'}).status_code==403
 
+def test_assistant_portuguese_reply_preserves_original_message_languages(setup):
+    """Araceli's locale check adapted to the persistent conversation contract."""
+    app, _ = setup
+    client, _ = login(app)
+    first = client.post('/api/assistant', json={'message': 'Mi saldo', 'locale': 'es'}).json()
+    cid = first['conversation']['id']
+    response = client.post('/api/assistant', json={
+        'message': 'Não reconheço uma compra', 'locale': 'pt',
+        'currentPage': 'home', 'conversationId': cid,
+    })
+    assert response.status_code == 200
+    value = response.json()
+    assert value['intent'] == 'report' and value['text'].startswith('Vamos por partes.')
+    assert value['destination'] == 'new-request'
+    history = client.get('/api/conversations/' + cid).json()['messages']
+    assert [row['locale'] for row in history] == ['es', 'es', 'pt', 'pt']
+    assert history[-1]['text'] == value['text']
+    assert history[1]['text'] == first['text']
+
+
 def test_login_rate_limit(setup):
     _,engine=setup
     app=create_app(engine,[ORIGIN],False,login_limit=2)

@@ -13,7 +13,7 @@ import { ArrowRight, ArrowUpRight, Bell, ChevronDown, CreditCard, Eye, EyeOff, H
 import i18n, { type Locale } from './i18n';
 import { api, ApiError, setCsrf } from './api';
 import { Brand, Badge, Dialog, TransactionList, formatMoney, formatDate } from './components';
-import { currentDestination, safeNavigation } from './navigation';
+import { currentDestination, navigateWithCommand } from './navigation';
 import type { User, Dashboard, AdminData, Transaction, RequestCase, Service } from './types';
 
 import { LanguagePicker, languageLabels } from './LanguagePicker';
@@ -71,9 +71,11 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   function open(next: Modal) { setActionError(''); setModal(next); }
   async function changeLocale(value: Locale) { try { await api('/profile/locale', 'PATCH', { locale: value }); await i18n.changeLanguage(value); setUser({ ...user, locale: value }); } catch (e) { setActionError(errorText(e)); } }
   function focusChat() { document.querySelector('.assistant-panel')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); document.querySelector<HTMLInputElement>('[data-assistant-input]')?.focus({ preventScroll: true }); }
-  function receiveReply(result: ChatReply) {
+  async function receiveReply(result: ChatReply) {
     if (result.destination === 'new-request') open({ type: 'create' });
-    else { const route = safeNavigation(result.navigation); if (route) { navigate(route); setNotice(t('navigationDone', { screen: t(result.navigation!.destination) })); } }
+    else if (await navigateWithCommand(result.navigation, navigate, error => setActionError(errorText(error)))) {
+      setNotice(t('navigationDone', { screen: t(result.navigation!.destination) }));
+    }
   }
   useEffect(() => { document.documentElement.dataset.textSize = user.textSize || 'medium'; return () => { delete document.documentElement.dataset.textSize; }; }, [user.textSize]);
   async function confirmAction() {
@@ -85,7 +87,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   return <div className="app-shell">
     <a className="skip-link" href="#main">{t('skip')}</a>
     <aside className={'sidebar ' + (menu ? 'mobile-open' : '')}><button className="icon-button menu-close" aria-label={t('close')} onClick={() => setMenu(false)}><X size={22} /></button><NavLink className="brand-link" to={user.role === 'admin' ? '/admin' : '/'} aria-label="Nexqori"><Brand /></NavLink><p className="brand-tagline">{t('tagline')}</p><p className="nav-label">{t('workspace')}</p><nav aria-label={t('workspace')}>{(user.role === 'admin' ? [{ path: '/admin', label: 'admin', Icon: ShieldCheck }, { path: '/admin/complaints', label: 'claims.title', Icon: FileText }] : navigation).map(({ path, label, Icon }) => <NavLink key={path} to={path} end className={({ isActive }) => 'nav-link ' + (isActive ? 'active' : '')}><Icon size={20} /><span>{t(label)}</span>{label === 'myClaims' && complaints.length > 0 && <span className="nav-count">{complaints.length}</span>}</NavLink>)}</nav>
-    <div className="sidebar-bottom"><NavLink to="/settings" className="nav-link"><Settings2 size={20} />{t('settings')}</NavLink><p className="nav-label">{t('support')}</p><NavLink to="/help" className="nav-link"><CircleHelp size={20} />{t('help')}</NavLink>{user.role === 'customer' && <button className="sidebar-help" onClick={() => { setMenu(false); focusChat(); }}><span className="round-icon small"><Headphones size={21} /></span><strong>{t('assistantHint')}</strong><span>{t('focusAssistant')} <ArrowUpRight size={15} /></span></button>}<button className="nav-link logout" onClick={() => { void signOut().catch(e => setActionError(errorText(e))); }}><LogOut size={19} />{t('logout')}</button><p className="sidebar-version">nexqori · v0.1</p></div></aside>
+    <div className="sidebar-bottom"><NavLink to="/settings" className="nav-link"><Settings2 size={20} />{t('settings')}</NavLink><p className="nav-label">{t('support')}</p><NavLink to="/help" className="nav-link"><CircleHelp size={20} />{t('help')}</NavLink><button className="nav-link logout" onClick={() => { void signOut().catch(e => setActionError(errorText(e))); }}><LogOut size={19} />{t('logout')}</button>{user.role === 'customer' && <button className="sidebar-help" onClick={() => { setMenu(false); focusChat(); }}><span className="round-icon small"><Headphones size={21} /></span><strong>{t('assistantHint')}</strong><span>{t('focusAssistant')} <ArrowUpRight size={15} /></span></button>}<p className="sidebar-version">nexqori · v0.1</p></div></aside>
     {menu && <button className="menu-backdrop" aria-label={t('close')} onClick={() => setMenu(false)} />}<div className="workspace"><header className="topbar"><div className="topbar-left"><button className="icon-button menu-toggle" onClick={() => setMenu(!menu)} aria-label={t('menu')} aria-expanded={menu}><Menu size={22} /></button><span className="breadcrumb">nexqori <span>/</span> <strong>{pageTitle}</strong></span></div><div className="topbar-actions"><LanguagePicker onChange={value => { void changeLocale(value); }} />{user.role === 'customer' && <button className="icon-button" aria-label={t('notifications')} onClick={() => navigate('/requests')}><Bell size={19} /></button>}<span className="avatar" title={user.name}>{user.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</span></div></header>
     <div className={'workspace-body ' + (user.role === 'admin' ? 'admin-layout' : '')}><main id="main" tabIndex={-1}>
       {actionError && !modal && <p className="error-banner" role="alert">{actionError}</p>}

@@ -17,6 +17,26 @@ export function safeNavigation(command: unknown): string | null {
   }
   return destinations[c.destination] === c.route ? c.route : null;
 }
+
+// A response may have no navigation. A supplied command must match the server
+// allowlist, and a rejected router transition must not become an unhandled promise.
+export async function navigateWithCommand(
+  command: unknown,
+  navigate: (route: string) => void | Promise<void>,
+  onError: (error: unknown) => void,
+): Promise<boolean> {
+  if (command == null) return false;
+  try {
+    const route = safeNavigation(command);
+    if (!route) throw new Error('Unsupported navigation command');
+    await navigate(route);
+    return true;
+  } catch (error) {
+    onError(error);
+    return false;
+  }
+}
+
 export function currentDestination(pathname: string, search: string): Destination {
   if (pathname.startsWith('/services/catalog/')) { const category = serviceCategory(pathname.slice('/services/catalog/'.length)); return category && Object.hasOwn(destinations, category) ? category as Destination : 'services'; }
   if (pathname === '/cards') return 'cards';

@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
@@ -34,6 +34,11 @@ try {
   await page.getByLabel('Contraseña', { exact: true }).fill(credentials.CUSTOMER_PASSWORD);
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).click();
   await page.getByRole('heading', { name: 'Qué bueno tenerte aquí.' }).waitFor();
+  await page.setViewportSize({width:1512,height:780});
+  await expect(page.getByRole('button',{name:'Cerrar sesión',exact:true})).toBeInViewport({ratio:1});
+  assert.equal(await page.locator('.sidebar').evaluate(el=>getComputedStyle(el).overflowY),'auto');
+  await snapshot('home-short-desktop');
+  await page.setViewportSize({width:1512,height:1050});
   await snapshot('home-desktop');
   await axe('home');
   const labels = {
@@ -52,7 +57,7 @@ try {
     }
   }
   const commands = {
-    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/products?kind=cards']],
+    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/products?kind=cards'],['Ver mis movimientos','/movements'],['Ver mis solicitudes','/requests']],
     en: [['Open bill payments','/services/payments'],['Show my accounts','/products?kind=accounts']],
     pt: [['Abrir empréstimos','/services/loans'],['Abrir seguros','/services/insurance']]
   };
@@ -76,6 +81,26 @@ try {
       results.pages.push({locale,route:'/services/'+service,width:1512});
     }
   }
+  // A Portuguese report opens the existing review form. It must not silently
+  // route a complaint into applications or create a request without confirmation.
+  await chooseLanguage('pt');
+  const beforePortuguese=await(await context.request.get(origin+'/api/bootstrap')).json();
+  const responsePromise=page.waitForResponse(response=>response.url()===origin+'/api/assistant'&&response.request().method()==='POST');
+  await page.locator('.paste-composer textarea').fill('Não reconheço uma compra');
+  await page.locator('.paste-entry button').click();
+  const portuguese=await(await responsePromise).json();
+  assert.equal(portuguese.intent,'report'); assert.equal(portuguese.destination,'new-request');
+  assert.ok(portuguese.text.startsWith('Vamos por partes.'));
+  assert.deepEqual(portuguese.messages.map(message=>message.locale),['pt','pt']);
+  await page.getByRole('dialog',{name:'Nova solicitação',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Fechar',exact:true}).click();
+  await expect(page.locator('.chat-bubble.assistant').last()).toHaveAttribute('lang','pt');
+  await expect(page.locator('.chat-bubble.assistant').last()).toContainText('Vamos por partes.');
+  const afterPortuguese=await(await context.request.get(origin+'/api/bootstrap')).json();
+  assert.deepEqual(afterPortuguese.requests,beforePortuguese.requests);
+  assert.deepEqual(afterPortuguese.products,beforePortuguese.products);
+  assert.deepEqual(afterPortuguese.transactions,beforePortuguese.transactions);
+  results.agentNavigation.push({locale:'pt',message:'Não reconheço uma compra',destination:'new-request',replyLocale:'pt',confirmed:false});
   await chooseLanguage('es');
   await page.waitForFunction(() => document.documentElement.lang === 'es');
   await page.goto(origin + '/movements');

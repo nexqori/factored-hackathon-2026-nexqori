@@ -506,7 +506,7 @@
 - Siguiente paso: publicar sólo los archivos de este frente y revisar CI, conservando los demás cambios locales.
 
 ## Frente: Nexqori — integrar consultas y PDF de Santiago
-- Fecha: 2026-10-02 23:21 -0500, America/Lima. E:/factoredai; rama bryan.
+- Fecha: 2026-10-02 23:31 -0500, America/Lima. E:/factoredai; rama bryan.
 - Pedido vigente: integrar consultas/PDF de Santiago, pagos por número/código con total/parcial, transferencias y continuidad del chat. Los pagos y transferencias deben aparecer sólo en Movimientos; los PDF en Mis solicitudes con detalle/descarga y redirección. Integrar ramas disponibles y dejar merge final en main para pruebas. Subagentes de Codex, no del aplicativo; voz aplazada.
 - [x] Adaptar consultas/PDF de origin/codex/bank-intent-es-pt, tip 3d85c57, conservando chat PostgreSQL y registros bancarios fuera de modelos. Plantillas/generador con procedencia. PDF propio persistente y resumen en Documentos solicitados; acceso desde historial.
 - [x] Implementar recibos por servicio/referencia/período, pago total/abono permitido, varios pagos y transferencias entre clientes. Confirmación, auditoría, idempotencia y transacción atómica; ningún pago/transferencia crea una solicitud. Comprobantes en Movimientos.
@@ -516,6 +516,9 @@
 - [x] Verificar seis conversaciones con Jev/Luna: confirmación de cobro y consulta→PDF en ES/EN/PT, sin cambios financieros. Se corrigió sólo la ruta esperada de tarjetas en el escenario; repetición PT correcta. Informes privados ce0d606f6b7c y be0c6bafb54b. No es benchmark del dataset.
 - [x] Integrar y desplegar security-lab-module, tip b878472, aislado en :5200. 101 pruebas offline; 13 sondas HTTP aprobadas, 31 bloqueadas, 13 manuales y nueve no aplicables. UI ES/EN/PT, exportación, retest y persistencia correctos; ocho axe sin infracciones. [Evidencia privada](security-lab/.local/verification/ui-results.json). No reutiliza DB ni proveedores del banco principal.
 - [x] Completar regresión: navegación de 56 vistas/seis comandos/cinco axe, experiencia/cinco axe, catálogo de 17 vistas/nueve axe. Los dos fallos de expectativas antiguas de prueba se adaptaron a títulos/rutas existentes y se repitieron correctamente. Ciento veinte enlaces documentales verificados.
-- [ ] Publicar integración en bryan, actualizar PR #3 contra main y fusionar con CI correcta.
-- Último avance: implementado, banco/editor desplegados y validación principal correcta; pendiente publicación y merge. Guías [inicio](INICIO-EQUIPO.md), [integración](docs/integracion-equipo.md), [pagos](docs/pagos-y-transferencias.md), [PDF](docs/consultas-y-documentos.md) y [contexto](docs/contexto-conversacion.md). Otros frentes y datos privados preservados.
-- Siguiente paso: publicar bryan, actualizar PR #3 a main y fusionar tras las comprobaciones.
+- [x] Publicar f0858b0 en bryan y actualizar [PR #3](https://github.com/nexqori/nexqori/pull/3) contra main. [CI correcta](https://github.com/nexqori/nexqori/actions/runs/37096277389): application, intent-lab y security-lab. Ciento dieciséis archivos comprobados sin claves ni datos privados.
+- [x] Incorporar la nueva rama araceli (6c6766e) mediante adaptación: Cerrar sesión visible, menú desplazable y errores de navegación controlados. Conservar Mis reclamos separado de solicitudes, comandos del servidor y el EDA vigente. 22 pruebas frontend y compilación correctas; 17 comprobaciones API, incluida continuidad ES→PT sin cambiar mensajes anteriores.
+- [x] Validar navegación final: 56 vistas, ocho comandos, idioma PT y Cerrar sesión dentro de la ventana; cinco axe sin infracciones. Banco actualizado en :5180.
+- [ ] Fusionar PR #3 en main tras la CI final.
+- Último avance: implementado, banco/editor desplegados y validación principal correcta; publicado en bryan y pendiente merge final con la adaptación de araceli. Guías [inicio](INICIO-EQUIPO.md), [integración](docs/integracion-equipo.md), [pagos](docs/pagos-y-transferencias.md), [PDF](docs/consultas-y-documentos.md) y [contexto](docs/contexto-conversacion.md). Otros frentes y datos privados preservados.
+- Siguiente paso: validar navegación de araceli, publicar la adaptación y fusionar PR #3 con las comprobaciones correctas.
