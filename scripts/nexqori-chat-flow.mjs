@@ -99,7 +99,10 @@ try{
    // effect, while applying asks the server to invalidate old evidence.
    const prior=await(await context.request.get(origin+'/api/verification/summary')).json();
    await panel.locator('.paste-composer textarea').fill('Borrador que se conserva');
-   await panel.getByRole('button',{name:copy['chatMovement.change'],exact:true}).click();
+   await expect(panel.getByRole('button',{name:copy['chatMovement.change'],exact:true})).toHaveCount(0);
+   await expect(panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true})).toHaveCount(0);
+   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText(person.transactionId);
+   await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
    await details.getByLabel(copy.chooseTransaction,{exact:true}).selectOption(person.alternateTransactionId);
    const unchanged=await(await context.request.get(origin+'/api/conversations/'+cid)).json();assert.equal(unchanged.conversation.transactionId,person.transactionId);
    assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),prior);
@@ -116,7 +119,8 @@ try{
    assert.equal(result.conversation.transactionId,person.alternateTransactionId);assert.equal(result.flow.canRegister,true);
    assert.equal(result.flow.jev.intent,person.intent);assert(!JSON.stringify(result.flow.verified_facts).includes(person.transactionId));
    await expect(panel.locator('.paste-composer textarea')).toHaveValue('Borrador que se conserva');
-   await expect(panel.locator('[data-chat-movement]')).toHaveAttribute('data-chat-movement',person.alternateTransactionId);
+   await expect(panel.locator('[data-chat-movement]')).toHaveCount(0);
+   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText(person.alternateTransactionId);
    const following=await(await context.request.get(origin+'/api/verification/summary')).json();
    assert.equal(following.counts.triage,prior.counts.triage);assert.equal(following.counts.jev,prior.counts.jev);
   }

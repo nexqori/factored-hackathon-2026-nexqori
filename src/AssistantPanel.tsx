@@ -121,11 +121,11 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
       {pending && <div className="chat-bubble user chat-pending" lang={pending.locale}>{pending.text}</div>}
       {busy && <div className="chat-thinking" role="status"><span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span>{t(pending ? 'chatSending.thinking' : 'loading')}</div>}
       {!busy && connected && !flow?.requestId && (messages.length > 0 || !!selectedTx) && <div className="chat-movement-context">
-        {selectedTransaction && <div className="chat-selected-movement" data-chat-movement={selectedTx}><strong>{selectedTransaction.merchant}</strong><span>{formatMoney(selectedTransaction.amountMinor,locale,selectedTransaction.currency)} · {formatDate(selectedTransaction.date,locale)}</span><small>{t('chatMovement.reference')}: {selectedTx}</small></div>}
-        <div className="chat-transaction-choice" aria-label={t('chatSending.suggestion')}>
+        {selectedTransaction && !flow?.canRegister && <div className="chat-selected-movement" data-chat-movement={selectedTx}><strong>{selectedTransaction.merchant}</strong><span>{formatMoney(selectedTransaction.amountMinor,locale,selectedTransaction.currency)} · {formatDate(selectedTransaction.date,locale)}</span><small>{t('chatMovement.reference')}: {selectedTx}</small></div>}
+        {!selectedTx && <div className="chat-transaction-choice" aria-label={t('chatSending.suggestion')}>
           {flow?.suggestedTransaction && !selectedTx && <button className="button primary" onClick={() => { void send(t('chatSending.confirmMessage'),undefined,'',flow.suggestedTransaction!.id).catch(fail); }}>{t('chatSending.confirm')}</button>}
-          <button className="button secondary" aria-haspopup="dialog" onClick={() => openDetails()}>{t(selectedTx ? 'chatMovement.change' : 'chatMovement.choose')}</button>
-        </div>
+          <button className="button secondary" aria-haspopup="dialog" onClick={() => openDetails()}>{t('chatMovement.choose')}</button>
+        </div>}
       </div>}
       {!busy && flow?.canDocument && conversation && <button className="button secondary chat-next-action" onClick={()=>setDocumentsOpen(true)}>{t('documents.prepare')}</button>}
       {!busy && flow?.canRegister && <button className="button secondary chat-next-action" onClick={() => openDetails()}>{t('chatFlow.prepareClaim')}<ArrowUpRight size={16}/></button>}

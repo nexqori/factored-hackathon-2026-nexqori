@@ -26,7 +26,7 @@ from .transaction_suggestions import FINANCIAL_PROBLEMS, confirmation, choose, s
 from .query_documents import can_document
 from .query_answers import query_answer
 from .query_context import apply_query_context
-from .claim_summary import claim_preview, confirmation_text, preview_token, NEXT as CLAIM_NEXT
+from .claim_summary import claim_preview, confirmation_text, preview_token, review_message, NEXT as CLAIM_NEXT
 from .conversation_selection import replace_transaction_context
 from .conversation_context import (changes_topic, provider_history, reviewed_problem, resume_review,
                                    safe_query_reply, safe_suggestion_reply, remember_safe_reply)
@@ -262,8 +262,8 @@ def chat_router(conversation_view, message_view):
                                  'Your case needs a review by customer support. Review the details and confirm the complaint to request it.',
                                  'Seu caso precisa de análise do atendimento. Revise o relato e confirme a reclamação para solicitá-la.'),
             }
-            ctx['reply'] = replies[ctx['state']][('es','en','pt').index(body.locale)]
-            remember_safe_reply(state, ctx['reply'])
+            ctx['reply'] = review_message(db, conv, state, body.locale)
+            remember_safe_reply(state, replies[ctx['state']][('es','en','pt').index(body.locale)])
         for question in ctx.get('questions', []):
             if question['field'] in ('transaction_id','request_id'):
                 question_text = {
