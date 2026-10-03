@@ -59,7 +59,7 @@ try {
     }
   }
   const commands = {
-    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/products?kind=cards'],['Ver mis movimientos','/movements'],['Ver mis solicitudes','/requests']],
+    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/cards'],['Ver mis movimientos','/movements'],['Ver mis solicitudes','/requests']],
     en: [['Open bill payments','/services/payments'],['Show my accounts','/products?kind=accounts']],
     pt: [['Abrir empréstimos','/services/loans'],['Abrir seguros','/services/insurance']]
   };

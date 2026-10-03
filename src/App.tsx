@@ -72,6 +72,13 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   async function changeLocale(value: Locale) { try { await api('/profile/locale', 'PATCH', { locale: value }); await i18n.changeLanguage(value); setUser({ ...user, locale: value }); } catch (e) { setActionError(errorText(e)); } }
   function focusChat() { document.querySelector('.assistant-panel')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); document.querySelector<HTMLInputElement>('[data-assistant-input]')?.focus({ preventScroll: true }); }
   async function receiveReply(result: ChatReply) {
+    if (result.appCommand) {
+      try {
+        if (result.appCommand.type === 'logout') await signOut();
+        else if (result.appCommand.type === 'set_locale' && ['es', 'en', 'pt'].includes(result.appCommand.locale)) await changeLocale(result.appCommand.locale);
+      } catch (error) { setActionError(errorText(error)); }
+      return;
+    }
     if (result.destination === 'new-request') open({ type: 'create' });
     else if (await navigateWithCommand(result.navigation, navigate, error => setActionError(errorText(error)))) {
       setNotice(t('navigationDone', { screen: t(result.navigation!.destination) }));

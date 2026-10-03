@@ -29,6 +29,7 @@ from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, Confirm
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
 from .assistant import answer
+from .chat_commands import application_command
 from .presentation import present_message
 from .transaction_context import transaction_evidence, transaction_reply
 
@@ -372,7 +373,11 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             conversation=Conversation(id=str(uuid4()),user_id=user.id,title=message[:100],locale=payload.locale,transaction_id=payload.transactionId)
             db.add(conversation); db.flush()
             add_audit(db,user.id,"conversation_started",user.id,conversation_id=conversation.id)
-        if conversation.transaction_id:
+        command=application_command(instruction,payload.locale) if not payload.pastedText.strip() else None
+        if command:
+            result=command
+            add_audit(db,user.id,"chat_app_command",user.id,conversation_id=conversation.id)
+        elif conversation.transaction_id:
             evidence=transaction_evidence(db,user.id,conversation.transaction_id)
             result=transaction_reply(evidence,payload.locale)
             db.add(AuditEvent(id=str(uuid4()),user_id=user.id,actor_id=user.id,action="transaction_context_viewed",transaction_id=conversation.transaction_id,product_id=evidence['transaction']['productId'],request_id=evidence['request']['id'] if evidence['request'] else None,conversation_id=conversation.id))

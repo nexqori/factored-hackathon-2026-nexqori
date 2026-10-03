@@ -24,7 +24,15 @@ Ejemplos: “Llévame a transferencias”, “Show my cards”, “Abrir emprés
 }
 ```
 
-Destinos: home, products, movements, requests, services, help, accounts, cards, transfers, payments, loans, investments, insurance, cash, settings. Cuentas y tarjetas filtran productos; las categorías abren un catálogo buscable. Un servicio específico usa `destination=services`, `serviceId` registrado y una ruta derivada `/services/catalog/{id}`; ambos extremos rechazan IDs o rutas ajenos al catálogo. No hay destino admin ni URL externa. La auditoría registra que se emitió el comando; el navegador puede fallar después y ese registro no acredita apertura exitosa.
+Destinos: home, products, movements, requests, services, help, accounts, cards, transfers, payments, loans, investments, insurance, cash, settings. Cuentas filtra productos; tarjetas abre `/cards` y activa su entrada del menú. Las categorías abren un catálogo buscable. Un servicio específico usa `destination=services`, `serviceId` registrado y una ruta derivada `/services/catalog/{id}`; ambos extremos rechazan IDs o rutas ajenos al catálogo. No hay destino admin ni URL externa. La auditoría registra que se emitió el comando; el navegador puede fallar después y ese registro no acredita apertura exitosa.
+
+## Órdenes explícitas de aplicación
+
+`backend/chat_commands.py` añade reglas ES/EN/PT antes de avanzar el intérprete, sin reconstruir el maestro. Distingue abrir Mis solicitudes de abrir Mis reclamos y reconoce tarjetas, Inicio y Centro de ayuda. Los comandos guardan mensajes, auditoría y respuesta idempotente en el chat conectado, preservando íntegro el checkpoint, contrato, referencias y pregunta pendiente. No consumen proveedores ni se incorporan al historial del modelo. Una respuesta posterior al caso continúa desde el punto guardado.
+
+Cambiar a Español, English o Português devuelve un comando limitado que la interfaz aplica con `PATCH /api/profile/locale`; cerrar sesión utiliza `POST /api/auth/logout`, con sus permisos, CSRF y auditoría existentes. El reconocimiento requiere una orden completa del texto escrito por el cliente; no acepta texto pegado, negaciones, instrucciones citadas ni salidas del modelo como autorización. No ejecuta operaciones bancarias. Las variantes fuera de estas reglas conservan el intérprete existente; no es una clasificación semántica ilimitada.
+
+Validación: `backend/tests/test_chat_commands.py` comprueba variantes, aislamiento, reintentos y continuidad. `npm run test:chat:flow` añade navegación y menú activo durante una pregunta pendiente, cambios de idioma persistidos tras recarga y cierre de sesión real en los tres idiomas.
 
 ## Proveedores y contexto
 

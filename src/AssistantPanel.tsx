@@ -12,7 +12,7 @@ import { localeTags, type Locale } from './i18n';
 import type { Destination, NavigationCommand } from './navigation';
 import type { Conversation, ConversationList, ConversationPage, Message } from './types';
 
-export type ChatReply = { flow?: FlowResult; text: string; destination: string | null; navigation: NavigationCommand | null; conversation: Conversation; messages: Message[] };
+export type ChatReply = { appCommand?: { type: 'logout' } | { type: 'set_locale'; locale: Locale } | null; flow?: FlowResult; text: string; destination: string | null; navigation: NavigationCommand | null; conversation: Conversation; messages: Message[] };
 export type TransactionQuestion = { nonce: string; transactionId: string; merchant: string };
 export function Bot({ large = false }: { large?: boolean }) { return <img className={'bot-avatar' + (large ? ' bot-large' : '')} src="/nexqori-bot.png" alt="" aria-hidden="true" width={large ? 100 : 48} height={large ? 100 : 48} />; }
 

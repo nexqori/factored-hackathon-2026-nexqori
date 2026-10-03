@@ -20,6 +20,7 @@ from .security import customer, customer_read, db_session
 from .agent_tools import read_tool, ReadToolInput
 from .catalog import SERVICES
 from .assistant import answer
+from .chat_commands import application_command
 from .navigation import navigate_in_app
 from .transaction_context import transaction_evidence, transaction_reply
 from .transaction_suggestions import FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply
@@ -142,6 +143,20 @@ def chat_router(conversation_view, message_view):
             db.add(conv); db.flush()
             db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action='conversation_started'))
         row = db.get(ConversationFlow, conv.id)
+        command = application_command(body.message, body.locale) if not body.pastedText.strip() and not body.replaceTransaction else None
+        if command:
+            # Keep the graph checkpoint, pending question, contract and bank
+            # binding unchanged. Commands are durable turns, not model replies.
+            user_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='user', content=message, locale=body.locale)
+            reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='assistant', content=command['text'], locale=body.locale)
+            db.add_all([user_message, reply])
+            for action in ('message_sent', 'chat_app_command', 'assistant_replied'):
+                db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action=action))
+            conv.updated_at = now(); db.flush()
+            response = {**command, 'conversation': conversation_view(conv), 'messages': [message_view(user_message), message_view(reply)], 'flow': flow_view(row)}
+            db.add(AssistantTurn(user_id=user.id, request_key=body.requestKey, fingerprint=fingerprint, response=response))
+            db.commit()
+            return response
         replacing = bool(body.replaceTransaction and body.transactionId != conv.transaction_id)
         if replacing and row and row.request_id:
             raise HTTPException(409, 'conversation_context_conflict')

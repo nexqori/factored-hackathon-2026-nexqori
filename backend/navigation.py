@@ -8,7 +8,7 @@ from .catalog import SERVICES
 Destination = Literal["home","products","movements","requests","complaints","documents","services","help","accounts","cards","transfers","payments","loans","investments","insurance","cash","settings"]
 ROUTES = {
     "home":"/", "products":"/products", "movements":"/movements", "requests":"/requests", "complaints":"/complaints", "documents":"/documents",
-    "services":"/services", "help":"/help", "accounts":"/products?kind=accounts", "cards":"/products?kind=cards",
+    "services":"/services", "help":"/help", "accounts":"/products?kind=accounts", "cards":"/cards",
     "transfers":"/services/transfers", "payments":"/services/payments", "loans":"/services/loans",
     "investments":"/services/investments", "insurance":"/services/insurance", "cash":"/services/cash", "settings":"/settings"
 }

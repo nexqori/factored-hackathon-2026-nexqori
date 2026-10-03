@@ -553,3 +553,17 @@
 - [x] Abrir y adjuntar [PR #5](https://github.com/nexqori/nexqori/pull/5). Adoptar ramas por funcionalidad, PRs frecuentes, commits claros y versiones etiquetadas en AGENTS.md y docs/trabajo-en-github.md; paquete/API 0.2.0.
 - Último avance: implementado, desplegado en banco Docker :5180 versión 0.2.0 y validado localmente. CI inicial de aplicación y editor correcta; corrección de Security Lab lista para repetir CI antes del merge. Informes privados bank-chat-ShSCWm, document-context-nzsaaD y picker-mobile-SjyP9p bajo .local/verification. Interpretación de fechas acotada y local, sin registros bancarios enviados a modelos. Voz aplazada; otros frentes y archivos privados preservados.
 - Siguiente paso: terminar CI del PR #5, fusionar main, sincronizar bryan por avance rápido y publicar etiqueta v0.2.0. No reiniciar Andrea ni los cinco perfiles ya preparados.
+
+## Frente: Nexqori — navegación, idioma y sesión desde el chatbot
+- Fecha: 2026-10-03, America/Lima. C:/Users/santi/Documents/Projects/nexqori; rama codex/chat-navigation-commands desde santiago 45d2d06.
+- Pedido vigente: corregir solicitudes/reclamos y selección de tarjetas; incorporar Inicio, Centro de ayuda, cierre de sesión y cambio ES/EN/PT sin rehacer el flujo.
+- [x] Añadir órdenes explícitas del cliente en backend/chat_commands.py y conectarlas a las dos rutas del chat. Preservar checkpoint, contrato, referencias, pregunta pendiente y turnos idempotentes del flujo conectado; sin ejecución de proveedores ni operaciones financieras.
+- [x] Separar Mis solicitudes de Mis reclamos; dirigir tarjetas a /cards y normalizar la ruta antigua sólo para reintentos guardados. Aplicar idioma y cierre mediante los endpoints autenticados existentes; conservar mensajes en su idioma original.
+- [x] Validar 30 pruebas frontend y compilación. Suite API completa: 418 correctas y un fallo del nuevo test por enviar requestKey a la ruta antigua; corregido el test y repetidas 69 pruebas de comandos, flujo y navegación, todas correctas, incluidas 41 nuevas. Dependencias del backend completadas desde requirements.lock en .venv-app; temporales de pytest aislados por permisos del directorio temporal previo.
+- [x] Validar nueve conversaciones ES/EN/PT y 47 axe sin infracciones; órdenes durante pregunta pendiente, menú activo, idioma persistido tras recarga, sesión revocada e intérprete con el mismo número de llamadas. Informe privado .local/verification/bank-chat-ZY468X/report.json; captura chat-cards-es.png revisada.
+- [x] Validar navegación general (56 vistas/nueve comandos), experiencia y catálogo (17 vistas), 19 axe sin infracciones; pagos en tres idiomas, reintentos y concurrencia, 15 axe sin infracciones. Informe privado .local/verification/payments/b007e342183b/report.json. Sólo titulares de verificación; no se reiniciaron perfiles manuales ni Andrea.
+- [x] Actualizar guía docs/agente.md y desplegar los cambios en Docker local :5180, conservando PostgreSQL.
+- [ ] Publicar la rama y abrir PR; sin fusión en main. GitHub CLI no está disponible en este equipo.
+- Límites: reglas explícitas con variantes ES/EN/PT, no reconocimiento semántico ilimitado. No se configuraron proveedores ni se alteró el grafo maestro. Las órdenes nuevas no requieren claves; el resto de la atención mantiene su configuración previa.
+- Último avance: implementado, validado y desplegado localmente; pendiente publicación mediante PR. Otros frentes preservados.
+- Siguiente paso: recargar el banco y probar las órdenes; tramitar PR antes de integrar a main.

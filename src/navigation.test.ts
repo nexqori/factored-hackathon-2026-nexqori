@@ -10,7 +10,9 @@ describe('Agent navigation boundary', () => {
     expect(safeNavigation({...command,destination:'requests'})).toBeNull();
   });
   it('opens a permitted destination and rejects arbitrary, mismatched or inherited routes', () => {
-    expect(safeNavigation({ tool: 'navigate_in_app', destination: 'cards', route: '/products?kind=cards' })).toBe('/products?kind=cards');
+    expect(safeNavigation({ tool: 'navigate_in_app', destination: 'cards', route: '/cards' })).toBe('/cards');
+    expect(safeNavigation({ tool: 'navigate_in_app', destination: 'cards', route: '/products?kind=cards' })).toBe('/cards');
+    expect(safeNavigation({ tool: 'navigate_in_app', destination: 'cards', route: '/products?kind=cards&action=pay' })).toBeNull();
     for (const command of [null, {}, { tool: 'navigate_in_app', destination: 'cards', route: 'https://example.com' },
       { tool: 'navigate_in_app', destination: 'admin', route: '/admin' },
       { tool: 'navigate_in_app', destination: '__proto__', route: '/' },
@@ -45,7 +47,7 @@ describe('Agent navigation boundary', () => {
     expect(navigate).toHaveBeenLastCalledWith('/services/catalog/phone-bill'); expect(onError).not.toHaveBeenCalled();
   });
   it('waits for a successful transition and reports both synchronous and asynchronous failures', async () => {
-    const command = {tool:'navigate_in_app',destination:'cards',route:'/products?kind=cards'};
+    const command = {tool:'navigate_in_app',destination:'cards',route:'/cards'};
     const onError = vi.fn(); const failure = new Error('Navigation failed');
     for (const navigate of [vi.fn(() => {throw failure;}), vi.fn().mockRejectedValue(failure)]) {
       await expect(navigateWithCommand(command,navigate,onError)).resolves.toBe(false);

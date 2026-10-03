@@ -2,7 +2,7 @@
 import { catalogIds, serviceCategory } from './catalog';
 export const destinations = {
   home: '/', products: '/products', movements: '/movements', requests: '/requests', complaints: '/complaints', documents: '/documents',
-  services: '/services', help: '/help', accounts: '/products?kind=accounts', cards: '/products?kind=cards',
+  services: '/services', help: '/help', accounts: '/products?kind=accounts', cards: '/cards',
   transfers: '/services/transfers', payments: '/services/payments', loans: '/services/loans',
   investments: '/services/investments', insurance: '/services/insurance', cash: '/services/cash', settings: '/settings',
 } as const;
@@ -26,6 +26,9 @@ export function safeNavigation(command: unknown): string | null {
   if (c.serviceId !== undefined) {
     return c.destination === 'services' && typeof c.serviceId === 'string' && catalogIds.has(c.serviceId) && c.route === '/services/catalog/' + c.serviceId ? c.route : null;
   }
+  // An idempotent replay can contain the former cards route. Normalize only
+  // this exact known route so existing saved turns activate the Cards menu too.
+  if (c.destination === 'cards' && c.route === '/products?kind=cards') return destinations.cards;
   return destinations[c.destination] === c.route ? c.route : null;
 }
 export function validDate(value:unknown):value is string{return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;}

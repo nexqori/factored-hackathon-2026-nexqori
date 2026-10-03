@@ -120,6 +120,16 @@ try{
   }
   if(person.intent==='incorrect-charge'){
    assert.deepEqual(result.flow.missing_fields,['difference']);
+   const commands={es:['Llévame a mis solicitudes','Llévame a mis tarjetas','Llévame al inicio','Llévame a centro de ayuda'],en:['Show my requests','Show me my cards','Go home','Open the help center'],pt:['Me leve às minhas solicitações','Mostre meus cartões','Vá ao início','Abra a central de ajuda']}[person.locale];
+   for(const [index,route] of ['/requests','/cards','/','/help'].entries()){
+    const response=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
+    await panel.locator('.paste-composer textarea').fill(commands[index]);await panel.locator('.paste-entry button').click();
+    const command=await(await response).json();assert.deepEqual(command.flow,result.flow,'Application commands preserve pending attention');
+    await page.waitForURL(origin+route);
+    await expect(page.locator('.sidebar .nav-link.active')).toHaveCount(1);
+    await expect(page.locator('.sidebar .nav-link.active')).toHaveAttribute('href',route);
+    if(route==='/cards')await page.screenshot({path:path.join(folder,'chat-cards-'+person.locale+'.png'),fullPage:true});
+   }
    const next=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
    await panel.locator('.paste-composer textarea').fill('100 MXN');await panel.locator('.paste-entry button').click();result=await(await next).json();assert(result.flow.canRegister);
   }
@@ -165,6 +175,19 @@ try{
   await page.locator('.claims-detail .trace-conversation').first().click();await expect(page.locator('.claims-detail')).toContainText(copy['chatFlow.title']);
   await expect(page.locator('.claims-detail pre')).toHaveCount(0);await expect(page.locator('.claims-detail .trace-tabs')).toHaveCount(0);await axe('claim-'+person.locale+'-'+person.intent);
   if(person.intent==='incorrect-charge'){await page.screenshot({path:path.join(folder,'chat-claim-'+person.locale+'.png'),fullPage:true});await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+person.locale);}
+  if(person.intent==='incorrect-charge'){
+   await page.setViewportSize({width:1512,height:1050});
+   for(const [target,text] of [['en','Cambia el idioma a inglés'],['pt','Switch to Portuguese'],['es','Mude o idioma para espanhol']]){
+    await panel.locator('.paste-composer textarea').fill(text);await panel.locator('.paste-entry button').click();
+    await expect(page.locator('html')).toHaveAttribute('lang',target);
+    const session=await(await context.request.get(origin+'/api/session')).json();assert.equal(session.user.locale,target);
+    await page.reload();await expect(page.locator('html')).toHaveAttribute('lang',target);
+   }
+   const logout=page.waitForResponse(r=>r.url().endsWith('/api/auth/logout'));
+   await panel.locator('.paste-composer textarea').fill({es:'Cierra sesión',en:'Log me out',pt:'Encerre minha sessão'}[person.locale]);await panel.locator('.paste-entry button').click();
+   assert.equal((await logout).status(),200);await expect(page.locator('.login-page')).toBeVisible();
+   assert.equal((await context.request.get(origin+'/api/session')).status(),401);
+  }
   report.cases.push({locale:person.locale,intent:person.intent,conversationId:cid,requestId:rid});await context.close();
  }
  const summary=await(await fetch(origin+'/api/verification/summary')).json();assert.deepEqual(summary.counts,{triage:9,jev:9,llm:18});assert.equal(summary.bankRecordsSentToModels,false);
