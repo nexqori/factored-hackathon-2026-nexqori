@@ -2,26 +2,31 @@ import os
 from datetime import datetime, timezone
 from sqlalchemy import select
 from .db import make_engine, make_sessions
-from .models import User, Product, Transaction, RequestCase, AuditEvent
+from .models import User, Product, Transaction, RequestCase, AuditEvent, CardProfile
 from .security import hasher
+from .payments import seed_service_bills
+from .transfers import assign_account_references
 
 def seed(session, passwords):
     if session.scalar(select(User.id).limit(1)):
+        seed_service_bills(session)
+        assign_account_references(session)
         return
     if any(not isinstance(p, str) or len(p) < 14 for p in passwords):
         raise RuntimeError("Run npm run setup: initial passwords require at least 14 characters.")
     users = [
-        User(id="andrea",email="andrea@nexqori.local",name="Andrea Rivera",password_hash=hasher.hash(passwords[0]),role="customer",locale="es"),
-        User(id="nora",email="admin@nexqori.local",name="Nora",password_hash=hasher.hash(passwords[1]),role="admin",locale="es"),
-        User(id="mateo",email="mateo@nexqori.local",name="Mateo Silva",password_hash=hasher.hash(passwords[2]),role="customer",locale="pt")
+        User(id="andrea",identity_number="00000001",email="andrea@nexqori.com",name="Andrea Rivera",password_hash=hasher.hash(passwords[0]),role="customer",locale="es"),
+        User(id="nora",identity_number="00000002",email="admin@nexqori.com",name="Nora",password_hash=hasher.hash(passwords[1]),role="admin",locale="es"),
+        User(id="mateo",identity_number="00000003",email="mateo@nexqori.com",name="Mateo Silva",password_hash=hasher.hash(passwords[2]),role="customer",locale="pt")
     ]
     session.add_all(users); session.flush()
     session.add_all([
         Product(id="account-01",user_id="andrea",type="account",last4="4821",balance_minor=1845000),
         Product(id="savings-01",user_id="andrea",type="savings",last4="7206",balance_minor=640000),
-        Product(id="card-01",user_id="andrea",type="card",last4="8942",balance_minor=None),
+        Product(id="card-01",user_id="andrea",type="card",last4="5556",balance_minor=None),
         Product(id="account-02",user_id="mateo",type="account",last4="1103",balance_minor=520000)
     ]); session.flush()
+    session.add(CardProfile(product_id="card-01", user_id="andrea", provider_ref="local-card-01", expiry_month=12, expiry_year=2029, settlement_product_id="account-01"))
     rows = [
         ("TX-1001","andrea","card-01","Mercado Central","shopping",-28650,"2026-09-28T16:30:00+00:00","completed"),
         ("TX-1002","andrea","card-01","Stream Plus","subscription",-18900,"2026-09-27T23:40:00+00:00","completed"),
@@ -42,6 +47,8 @@ def seed(session, passwords):
         AuditEvent(id="seed-02",user_id="andrea",request_id="NQ-1021",action="reviewed",actor_id="nora",created_at=at)
     ])
     session.commit()
+    seed_service_bills(session)
+    assign_account_references(session)
 
 if __name__ == "__main__":
     engine=make_engine()

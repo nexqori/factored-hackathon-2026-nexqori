@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "name": {
+    "es": "Acceso a la app · Jev y evidencia local",
+    "en": "App access · Jev and local evidence",
+    "pt": "Acesso ao app · Jev e evidência local"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": {
+        "es": "Mensaje del cliente",
+        "en": "Customer message",
+        "pt": "Mensagem do cliente"
+      },
+      "position": {
+        "x": 0.0,
+        "y": 100.0
+      },
+      "config": {}
+    },
+    {
+      "id": "jev",
+      "kind": "jev",
+      "label": {
+        "es": "Clasificar el caso",
+        "en": "Classify the case",
+        "pt": "Classificar o caso"
+      },
+      "position": {
+        "x": 210.0,
+        "y": 100.0
+      },
+      "config": {
+        "instructions": {
+          "es": "",
+          "en": "",
+          "pt": ""
+        }
+      }
+    },
+    {
+      "id": "scope",
+      "kind": "condition",
+      "label": {
+        "es": "¿Fuera de alcance?",
+        "en": "Out of scope?",
+        "pt": "Fora do escopo?"
+      },
+      "position": {
+        "x": 420.0,
+        "y": 100.0
+      },
+      "config": {
+        "predicate": "intent_is",
+        "value": "out-of-scope"
+      }
+    },
+    {
+      "id": "outside",
+      "kind": "response",
+      "label": {
+        "es": "Orientar al cliente",
+        "en": "Guide the customer",
+        "pt": "Orientar o cliente"
+      },
+      "position": {
+        "x": 420.0,
+        "y": 300.0
+      },
+      "config": {
+        "outcome": "information",
+        "text": {
+          "es": "Puedo orientarte sobre tus consultas y servicios bancarios. No puedo acceder a información de otras personas ni realizar esa solicitud.",
+          "en": "I can help with your banking inquiries and services. I cannot access other people’s information or carry out that request.",
+          "pt": "Posso orientar sobre suas consultas e serviços bancários. Não posso acessar informações de outras pessoas nem realizar esse pedido."
+        }
+      }
+    },
+    {
+      "id": "context",
+      "kind": "context",
+      "label": {
+        "es": "Contexto e instrucciones",
+        "en": "Context and instructions",
+        "pt": "Contexto e instruções"
+      },
+      "position": {
+        "x": 1050.0,
+        "y": 100.0
+      },
+      "config": {
+        "instructions": {
+          "es": "Conserva los intentos que el cliente ya hizo. La incidencia vinculada es una comprobación local controlada, no un hecho bancario real.",
+          "en": "Keep the steps the customer has already tried. The linked incident is a controlled local check, not a real banking fact.",
+          "pt": "Preserve os passos que o cliente já tentou. A incidência vinculada é uma verificação local controlada, não um fato bancário real."
+        },
+        "mode": "case",
+        "fields": [],
+        "notes": {
+          "es": "",
+          "en": "",
+          "pt": ""
+        }
+      }
+    },
+    {
+      "id": "human",
+      "kind": "condition",
+      "label": {
+        "es": "¿Requiere una persona?",
+        "en": "Needs a person?",
+        "pt": "Precisa de uma pessoa?"
+      },
+      "position": {
+        "x": 1260.0,
+        "y": 100.0
+      },
+      "config": {
+        "predicate": "needs_human",
+        "value": ""
+      }
+    },
+    {
+      "id": "escalate",
+      "kind": "escalate",
+      "label": {
+        "es": "Proponer revisión humana",
+        "en": "Propose human review",
+        "pt": "Propor revisão humana"
+      },
+      "position": {
+        "x": 1260.0,
+        "y": 300.0
+      },
+      "config": {
+        "text": {
+          "es": "",
+          "en": "",
+          "pt": ""
+        }
+      }
+    },
+    {
+      "id": "missing",
+      "kind": "condition",
+      "label": {
+        "es": "¿Faltan datos?",
+        "en": "Missing information?",
+        "pt": "Faltam dados?"
+      },
+      "position": {
+        "x": 1470.0,
+        "y": 100.0
+      },
+      "config": {
+        "predicate": "has_missing",
+        "value": ""
+      }
+    },
+    {
+      "id": "ask",
+      "kind": "question",
+      "label": {
+        "es": "Preguntar lo que falta",
+        "en": "Ask for missing details",
+        "pt": "Perguntar o que falta"
+      },
+      "position": {
+        "x": 1680.0,
+        "y": 0.0
+      },
+      "config": {
+        "mode": "missing",
+        "text": {
+          "es": "",
+          "en": "",
+          "pt": ""
+        }
+      }
+    },
+    {
+      "id": "review",
+      "kind": "response",
+      "label": {
+        "es": "Revisar en el banco",
+        "en": "Review in the bank",
+        "pt": "Revisar no banco"
+      },
+      "position": {
+        "x": 1680.0,
+        "y": 210.0
+      },
+      "config": {
+        "outcome": "review_in_bank",
+        "text": {
+          "es": "",
+          "en": "",
+          "pt": ""
+        }
+      }
+    },
+    {
+      "id": "app_case",
+      "kind": "condition",
+      "label": {
+        "es": "¿Problema de la app?",
+        "en": "App problem?",
+        "pt": "Problema no app?"
+      },
+      "position": {
+        "x": 630.0,
+        "y": 100.0
+      },
+      "config": {
+        "predicate": "intent_is",
+        "value": "app-support"
+      }
+    },
+    {
+      "id": "logs",
+      "kind": "diagnostic",
+      "label": {
+        "es": "Recoger logs de la incidencia",
+        "en": "Read incident logs",
+        "pt": "Ler logs da incidência"
+      },
+      "position": {
+        "x": 630.0,
+        "y": 350.0
+      },
+      "config": {}
+    },
+    {
+      "id": "failed",
+      "kind": "condition",
+      "label": {
+        "es": "¿Se confirmó el error?",
+        "en": "Was an error recorded?",
+        "pt": "O erro foi registrado?"
+      },
+      "position": {
+        "x": 840.0,
+        "y": 350.0
+      },
+      "config": {
+        "predicate": "diagnostic_failed",
+        "value": ""
+      }
+    },
+    {
+      "id": "notify",
+      "kind": "notify",
+      "label": {
+        "es": "Registrar aviso de incidencia",
+        "en": "Register incident notification",
+        "pt": "Registrar aviso de incidência"
+      },
+      "position": {
+        "x": 1050.0,
+        "y": 350.0
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "source": "start",
+      "target": "jev",
+      "port": "next"
+    },
+    {
+      "id": "e1",
+      "source": "jev",
+      "target": "scope",
+      "port": "next"
+    },
+    {
+      "id": "e2",
+      "source": "scope",
+      "target": "outside",
+      "port": "yes"
+    },
+    {
+      "id": "e3",
+      "source": "scope",
+      "target": "app_case",
+      "port": "no"
+    },
+    {
+      "id": "e4",
+      "source": "context",
+      "target": "human",
+      "port": "next"
+    },
+    {
+      "id": "e5",
+      "source": "human",
+      "target": "escalate",
+      "port": "yes"
+    },
+    {
+      "id": "e6",
+      "source": "human",
+      "target": "missing",
+      "port": "no"
+    },
+    {
+      "id": "e7",
+      "source": "missing",
+      "target": "ask",
+      "port": "yes"
+    },
+    {
+      "id": "e8",
+      "source": "missing",
+      "target": "review",
+      "port": "no"
+    },
+    {
+      "id": "app_edge0",
+      "source": "app_case",
+      "target": "context",
+      "port": "no"
+    },
+    {
+      "id": "app_edge1",
+      "source": "app_case",
+      "target": "logs",
+      "port": "yes"
+    },
+    {
+      "id": "app_edge2",
+      "source": "logs",
+      "target": "failed",
+      "port": "next"
+    },
+    {
+      "id": "app_edge3",
+      "source": "failed",
+      "target": "notify",
+      "port": "yes"
+    },
+    {
+      "id": "app_edge4",
+      "source": "failed",
+      "target": "context",
+      "port": "no"
+    },
+    {
+      "id": "app_edge5",
+      "source": "notify",
+      "target": "context",
+      "port": "next"
+    }
+  ]
+}

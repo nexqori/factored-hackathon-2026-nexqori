@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "title": {
+    "es": "Resumen de productos",
+    "en": "Product summary",
+    "pt": "Resumo de produtos"
+  },
+  "note": {
+    "es": "Información de consulta obtenida al generar el documento. El saldo mostrado es actual, no un saldo de apertura o cierre del periodo. No es un comprobante fiscal ni un certificado firmado.",
+    "en": "Information retrieved when this document was generated. The displayed balance is current, not a period opening or closing balance. This is not a tax receipt or a signed certificate.",
+    "pt": "Informações obtidas ao gerar o documento. O saldo exibido é atual, não o saldo inicial ou final do período. Não é comprovante fiscal nem certificado assinado."
+  },
+  "sections": [
+    {
+      "table": "products",
+      "columns": [
+        "id",
+        "type",
+        "last4",
+        "balance_display"
+      ]
+    }
+  ]
+}

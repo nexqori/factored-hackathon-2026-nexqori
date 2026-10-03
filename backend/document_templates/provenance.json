@@ -1,0 +1,13 @@
+{
+  "source_branch": "codex/bank-intent-es-pt",
+  "commit": "3d85c57ead66031ffda860cdab7b83cc05987669",
+  "author": "Santiago Leyva",
+  "adaptation": "Authenticated persistent conversations; bank records stay server-side.",
+  "files": {
+    "chat-agente/nexqori_chat/codigo6_documentos.py": "23e3354d83e3426ba6d8336d7204d557a9214ea5f8aca935f886031d5c64ecf4",
+    "chat-agente/templates/labels.json": "0740b838c730f68acd06f2556ee99046987e9c97e5df6c06733d895de8c78895",
+    "chat-agente/templates/statement.json": "8c26aa714df73c4f69f718918b2607079df12c3677669e03f4fb6629034bb37c",
+    "chat-agente/templates/products_summary.json": "cb6bd58e1dee86aa84d692e888781564976dfb6367cdc65168c780ad0dc314ca",
+    "chat-agente/templates/requests_summary.json": "3d37cceca3f1aac554c9c037690c5eded7fc8237c415cc4b7d10eb50d9b7e1e2"
+  }
+}

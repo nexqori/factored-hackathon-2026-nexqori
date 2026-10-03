@@ -17,6 +17,11 @@ services:
       retries: 12
     restart: unless-stopped
   api:
+    env_file:
+      - path: .local/intent-lab/providers.env
+        required: false
+    volumes:
+      - ./.local/intent-lab:/app/flow-config:ro
     build:
       context: .
       dockerfile: docker/Dockerfile.api
@@ -27,6 +32,10 @@ services:
       SECOND_CUSTOMER_PASSWORD: ${SECOND_CUSTOMER_PASSWORD:?Run npm run setup}
       APP_ORIGINS: http://localhost:5180,http://127.0.0.1:5180
       COOKIE_SECURE: "false"
+      CARD_PROVIDER: local_fixture
+      BANK_ASSISTANT_FLOW: "true"
+      BANK_FLOW_CONFIG: /app/flow-config
+      NEXQORI_LAB_DATA: /app/flow-config
     depends_on:
       db:
         condition: service_healthy

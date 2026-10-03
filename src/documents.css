@@ -1,0 +1,12 @@
+.requested-documents { margin: 1.5rem 0 2.5rem; }
+.requested-documents h2 { display:flex; align-items:center; gap:.6rem; }
+.requested-documents h2:focus { outline:2px solid var(--color-primary,#9A4B32); outline-offset:5px; }
+.requested-document-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr)); gap:1rem; margin:1rem 0; }
+.requested-document { padding:1.25rem; border:1px solid #e6d4ca; border-radius:18px; background:white; }
+.requested-document.selected { border-color:#9A4B32; box-shadow:0 0 0 1px #9A4B32; }
+.document-ready { display:inline-block; padding:.3rem .6rem; background:#edf4ef; color:#325b46; border-radius:6px; font-size:.8rem; margin-bottom:.7rem; }
+.requested-document .chat-document { border:0; padding:0; background:transparent; }
+.requested-document p { overflow-wrap:anywhere; }
+.document-summary { display:grid; grid-template-columns:1fr 1.4fr; gap:.8rem; margin:1.4rem 0; }
+.document-summary dt { color:#715c53; }
+.document-summary dd { margin:0; overflow-wrap:anywhere; }

@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
@@ -10,10 +10,13 @@ mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 1512, height: 1050 }, locale: 'es-MX' });
 const page = await context.newPage();
+// Exercise the guided navigation fallback without spending provider credits.
+await page.route('**/api/assistant/capabilities',route=>route.fulfill({json:{connected:false,providers:{}}}));
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
 const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], securityHeaders: false };
 const snapshot = async name => { const path = output + '/' + name + '.png'; await page.screenshot({ path, fullPage: true }); results.screenshots.push(path); };
+async function chooseLanguage(locale) { await page.locator('.language-trigger').click(); await page.locator('[data-locale="'+locale+'"]').click(); }
 async function noOverflow() { assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Horizontal overflow: ' + page.url()); }
 async function axe(name) {
   const result = await new AxeBuilder({ page }).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
@@ -27,10 +30,15 @@ try {
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).waitFor();
   await snapshot('login-desktop');
   await axe('login');
-  await page.getByLabel('Correo electrónico').fill('andrea@nexqori.local');
+  await page.getByLabel('Correo electrónico').fill('andrea@nexqori.com');
   await page.getByLabel('Contraseña', { exact: true }).fill(credentials.CUSTOMER_PASSWORD);
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).click();
   await page.getByRole('heading', { name: 'Qué bueno tenerte aquí.' }).waitFor();
+  await page.setViewportSize({width:1512,height:780});
+  await expect(page.getByRole('button',{name:'Cerrar sesión',exact:true})).toBeInViewport({ratio:1});
+  assert.equal(await page.locator('.sidebar').evaluate(el=>getComputedStyle(el).overflowY),'auto');
+  await snapshot('home-short-desktop');
+  await page.setViewportSize({width:1512,height:1050});
   await snapshot('home-desktop');
   await axe('home');
   const labels = {
@@ -39,7 +47,7 @@ try {
     pt: {language:'Idioma',home:'Que bom ter você aqui.',movements:'Movimentações',products:'Meus produtos',services:'Serviços',requests:'Minhas solicitações',help:'Sempre há um próximo passo.'}
   };
   for (const locale of ['en','pt','es']) {
-    await page.locator('.language-picker select').selectOption(locale);
+    await chooseLanguage(locale);
     await page.waitForFunction(language => document.documentElement.lang === language, locale);
     for (const route of ['home','movements','products','services','requests','help']) {
       await page.goto(origin + (route === 'home' ? '/' : '/' + route));
@@ -49,31 +57,51 @@ try {
     }
   }
   const commands = {
-    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/products?kind=cards']],
+    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/products?kind=cards'],['Ver mis movimientos','/movements'],['Ver mis solicitudes','/requests']],
     en: [['Open bill payments','/services/payments'],['Show my accounts','/products?kind=accounts']],
     pt: [['Abrir empréstimos','/services/loans'],['Abrir seguros','/services/insurance']]
   };
   for (const [locale, cases] of Object.entries(commands)) {
-    await page.locator('.language-picker select').selectOption(locale);
+    await chooseLanguage(locale);
     await page.waitForFunction(language => document.documentElement.lang === language, locale);
     for (const [message, route] of cases) {
-      await page.locator('.chat-composer input').fill(message);
-      await page.locator('.chat-composer button').click();
+      await page.locator('.paste-composer textarea').fill(message);
+      await page.locator('.paste-entry button').click();
       await page.waitForURL(origin+route);
-      await page.locator('.chat-composer input').waitFor({state:'visible'});
+      await page.locator('.paste-composer textarea').waitFor({state:'visible'});
       await noOverflow();
       results.agentNavigation.push({locale,message,route});
-      if (route.includes('kind=cards')) assert.equal(await page.locator('.product-card').count(),1);
+      if (route.includes('kind=cards')) { await page.locator('.bank-card').waitFor(); assert.equal(await page.locator('.bank-card').count(),1); }
       if (route.includes('kind=accounts')) assert.equal(await page.locator('.product-card').count(),2);
     }
     for (const service of ['transfers','payments','loans','investments','insurance','cash']) {
       await page.goto(origin+'/services/'+service);
-      await page.locator('.service-detail').waitFor();
+      await page.locator('[data-catalog-ready="true"]').waitFor();
       await noOverflow();
       results.pages.push({locale,route:'/services/'+service,width:1512});
     }
   }
-  await page.locator('.language-picker select').selectOption('es');
+  // A Portuguese report opens the existing review form. It must not silently
+  // route a complaint into applications or create a request without confirmation.
+  await chooseLanguage('pt');
+  const beforePortuguese=await(await context.request.get(origin+'/api/bootstrap')).json();
+  const responsePromise=page.waitForResponse(response=>response.url()===origin+'/api/assistant'&&response.request().method()==='POST');
+  await page.locator('.paste-composer textarea').fill('Não reconheço uma compra');
+  await page.locator('.paste-entry button').click();
+  const portuguese=await(await responsePromise).json();
+  assert.equal(portuguese.intent,'report'); assert.equal(portuguese.destination,'new-request');
+  assert.ok(portuguese.text.startsWith('Vamos por partes.'));
+  assert.deepEqual(portuguese.messages.map(message=>message.locale),['pt','pt']);
+  await page.getByRole('dialog',{name:'Nova solicitação',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Fechar',exact:true}).click();
+  await expect(page.locator('.chat-bubble.assistant').last()).toHaveAttribute('lang','pt');
+  await expect(page.locator('.chat-bubble.assistant').last()).toContainText('Vamos por partes.');
+  const afterPortuguese=await(await context.request.get(origin+'/api/bootstrap')).json();
+  assert.deepEqual(afterPortuguese.requests,beforePortuguese.requests);
+  assert.deepEqual(afterPortuguese.products,beforePortuguese.products);
+  assert.deepEqual(afterPortuguese.transactions,beforePortuguese.transactions);
+  results.agentNavigation.push({locale:'pt',message:'Não reconheço uma compra',destination:'new-request',replyLocale:'pt',confirmed:false});
+  await chooseLanguage('es');
   await page.waitForFunction(() => document.documentElement.lang === 'es');
   await page.goto(origin + '/movements');
   await page.getByPlaceholder('Buscar comercio o referencia').fill('Stream');
@@ -92,13 +120,16 @@ try {
   await snapshot('request-handoff');
   await page.getByRole('button', {name:'Cerrar',exact:true}).click();
   await page.reload();
-  await page.getByRole('heading',{name:'Mis solicitudes',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'Mis reclamos',exact:true}).waitFor();
   assert.ok(await page.getByText(results.createdRequest,{exact:true}).count()>0,'Request persisted');
+  const currentData=await(await context.request.get(origin+'/api/bootstrap')).json();
+  const currentBalance=currentData.products.filter(p=>['account','savings'].includes(p.type)).reduce((sum,p)=>sum+(p.balanceMinor||0),0);
+  const expectedBalance=new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(currentBalance/100);
   await page.getByRole('textbox', {name:'Mensaje para Nexqori'}).fill('¿Cuál es mi saldo?');
   await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
   await page.getByRole('heading',{name:'Mis productos',exact:true}).waitFor();
   await page.locator('.chat-bubble.assistant').last().waitFor();
-  assert.ok((await page.locator('.chat-bubble.assistant').last().innerText()).includes('24,850.00'));
+  assert.ok((await page.locator('.chat-bubble.assistant').last().innerText()).includes(expectedBalance),'Chat must show the current persisted balance');
   for (const width of [1024,768,390,320]) {
     await page.setViewportSize({width,height:900});
     for (const route of ['/','/movements','/services','/requests','/help']) {
@@ -114,7 +145,7 @@ try {
   await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
   await page.getByRole('button',{name:'Entrar a mi espacio'}).waitFor();
   assert.equal((await context.request.get(origin+'/api/bootstrap')).status(),401);
-  await page.getByLabel('Correo electrónico').fill('admin@nexqori.local');
+  await page.getByLabel('Correo electrónico').fill('admin@nexqori.com');
   await page.getByLabel('Contraseña',{exact:true}).fill(credentials.ADMIN_PASSWORD);
   await page.getByRole('button',{name:'Entrar a mi espacio'}).click();
   await page.getByRole('heading',{name:'Solicitudes y trazabilidad'}).waitFor();

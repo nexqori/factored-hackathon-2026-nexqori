@@ -86,6 +86,8 @@ Fuente: [quality.csv](../notebooks/servicios_nexqori/quality.csv), [campañas](.
 
 ## Servicios y alcance incorporado
 
+Ampliación del 28/09/2026: el [catálogo buscable de 20 servicios](catalogo-servicios.md) baja estas categorías a necesidades y empresas concretas. Las [seis consultas adicionales](../notebooks/servicios_nexqori/catalog_evidence.json) verifican Empresa Telefónica, Internet Plus, Cable TV y Servicios Públicos en registros Purchase. Estos nombres no acreditan convenios de recaudación; los formularios registran solicitudes con revisión y seguimiento, sin ejecución monetaria.
+
 | Módulo | Incorporado | Servicio externo o modelo operativo pendiente |
 | --- | --- | --- |
 | Acceso e idiomas | Sesión, roles y perfil ES/EN/PT | Identidad bancaria, MFA y recuperación de cuenta. |

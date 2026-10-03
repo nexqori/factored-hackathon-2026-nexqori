@@ -1,0 +1,625 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "phone-bill",
+      "category": "payments",
+      "kind": "bill",
+      "icon": "phone",
+      "provider": "Empresa Telefónica",
+      "referenceKind": "phone",
+      "target": null,
+      "reason": "payment",
+      "copy": {
+        "es": {
+          "title": "Pagar celular o teléfono",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
+          "keywords": "celular teléfono telefonía móvil linea factura empresa telefonica"
+        },
+        "en": {
+          "title": "Pay a phone bill",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
+          "keywords": "phone mobile cell telephone bill empresa telefonica"
+        },
+        "pt": {
+          "title": "Pagar celular ou telefone",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
+          "keywords": "celular telefone telefonia móvel linha fatura empresa telefonica"
+        }
+      },
+      "evidence": {
+        "query": "service_merchants",
+        "sourceValue": "Empresa Telefónica"
+      }
+    },
+    {
+      "id": "internet-bill",
+      "category": "payments",
+      "kind": "bill",
+      "icon": "wifi",
+      "provider": "Internet Plus",
+      "referenceKind": "customer",
+      "target": null,
+      "reason": "payment",
+      "copy": {
+        "es": {
+          "title": "Pagar internet",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
+          "keywords": "internet wifi fibra recibo internet plus"
+        },
+        "en": {
+          "title": "Pay an internet bill",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
+          "keywords": "internet broadband wifi bill internet plus"
+        },
+        "pt": {
+          "title": "Pagar internet",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
+          "keywords": "internet wifi fibra boleto internet plus"
+        }
+      },
+      "evidence": {
+        "query": "service_merchants",
+        "sourceValue": "Internet Plus"
+      }
+    },
+    {
+      "id": "tv-bill",
+      "category": "payments",
+      "kind": "bill",
+      "icon": "tv",
+      "provider": "Cable TV",
+      "referenceKind": "customer",
+      "target": null,
+      "reason": "payment",
+      "copy": {
+        "es": {
+          "title": "Pagar televisión",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
+          "keywords": "televisión television cable tv recibo"
+        },
+        "en": {
+          "title": "Pay a TV bill",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
+          "keywords": "television cable tv bill"
+        },
+        "pt": {
+          "title": "Pagar televisão",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
+          "keywords": "televisão televisao tv cabo fatura"
+        }
+      },
+      "evidence": {
+        "query": "service_merchants",
+        "sourceValue": "Cable TV"
+      }
+    },
+    {
+      "id": "utilities-bill",
+      "category": "payments",
+      "kind": "bill",
+      "icon": "utility",
+      "provider": "Servicios Públicos",
+      "referenceKind": "receipt",
+      "target": null,
+      "reason": "payment",
+      "copy": {
+        "es": {
+          "title": "Pagar servicios públicos",
+          "summary": "Busca tu recibo con el número o código del servicio. Revisa el importe y elige cómo pagarlo.",
+          "keywords": "servicios públicos luz agua electricidad gas recibo"
+        },
+        "en": {
+          "title": "Pay a utility bill",
+          "summary": "Find your bill using the service number or code. Review the amount and choose how to pay.",
+          "keywords": "utilities electricity water gas public services bill"
+        },
+        "pt": {
+          "title": "Pagar serviços públicos",
+          "summary": "Busque sua fatura pelo número ou código do serviço. Confira o valor e escolha como pagar.",
+          "keywords": "serviços públicos luz água eletricidade gás conta boleto"
+        }
+      },
+      "evidence": {
+        "query": "service_merchants",
+        "sourceValue": "Servicios Públicos"
+      }
+    },
+    {
+      "id": "bank-transfer",
+      "category": "transfers",
+      "kind": "transfer",
+      "icon": "transfer",
+      "provider": null,
+      "referenceKind": "account",
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Transferir dinero",
+          "summary": "Envía dinero a una cuenta Nexqori. Comprueba el destinatario antes de confirmar.",
+          "keywords": "transferir transferencia enviar dinero beneficiario"
+        },
+        "en": {
+          "title": "Transfer money",
+          "summary": "Send money to a Nexqori account. Check the recipient before confirming.",
+          "keywords": "transfer send money recipient"
+        },
+        "pt": {
+          "title": "Transferir dinheiro",
+          "summary": "Envie dinheiro para uma conta Nexqori. Confira o destinatário antes de confirmar.",
+          "keywords": "transferir transferência enviar dinheiro destinatário"
+        }
+      },
+      "evidence": {
+        "query": "transaction_types",
+        "sourceValue": "Transfer"
+      }
+    },
+    {
+      "id": "account-balance",
+      "category": "accounts",
+      "kind": "navigate",
+      "icon": "wallet",
+      "provider": null,
+      "referenceKind": null,
+      "target": "accounts",
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar cuentas y saldos",
+          "summary": "Revisa tus cuentas y el saldo disponible en cada una.",
+          "keywords": "saldo balance cuenta ahorro corriente cuentas"
+        },
+        "en": {
+          "title": "Check accounts and balances",
+          "summary": "View your accounts and the available balance in each.",
+          "keywords": "balance accounts savings checking account"
+        },
+        "pt": {
+          "title": "Consultar contas e saldos",
+          "summary": "Veja suas contas e o saldo disponível em cada uma.",
+          "keywords": "saldo contas poupança corrente"
+        }
+      },
+      "evidence": {
+        "query": "product_types",
+        "sourceValue": "Cuenta Ahorro|Cuenta Corriente"
+      }
+    },
+    {
+      "id": "account-activity",
+      "category": "accounts",
+      "kind": "navigate",
+      "icon": "activity",
+      "provider": null,
+      "referenceKind": null,
+      "target": "movements",
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar movimientos",
+          "summary": "Busca una operación, revisa su estado y abre su detalle.",
+          "keywords": "movimientos historial transacciones cuenta"
+        },
+        "en": {
+          "title": "View transactions",
+          "summary": "Find a transaction, check its status and view the details.",
+          "keywords": "transactions activity history statement"
+        },
+        "pt": {
+          "title": "Consultar movimentações",
+          "summary": "Encontre uma operação, confira o status e veja os detalhes.",
+          "keywords": "movimentações histórico transações extrato"
+        }
+      },
+      "evidence": {
+        "query": "transaction_types",
+        "sourceValue": "Payment|Purchase|Transfer|Withdrawal|Deposit|Adjustment"
+      }
+    },
+    {
+      "id": "my-cards",
+      "category": "cards",
+      "kind": "navigate",
+      "icon": "card",
+      "provider": null,
+      "referenceKind": null,
+      "target": "cards",
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar mis tarjetas",
+          "summary": "Encuentra tus tarjetas y abre sus movimientos.",
+          "keywords": "tarjeta tarjetas débito crédito"
+        },
+        "en": {
+          "title": "View my cards",
+          "summary": "Find your cards and view their transactions.",
+          "keywords": "card cards debit credit"
+        },
+        "pt": {
+          "title": "Consultar meus cartões",
+          "summary": "Encontre seus cartões e veja as movimentações.",
+          "keywords": "cartão cartões débito crédito"
+        }
+      },
+      "evidence": {
+        "query": "product_types",
+        "sourceValue": "Tarjeta Débito|Tarjeta Crédito"
+      }
+    },
+    {
+      "id": "unrecognized-charge",
+      "category": "cards",
+      "kind": "claim",
+      "icon": "shield",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "unknown",
+      "copy": {
+        "es": {
+          "title": "Reportar un cargo no reconocido",
+          "summary": "Selecciona el movimiento y cuéntanos qué ocurrió.",
+          "keywords": "cargo no reconocido no reconozco compra desconocida reclamo fraude"
+        },
+        "en": {
+          "title": "Report an unrecognized charge",
+          "summary": "Select the transaction and tell us what happened.",
+          "keywords": "unrecognized charge do not recognize unknown purchase fraud dispute"
+        },
+        "pt": {
+          "title": "Informar cobrança não reconhecida",
+          "summary": "Selecione a movimentação e conte o que aconteceu.",
+          "keywords": "cobrança não reconhecida não reconheço compra fraude"
+        }
+      },
+      "evidence": {
+        "query": "complaint_subcategories",
+        "sourceValue": "Cargo no reconocido"
+      }
+    },
+    {
+      "id": "incorrect-charge",
+      "category": "cards",
+      "kind": "claim",
+      "icon": "receipt",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "amount",
+      "copy": {
+        "es": {
+          "title": "Revisar un cobro incorrecto",
+          "summary": "Indica el movimiento y la diferencia que encontraste.",
+          "keywords": "cobro indebido duplicado monto incorrecto cargo duplicado"
+        },
+        "en": {
+          "title": "Review an incorrect charge",
+          "summary": "Choose the transaction and describe the difference.",
+          "keywords": "incorrect charge duplicate wrong amount overcharged"
+        },
+        "pt": {
+          "title": "Revisar cobrança incorreta",
+          "summary": "Escolha a movimentação e descreva a diferença.",
+          "keywords": "cobrança indevida duplicada valor incorreto"
+        }
+      },
+      "evidence": {
+        "query": "complaint_subcategories",
+        "sourceValue": "Cobro indebido"
+      }
+    },
+    {
+      "id": "payment-status",
+      "category": "payments",
+      "kind": "claim",
+      "icon": "activity",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "payment",
+      "copy": {
+        "es": {
+          "title": "Revisar un pago pendiente o rechazado",
+          "summary": "Abre una consulta sobre el estado de un pago registrado.",
+          "keywords": "pago pendiente rechazado no llegó problema pago"
+        },
+        "en": {
+          "title": "Review a pending or declined payment",
+          "summary": "Ask about the status of a recorded payment.",
+          "keywords": "pending declined rejected failed payment problem"
+        },
+        "pt": {
+          "title": "Revisar pagamento pendente ou recusado",
+          "summary": "Abra uma consulta sobre o status de um pagamento registrado.",
+          "keywords": "pagamento pendente recusado rejeitado falhou problema"
+        }
+      },
+      "evidence": {
+        "query": "transaction_states",
+        "sourceValue": "Pending|Declined"
+      }
+    },
+    {
+      "id": "personal-loan",
+      "category": "loans",
+      "kind": "inquiry",
+      "icon": "loan",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar un préstamo personal",
+          "summary": "Cuéntanos qué necesitas saber sobre un préstamo personal.",
+          "keywords": "préstamo personal crédito préstamo cuotas"
+        },
+        "en": {
+          "title": "Ask about a personal loan",
+          "summary": "Tell us what you need to know about a personal loan.",
+          "keywords": "personal loan credit installment"
+        },
+        "pt": {
+          "title": "Consultar empréstimo pessoal",
+          "summary": "Conte o que precisa saber sobre um empréstimo pessoal.",
+          "keywords": "empréstimo pessoal crédito parcelas"
+        }
+      },
+      "evidence": {
+        "query": "product_types",
+        "sourceValue": "Préstamo Personal"
+      }
+    },
+    {
+      "id": "mortgage",
+      "category": "loans",
+      "kind": "inquiry",
+      "icon": "home",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar un préstamo hipotecario",
+          "summary": "Prepara tus preguntas sobre financiamiento de vivienda.",
+          "keywords": "hipoteca hipotecario vivienda casa"
+        },
+        "en": {
+          "title": "Ask about a mortgage",
+          "summary": "Prepare your questions about home financing.",
+          "keywords": "mortgage home housing loan"
+        },
+        "pt": {
+          "title": "Consultar financiamento imobiliário",
+          "summary": "Prepare suas perguntas sobre financiamento de imóvel.",
+          "keywords": "hipoteca imobiliário financiamento imóvel casa"
+        }
+      },
+      "evidence": {
+        "query": "product_types",
+        "sourceValue": "Préstamo Hipotecario"
+      }
+    },
+    {
+      "id": "investment-inquiry",
+      "category": "investments",
+      "kind": "inquiry",
+      "icon": "chart",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar inversiones",
+          "summary": "Solicita información sobre un producto de inversión.",
+          "keywords": "inversión inversiones invertir"
+        },
+        "en": {
+          "title": "Ask about investments",
+          "summary": "Request information about an investment product.",
+          "keywords": "investment investing investments"
+        },
+        "pt": {
+          "title": "Consultar investimentos",
+          "summary": "Solicite informações sobre um produto de investimento.",
+          "keywords": "investimento investimentos investir"
+        }
+      },
+      "evidence": {
+        "query": "product_types",
+        "sourceValue": "Inversión"
+      }
+    },
+    {
+      "id": "insurance-inquiry",
+      "category": "insurance",
+      "kind": "inquiry",
+      "icon": "umbrella",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar seguros",
+          "summary": "Consulta coberturas y dudas sobre tu seguro.",
+          "keywords": "seguro seguros cobertura póliza"
+        },
+        "en": {
+          "title": "Ask about insurance",
+          "summary": "Ask about coverage and questions about your insurance.",
+          "keywords": "insurance coverage policy"
+        },
+        "pt": {
+          "title": "Consultar seguros",
+          "summary": "Consulte coberturas e tire dúvidas sobre seu seguro.",
+          "keywords": "seguro seguros cobertura apólice"
+        }
+      },
+      "evidence": {
+        "query": "product_types",
+        "sourceValue": "Seguro"
+      }
+    },
+    {
+      "id": "cash-withdrawal",
+      "category": "cash",
+      "kind": "claim",
+      "icon": "cash",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar un retiro",
+          "summary": "Revisa un retiro registrado o describe tu consulta.",
+          "keywords": "retiro retirar efectivo cajero atm"
+        },
+        "en": {
+          "title": "Ask about a withdrawal",
+          "summary": "Review a recorded withdrawal or describe your question.",
+          "keywords": "withdrawal withdraw cash atm"
+        },
+        "pt": {
+          "title": "Consultar um saque",
+          "summary": "Revise um saque registrado ou descreva sua dúvida.",
+          "keywords": "saque sacar dinheiro caixa eletrônico"
+        }
+      },
+      "evidence": {
+        "query": "transaction_types",
+        "sourceValue": "Withdrawal"
+      }
+    },
+    {
+      "id": "cash-deposit",
+      "category": "cash",
+      "kind": "claim",
+      "icon": "cash",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar un depósito",
+          "summary": "Localiza tu depósito y solicita una revisión si la necesitas.",
+          "keywords": "depósito depositar abono"
+        },
+        "en": {
+          "title": "Ask about a deposit",
+          "summary": "Find your deposit and request a review if needed.",
+          "keywords": "deposit cash deposit"
+        },
+        "pt": {
+          "title": "Consultar um depósito",
+          "summary": "Localize seu depósito e solicite uma revisão se precisar.",
+          "keywords": "depósito depositar"
+        }
+      },
+      "evidence": {
+        "query": "transaction_types",
+        "sourceValue": "Deposit"
+      }
+    },
+    {
+      "id": "app-support",
+      "category": "support",
+      "kind": "inquiry",
+      "icon": "help",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Resolver un problema con la app",
+          "summary": "Describe la pantalla y lo que sucede para recibir seguimiento.",
+          "keywords": "problema app aplicación error técnico acceso no funciona"
+        },
+        "en": {
+          "title": "Get help with the app",
+          "summary": "Describe the screen and what happens so we can follow up.",
+          "keywords": "app application technical error login not working"
+        },
+        "pt": {
+          "title": "Obter ajuda com o aplicativo",
+          "summary": "Descreva a tela e o que acontece para receber acompanhamento.",
+          "keywords": "problema aplicativo app erro técnico acesso não funciona"
+        }
+      },
+      "evidence": {
+        "query": "complaint_subcategories",
+        "sourceValue": "Problema con app"
+      }
+    },
+    {
+      "id": "branch-support",
+      "category": "support",
+      "kind": "inquiry",
+      "icon": "home",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Consultar atención en sucursal",
+          "summary": "Comparte tu consulta sobre la atención recibida en sucursal.",
+          "keywords": "atención sucursal agencia oficina"
+        },
+        "en": {
+          "title": "Ask about branch service",
+          "summary": "Share your question about the service received at a branch.",
+          "keywords": "branch service office"
+        },
+        "pt": {
+          "title": "Consultar atendimento na agência",
+          "summary": "Compartilhe sua dúvida sobre o atendimento recebido na agência.",
+          "keywords": "atendimento agência agência bancária"
+        }
+      },
+      "evidence": {
+        "query": "complaint_subcategories",
+        "sourceValue": "Atención en sucursal"
+      }
+    },
+    {
+      "id": "service-feedback",
+      "category": "support",
+      "kind": "inquiry",
+      "icon": "message",
+      "provider": null,
+      "referenceKind": null,
+      "target": null,
+      "reason": "other",
+      "copy": {
+        "es": {
+          "title": "Compartir una experiencia de atención",
+          "summary": "Registra un comentario sobre la calidad del servicio.",
+          "keywords": "calidad servicio queja experiencia atención"
+        },
+        "en": {
+          "title": "Share a service experience",
+          "summary": "Send feedback about the quality of service.",
+          "keywords": "service quality complaint feedback experience"
+        },
+        "pt": {
+          "title": "Compartilhar uma experiência de atendimento",
+          "summary": "Registre um comentário sobre a qualidade do atendimento.",
+          "keywords": "qualidade serviço reclamação experiência atendimento"
+        }
+      },
+      "evidence": {
+        "query": "complaint_subcategories",
+        "sourceValue": "Calidad de servicio"
+      }
+    }
+  ]
+}

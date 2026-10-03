@@ -25,7 +25,7 @@ def setup(tmp_path):
 
 def login(app,who="andrea",language=None):
     client=TestClient(app)
-    email={"andrea":"andrea@nexqori.local","nora":"admin@nexqori.local","mateo":"mateo@nexqori.local"}[who]
+    email={"andrea":"andrea@nexqori.com","nora":"admin@nexqori.com","mateo":"mateo@nexqori.com"}[who]
     index={"andrea":0,"nora":1,"mateo":2}[who]
     response=client.post("/api/auth/login",json={"email":email,"password":PASSWORDS[index]},headers={"Origin":ORIGIN})
     assert response.status_code==200,response.text
@@ -40,14 +40,14 @@ def test_anonymous_and_origin_boundaries(setup):
     client=TestClient(app)
     assert client.get("/api/bootstrap").status_code==401
     assert client.get("/api/admin/overview").status_code==401
-    assert client.post("/api/auth/login",json={"email":"andrea@nexqori.local","password":PASSWORDS[0]}).status_code==403
+    assert client.post("/api/auth/login",json={"email":"andrea@nexqori.com","password":PASSWORDS[0]}).status_code==403
     assert client.post("/api/auth/login",json={},headers={"Origin":"https://unexpected.invalid"}).status_code==403
     assert client.post("/api/auth/login",content="{}",headers={"Origin":ORIGIN,"Content-Type":"text/plain"}).status_code==415
 
 def test_invalid_login_does_not_disclose_account(setup):
     app,_=setup
     client=TestClient(app)
-    for email in ["andrea@nexqori.local","missing@nexqori.local"]:
+    for email in ["andrea@nexqori.com","missing@nexqori.com"]:
         response=client.post("/api/auth/login",json={"email":email,"password":"wrong-password"},headers={"Origin":ORIGIN})
         assert response.status_code==401
         assert response.json()=={"error":"invalid_login"}
@@ -161,7 +161,7 @@ def test_ambiguous_chat_never_executes_banking_action(setup):
     after=client.get("/api/bootstrap").json()
     assert after["requests"]==before["requests"]
     assert after["products"]==before["products"]
-    assert len(after["messages"])==2
+    assert len(client.get("/api/conversations/"+response["conversation"]["id"]).json()["messages"])==2
 
 def test_payload_limit(setup):
     app,_=setup
@@ -183,11 +183,31 @@ def test_navigation_is_audited_and_cannot_create_requests_or_move_money(setup):
     operator,_=login(app,'nora')
     assert operator.post('/api/assistant',json={'message':'open cards','locale':'en'}).status_code==403
 
+def test_assistant_portuguese_reply_preserves_original_message_languages(setup):
+    """Araceli's locale check adapted to the persistent conversation contract."""
+    app, _ = setup
+    client, _ = login(app)
+    first = client.post('/api/assistant', json={'message': 'Mi saldo', 'locale': 'es'}).json()
+    cid = first['conversation']['id']
+    response = client.post('/api/assistant', json={
+        'message': 'Não reconheço uma compra', 'locale': 'pt',
+        'currentPage': 'home', 'conversationId': cid,
+    })
+    assert response.status_code == 200
+    value = response.json()
+    assert value['intent'] == 'report' and value['text'].startswith('Vamos por partes.')
+    assert value['destination'] == 'new-request'
+    history = client.get('/api/conversations/' + cid).json()['messages']
+    assert [row['locale'] for row in history] == ['es', 'es', 'pt', 'pt']
+    assert history[-1]['text'] == value['text']
+    assert history[1]['text'] == first['text']
+
+
 def test_login_rate_limit(setup):
     _,engine=setup
     app=create_app(engine,[ORIGIN],False,login_limit=2)
     client=TestClient(app)
-    args={"json":{"email":"andrea@nexqori.local","password":"wrong"},"headers":{"Origin":ORIGIN}}
+    args={"json":{"email":"andrea@nexqori.com","password":"wrong"},"headers":{"Origin":ORIGIN}}
     assert client.post("/api/auth/login",**args).status_code==401
     assert client.post("/api/auth/login",**args).status_code==401
     response=client.post("/api/auth/login",**args)

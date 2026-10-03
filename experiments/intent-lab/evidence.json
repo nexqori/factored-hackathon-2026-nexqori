@@ -1,0 +1,216 @@
+{
+  "basis": "existing_full_census_aggregates_2026-09-25",
+  "transcripts": 171321,
+  "distinct_texts": 42,
+  "text_families": 2,
+  "languages": [
+    "es"
+  ],
+  "intent_metadata": [
+    {
+      "intent": "consulta_general",
+      "language": "es",
+      "transcripts": "162864"
+    },
+    {
+      "intent": "Sin intención",
+      "language": "es",
+      "transcripts": "8457"
+    }
+  ],
+  "families": [
+    {
+      "text_family": "Plantilla: saldo de tarjeta de crédito",
+      "transcripts": "85910",
+      "distinct_exact_texts": "21"
+    },
+    {
+      "text_family": "Plantilla: saldo de cuenta de ahorros",
+      "transcripts": "85411",
+      "distinct_exact_texts": "21"
+    }
+  ],
+  "fit_for_broad_intent_benchmark": false,
+  "sources": [
+    {
+      "path": "notebooks/resultados_integral/detalle_transcript_quality.csv",
+      "sha256": "9b48db648cdc47b9603efed9974ea5249a8d256dfe373d68a24da3117666d2dc"
+    },
+    {
+      "path": "notebooks/resultados_integral/detalle_transcript_metadata.csv",
+      "sha256": "a5bed919d6300cf63e85f91085d691e3cd1644d4929b3fbaf5d5b9040fdbc232"
+    },
+    {
+      "path": "notebooks/resultados_integral/detalle_text_families.csv",
+      "sha256": "d3647d73c07a13db1072a2803fedde9a96e4081fb0ac48b33beffbed7131c664"
+    },
+    {
+      "path": "notebooks/servicios_nexqori/complaint_needs.csv",
+      "sha256": "0cb43ae0e73e838623af630ab41b54e7206c4d0a9bb21f4d4caa0e84189fca7e"
+    },
+    {
+      "path": "notebooks/servicios_nexqori/contact_needs.csv",
+      "sha256": "18797ab979ebcd9816f0e234b0b65a66222f5c69ab2999a0cffffb92dcd3b70d"
+    },
+    {
+      "path": "notebooks/resultados_integral/detalle_technical_actions.csv",
+      "sha256": "ce7281303f35df93d33ad8dd3d61768185eebbf77d7c583589e61401f05fecd5"
+    }
+  ],
+  "problems": [
+    {
+      "source_label": "Cargo no reconocido",
+      "intent": "unrecognized-charge",
+      "records": 12297,
+      "denominator": 67095,
+      "sla_flagged": 2507,
+      "unit": "complaint",
+      "source": "notebooks/servicios_nexqori/complaint_needs.csv"
+    },
+    {
+      "source_label": "Cobro indebido",
+      "intent": "incorrect-charge",
+      "records": 12194,
+      "denominator": 67095,
+      "sla_flagged": 2431,
+      "unit": "complaint",
+      "source": "notebooks/servicios_nexqori/complaint_needs.csv"
+    },
+    {
+      "source_label": "Problema con app",
+      "intent": "app-support",
+      "records": 12128,
+      "denominator": 67095,
+      "sla_flagged": 2429,
+      "unit": "complaint",
+      "source": "notebooks/servicios_nexqori/complaint_needs.csv"
+    },
+    {
+      "source_label": "Atención en sucursal",
+      "intent": "branch-support",
+      "records": 11892,
+      "denominator": 67095,
+      "sla_flagged": 2421,
+      "unit": "complaint",
+      "source": "notebooks/servicios_nexqori/complaint_needs.csv"
+    },
+    {
+      "source_label": "Calidad de servicio",
+      "intent": "service-feedback",
+      "records": 11886,
+      "denominator": 67095,
+      "sla_flagged": 2412,
+      "unit": "complaint",
+      "source": "notebooks/servicios_nexqori/complaint_needs.csv"
+    },
+    {
+      "source_label": "(sin subcategoría)",
+      "intent": "needs-clarification",
+      "records": 6698,
+      "denominator": 67095,
+      "sla_flagged": 1295,
+      "unit": "complaint",
+      "source": "notebooks/servicios_nexqori/complaint_needs.csv"
+    }
+  ],
+  "contact_reasons": [
+    {
+      "source_label": "Transaccional",
+      "records": 240056,
+      "unresolved": 20385,
+      "denominator": 686296,
+      "unit": "interaction"
+    },
+    {
+      "source_label": "Producto",
+      "records": 150863,
+      "unresolved": 15650,
+      "denominator": 686296,
+      "unit": "interaction"
+    },
+    {
+      "source_label": "Queja",
+      "records": 117021,
+      "unresolved": 66000,
+      "denominator": 686296,
+      "unit": "interaction"
+    },
+    {
+      "source_label": "Técnico",
+      "records": 102899,
+      "unresolved": 30940,
+      "denominator": 686296,
+      "unit": "interaction"
+    },
+    {
+      "source_label": "Comercial",
+      "records": 54879,
+      "unresolved": 19093,
+      "denominator": 686296,
+      "unit": "interaction"
+    },
+    {
+      "source_label": "Retención",
+      "records": 20578,
+      "unresolved": 8198,
+      "denominator": 686296,
+      "unit": "interaction"
+    }
+  ],
+  "digital_errors": [
+    {
+      "action": "view_transactions",
+      "events": 901039,
+      "errors": 54073,
+      "unit": "event"
+    },
+    {
+      "action": "initiate_transfer",
+      "events": 901824,
+      "errors": 53883,
+      "unit": "event"
+    },
+    {
+      "action": "initiate_payment",
+      "events": 902225,
+      "errors": 53657,
+      "unit": "event"
+    },
+    {
+      "action": "view_help",
+      "events": 890625,
+      "errors": 40679,
+      "unit": "event"
+    },
+    {
+      "action": "view_accounts",
+      "events": 892802,
+      "errors": 40308,
+      "unit": "event"
+    },
+    {
+      "action": "view_home",
+      "events": 890058,
+      "errors": 40283,
+      "unit": "event"
+    },
+    {
+      "action": "view_products",
+      "events": 891777,
+      "errors": 40193,
+      "unit": "event"
+    },
+    {
+      "action": "Sin acción",
+      "events": 396062,
+      "errors": 17872,
+      "unit": "event"
+    },
+    {
+      "action": "Sin acción",
+      "events": 299886,
+      "errors": 17775,
+      "unit": "event"
+    }
+  ]
+}

@@ -13,6 +13,10 @@
 !alembic.ini
 !docker/
 !docker/**
+!experiments/
+!experiments/intent-lab/
+!experiments/intent-lab/intent_lab/
+!experiments/intent-lab/intent_lab/**
 **/__pycache__/
 **/*.pyc
 **/.pytest_cache/

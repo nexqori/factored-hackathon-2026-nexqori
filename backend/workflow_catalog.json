@@ -1,0 +1,207 @@
+{
+  "version": "2",
+  "items": [
+    {
+      "id": "unrecognized-charge",
+      "requiredFields": [
+        "transactionId",
+        "notes",
+        "confirmed",
+        "requestKey"
+      ],
+      "creates": "request",
+      "executesFinancialOperation": false,
+      "steps": {
+        "es": [
+          "Selecciona el movimiento que no reconoces.",
+          "Revisa comercio, fecha, importe y estado; cuéntanos qué no reconoces.",
+          "Revisa el resumen y confirma la solicitud.",
+          "Conserva el folio y consulta el seguimiento en Mis reclamos."
+        ],
+        "en": [
+          "Select the transaction you do not recognize.",
+          "Review merchant, date, amount and status; explain what you do not recognize.",
+          "Review the summary and confirm your request.",
+          "Keep the reference and track it in My complaints."
+        ],
+        "pt": [
+          "Selecione a movimentação que não reconhece.",
+          "Confira estabelecimento, data, valor e status; conte o que não reconhece.",
+          "Revise o resumo e confirme a solicitação.",
+          "Guarde o protocolo e acompanhe em Minhas reclamações."
+        ]
+      },
+      "family": "problem",
+      "availableActions": [
+        "request-refund",
+        "block-card"
+      ]
+    },
+    {
+      "id": "incorrect-charge",
+      "requiredFields": [
+        "transactionId",
+        "notes",
+        "confirmed",
+        "requestKey"
+      ],
+      "creates": "request",
+      "executesFinancialOperation": false,
+      "steps": {
+        "es": [
+          "Selecciona el cargo que quieres revisar.",
+          "Indica el importe esperado y la referencia del otro cargo o comprobante, si existe.",
+          "Revisa el resumen y confirma la solicitud.",
+          "Conserva el folio y consulta el seguimiento en Mis reclamos."
+        ],
+        "en": [
+          "Select the charge you want reviewed.",
+          "State the expected amount and the other charge or receipt reference, if available.",
+          "Review the summary and confirm your request.",
+          "Keep the reference and track it in My complaints."
+        ],
+        "pt": [
+          "Selecione a cobrança que deseja revisar.",
+          "Informe o valor esperado e a referência da outra cobrança ou comprovante, se houver.",
+          "Revise o resumo e confirme a solicitação.",
+          "Guarde o protocolo e acompanhe em Minhas reclamações."
+        ]
+      },
+      "family": "problem",
+      "availableActions": [
+        "request-refund"
+      ]
+    },
+    {
+      "id": "payment-status",
+      "requiredFields": [
+        "transactionId",
+        "notes",
+        "confirmed",
+        "requestKey"
+      ],
+      "creates": "request",
+      "executesFinancialOperation": false,
+      "steps": {
+        "es": [
+          "Selecciona el pago y consulta su estado registrado.",
+          "Indica qué ocurrió. Un error en pantalla no confirma que el pago falló; evita repetirlo sin comprobar su estado.",
+          "Revisa el resumen y confirma la solicitud.",
+          "Conserva el folio y consulta el seguimiento en Mis reclamos."
+        ],
+        "en": [
+          "Select the payment and check its recorded status.",
+          "Explain what happened. An on-screen error does not confirm payment failure; check the status before retrying.",
+          "Review the summary and confirm your request.",
+          "Keep the reference and track it in My complaints."
+        ],
+        "pt": [
+          "Selecione o pagamento e consulte o status registrado.",
+          "Conte o que aconteceu. Um erro na tela não confirma falha no pagamento; confira o status antes de tentar novamente.",
+          "Revise o resumo e confirme a solicitação.",
+          "Guarde o protocolo e acompanhe em Minhas reclamações."
+        ]
+      },
+      "family": "problem",
+      "availableActions": [
+        "request-refund"
+      ]
+    },
+    {
+      "id": "app-support",
+      "requiredFields": [
+        "notes",
+        "confirmed",
+        "requestKey"
+      ],
+      "creates": "request",
+      "executesFinancialOperation": false,
+      "steps": {
+        "es": [
+          "Indica la pantalla, acción y hora aproximada del problema.",
+          "Describe el error sin incluir contraseñas ni códigos. Si afecta un pago, selecciona el movimiento asociado.",
+          "Revisa el resumen y confirma la solicitud.",
+          "Conserva el folio y consulta el seguimiento en Mis reclamos."
+        ],
+        "en": [
+          "Provide the screen, action and approximate time of the issue.",
+          "Describe the error without passwords or security codes. If a payment is affected, select its transaction.",
+          "Review the summary and confirm your request.",
+          "Keep the reference and track it in My complaints."
+        ],
+        "pt": [
+          "Informe a tela, ação e horário aproximado do problema.",
+          "Descreva o erro sem senhas nem códigos. Se afetar um pagamento, selecione a movimentação relacionada.",
+          "Revise o resumo e confirme a solicitação.",
+          "Guarde o protocolo e acompanhe em Minhas reclamações."
+        ]
+      },
+      "family": "problem",
+      "availableActions": []
+    },
+    {
+      "id": "branch-support",
+      "requiredFields": [
+        "notes",
+        "confirmed",
+        "requestKey"
+      ],
+      "creates": "request",
+      "executesFinancialOperation": false,
+      "steps": {
+        "es": [
+          "Indica la sucursal, fecha y servicio de tu consulta.",
+          "Cuéntanos lo ocurrido y qué necesitas que revisemos.",
+          "Revisa el resumen y confirma la solicitud.",
+          "Conserva el folio y consulta el seguimiento en Mis reclamos."
+        ],
+        "en": [
+          "Provide the branch, date and service involved.",
+          "Tell us what happened and what you need reviewed.",
+          "Review the summary and confirm your request.",
+          "Keep the reference and track it in My complaints."
+        ],
+        "pt": [
+          "Informe a agência, data e serviço relacionado.",
+          "Conte o que aconteceu e o que precisa que seja revisado.",
+          "Revise o resumo e confirme a solicitação.",
+          "Guarde o protocolo e acompanhe em Minhas reclamações."
+        ]
+      },
+      "family": "problem",
+      "availableActions": []
+    },
+    {
+      "id": "service-feedback",
+      "requiredFields": [
+        "notes",
+        "confirmed",
+        "requestKey"
+      ],
+      "creates": "request",
+      "executesFinancialOperation": false,
+      "steps": {
+        "es": [
+          "Identifica el servicio o canal sobre el que quieres comentar.",
+          "Describe tu experiencia. Si ya tienes un folio, consulta primero su seguimiento en Mis reclamos.",
+          "Revisa el resumen y confirma la solicitud.",
+          "Conserva el folio y consulta el seguimiento en Mis reclamos."
+        ],
+        "en": [
+          "Identify the service or channel you want to comment on.",
+          "Describe your experience. If you already have a reference, check its status in My complaints first.",
+          "Review the summary and confirm your request.",
+          "Keep the reference and track it in My complaints."
+        ],
+        "pt": [
+          "Identifique o serviço ou canal sobre o qual deseja comentar.",
+          "Descreva sua experiência. Se já tiver um protocolo, consulte primeiro seu andamento em Minhas reclamações.",
+          "Revise o resumo e confirme a solicitação.",
+          "Guarde o protocolo e acompanhe em Minhas reclamações."
+        ]
+      },
+      "family": "problem",
+      "availableActions": []
+    }
+  ]
+}

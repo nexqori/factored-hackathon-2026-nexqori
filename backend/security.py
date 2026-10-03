@@ -51,6 +51,11 @@ def customer(user=Depends(csrf)):
         raise HTTPException(403, "forbidden")
     return user
 
+def customer_read(user=Depends(current_user)):
+    if user.role != "customer":
+        raise HTTPException(403, "forbidden")
+    return user
+
 def admin(user=Depends(current_user)):
     if user.role != "admin":
         raise HTTPException(403, "forbidden")
