@@ -15,7 +15,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import Field
 from .models import User, Product, Conversation, Message, ConversationFlow, AssistantTurn, RequestCase, AuditEvent, now
-from .schemas import ChatInput, ConfirmInput
+from .schemas import ChatInput, ConfirmInput, Locale
 from .security import customer, customer_read, db_session
 from .agent_tools import read_tool, ReadToolInput
 from .catalog import SERVICES
@@ -25,6 +25,9 @@ from .transaction_context import transaction_evidence, transaction_reply
 from .transaction_suggestions import FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply
 from .query_documents import can_document
 from .query_answers import query_answer
+from .query_context import apply_query_context
+from .claim_summary import claim_preview, confirmation_text, preview_token, NEXT as CLAIM_NEXT
+from .conversation_selection import replace_transaction_context
 from .conversation_context import (changes_topic, provider_history, reviewed_problem, resume_review,
                                    safe_query_reply, safe_suggestion_reply, remember_safe_reply)
 
@@ -37,11 +40,14 @@ from intent_lab.providers import provider_status
 class FlowMessage(ChatInput):
     requestKey: str = Field(min_length=16, max_length=64, pattern=r'^[a-zA-Z0-9-]+$')
     requestId: str | None = Field(default=None, min_length=1, max_length=64)
+    replaceTransaction: bool = False
 
 
 class RegisterClaim(ConfirmInput):
     details: str = Field(min_length=10, max_length=1000)
     requestKey: str = Field(min_length=16, max_length=64, pattern=r'^[a-zA-Z0-9-]+$')
+    locale: Locale | None = None
+    previewToken: str | None = Field(default=None, pattern=r'^[a-f0-9]{64}$')
 
 
 def enabled():
@@ -87,7 +93,8 @@ def flow_view(row):
         'state': 'registered' if row.request_id else value['state'],
         'suggestedTransaction': row.state.get('transaction_suggestion'),
         'canDocument': can_document(row),
-        'requestId': row.request_id, 'canRegister': not row.request_id and value['state'] in ('review_in_bank','human_review')
+        'requestId': row.request_id, 'canRegister': not row.request_id and row.state.get('phase') == 'completed'
+                       and value['triage'].get('family') == 'problem' and value['state'] in ('review_in_bank','human_review')
                        and value['jev'].get('intent') in editor.PROBLEM_PORTS}
 
 
@@ -107,12 +114,17 @@ def chat_router(conversation_view, message_view):
     @router.post('/api/assistant/flow')
     def chat(body: FlowMessage, user=Depends(customer), db=Depends(db_session)):
         if not enabled(): raise HTTPException(503, 'flow_unavailable')
+        if body.replaceTransaction and (not body.conversationId or not body.transactionId):
+            raise HTTPException(422, 'tool_reference_required')
         message = body.message.strip() + ('\n\n[Texto pegado / Pasted text / Texto colado]\n' + body.pastedText if body.pastedText.strip() else '')
         if not message or len(message) > 8100: raise HTTPException(422, 'invalid_message')
         # Same owner lock order as local payments. A retry cannot append a second
         # turn after a response is lost; no provider retries occur automatically.
         db.scalar(select(User).where(User.id == user.id).with_for_update())
-        fingerprint = hashlib.sha256(json.dumps(body.model_dump(exclude={'requestKey'}), sort_keys=True).encode()).hexdigest()
+        fingerprint_data = body.model_dump(exclude={'requestKey'})
+        # Preserve retries of turns created before the optional replacement flag.
+        if not body.replaceTransaction: fingerprint_data.pop('replaceTransaction')
+        fingerprint = hashlib.sha256(json.dumps(fingerprint_data, sort_keys=True).encode()).hexdigest()
         previous = db.get(AssistantTurn, (user.id, body.requestKey))
         if previous:
             if previous.fingerprint != fingerprint: raise HTTPException(409, 'conflict')
@@ -123,13 +135,16 @@ def chat_router(conversation_view, message_view):
         if body.conversationId:
             conv = db.scalar(select(Conversation).where(Conversation.id == body.conversationId, Conversation.user_id == user.id).with_for_update())
             if not conv: raise HTTPException(404, 'not_found')
-            if body.transactionId and conv.transaction_id and body.transactionId != conv.transaction_id:
+            if body.transactionId and conv.transaction_id and body.transactionId != conv.transaction_id and not body.replaceTransaction:
                 raise HTTPException(409, 'conversation_context_conflict')
         else:
             conv = Conversation(id=str(uuid4()), user_id=user.id, title=message[:100], locale=body.locale, transaction_id=body.transactionId)
             db.add(conv); db.flush()
             db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action='conversation_started'))
         row = db.get(ConversationFlow, conv.id)
+        replacing = bool(body.replaceTransaction and body.transactionId != conv.transaction_id)
+        if replacing and row and row.request_id:
+            raise HTTPException(409, 'conversation_context_conflict')
         proposed = row.state.get('transaction_suggestion') if row else None
         dismissed = list(row.state.get('dismissed_transaction_ids', [])) if row else []
         selected_id = body.transactionId
@@ -141,29 +156,37 @@ def chat_router(conversation_view, message_view):
             elif reply_to_proposal == 'no':
                 dismissed = list(dict.fromkeys([*dismissed, proposed['id']]))[-20:]
         if selected_id:
-            if not conv.transaction_id:
+            if not conv.transaction_id or replacing:
                 db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id,
-                                  transaction_id=selected_id, action='chat_transaction_selected'))
+                                  transaction_id=selected_id, action='chat_transaction_changed' if replacing else 'chat_transaction_selected'))
             conv.transaction_id = selected_id
-        selection = {'owner_id': user.id, 'transaction_id': conv.transaction_id, 'request_id': body.requestId or (row.state.get('bank_binding',{}).get('request_id') if row else None)}
+        selection = {'owner_id': user.id, 'transaction_id': conv.transaction_id,
+                     'request_id': None if replacing else body.requestId or (row.state.get('bank_binding',{}).get('request_id') if row else None)}
         reader = SessionReader(db, user, conv)
         registered = bool(row and row.request_id)
         # A clarification keeps the active case. An explicit change of topic is
         # classified again rather than swallowed as an answer to the old case.
-        new_topic = bool(row and not registered and changes_topic(body.message))
+        new_topic = bool(row and not registered and not replacing and changes_topic(body.message))
         if new_topic:
             dismissed = []
-        continuing = row is not None and row.state['phase'] == 'waiting_reply' and not new_topic
-        reviewing = bool(row and not registered and not new_topic and reviewed_problem(row.state))
+        continuing = row is not None and row.state['phase'] == 'waiting_reply' and not new_topic and not replacing
+        reviewing = bool(row and not registered and not new_topic and not replacing and reviewed_problem(row.state))
         # Reclassification after an unresolved subtype must retain the conversation.
         # Use interpreter messages, never bank-enriched replies from the Message table.
         prior_messages = provider_history(row.state if row else None)
-        state = copy.deepcopy(row.state) if continuing or registered or reviewing else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
-                    body.locale, thread_id=conv.id, bank_binding=selection, persist=lambda _: None)
+        previous_query = ({key: copy.deepcopy(row.state[key]) for key in ('queryDefaults','queryPeriodUnclear') if key in row.state}
+                          if row and not new_topic and row.state['context'].get('triage',{}).get('family')=='query' else {})
+        replacement = replace_transaction_context(row.state, selection, message, execution.MAX_REPLIES) if replacing and row else None
+        state = replacement or (copy.deepcopy(row.state) if continuing or registered or reviewing else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
+                    body.locale, thread_id=conv.id, bank_binding=selection, persist=lambda _: None))
+        if replacing or (row and row.state.get('claim_preview_required')):
+            state['claim_preview_required'] = True
         state['language'] = body.locale
+        for key, value in previous_query.items():
+            state.setdefault(key, value)
         state['transaction_suggestion'] = None
         state['dismissed_transaction_ids'] = dismissed
-        state['conversation_context'] = {'mode': 'registered_case' if registered else 'new_topic' if new_topic else
+        state['conversation_context'] = {'mode': 'registered_case' if registered else 'replace_transaction' if replacing else 'new_topic' if new_topic else
                                         'continue_question' if continuing else 'continue_review' if reviewing else 'classify',
                                         'source': 'provider_safe_history'}
         if registered:
@@ -214,6 +237,8 @@ def chat_router(conversation_view, message_view):
             selected_evidence = next((r['data'] for r in evidence['reads'] if r['tool']=='read-transaction-evidence'), None)
             if selected_evidence:
                 ctx['reply'] = transaction_reply(selected_evidence,body.locale)['text']
+            apply_query_context(db, user.id, conv.id, state, body.locale)
+            if 'navigation' in ctx: navigation = ctx['navigation']
             remember_safe_reply(state, safe_query_reply(ctx['intent'], body.locale,
                 reference_needed=ctx['intent'] == 'request-status' and not any(
                     r['tool'] in ('read-request-status', 'read-transaction-evidence') for r in evidence['reads'])))
@@ -264,20 +289,53 @@ def chat_router(conversation_view, message_view):
         db.commit()
         return response
 
+    @router.get('/api/conversations/{conversation_id}/claim-preview')
+    def preview_claim(conversation_id: str, locale: Locale | None = None, user=Depends(customer_read), db=Depends(db_session)):
+        conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == user.id))
+        if not conv: raise HTTPException(404, 'not_found')
+        row = db.get(ConversationFlow, conv.id)
+        if not row or not flow_view(row)['canRegister']: raise HTTPException(409, 'flow_not_ready')
+        if row.state['context']['intent'] in FINANCIAL_PROBLEMS and not conv.transaction_id:
+            raise HTTPException(409, 'flow_not_ready')
+        value = claim_preview(db, conv, row.state, locale or row.state['language'])
+        db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id,
+                          transaction_id=conv.transaction_id, action='claim_previewed'))
+        db.commit()
+        return value
+
     @router.post('/api/conversations/{conversation_id}/claim')
     def register_claim(conversation_id: str, body: RegisterClaim, user=Depends(customer), db=Depends(db_session)):
         if len(body.details.strip()) < 10: raise HTTPException(422, 'details')
         db.scalar(select(User).where(User.id == user.id).with_for_update())
+        conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == user.id).with_for_update())
+        if not conv: raise HTTPException(404, 'not_found')
         row = db.scalar(select(ConversationFlow).where(ConversationFlow.conversation_id == conversation_id, ConversationFlow.user_id == user.id).with_for_update())
         if not row: raise HTTPException(404, 'not_found')
-        if row.request_id: return {'id': row.request_id}
-        if not flow_view(row)['canRegister']: raise HTTPException(409, 'flow_not_ready')
+        fingerprint = hashlib.sha256(json.dumps(body.model_dump(exclude={'requestKey'}), sort_keys=True).encode()).hexdigest()
+        cached = row.state.get('claim_registration')
+        if cached:
+            if cached['request_key'] == body.requestKey and cached['fingerprint'] != fingerprint:
+                raise HTTPException(409, 'conflict')
+            return cached['response']
+        # Old registered conversations may have no confirmation message yet.
+        # A new explicit request backfills it once, without creating another case.
+        if not row.request_id and not flow_view(row)['canRegister']: raise HTTPException(409, 'flow_not_ready')
+        locale = body.locale or row.state['language']
+        if not row.request_id and (body.previewToken is not None or row.state.get('claim_preview_required')):
+            if body.previewToken != preview_token(conv, row.state, locale):
+                raise HTTPException(409, 'claim_preview_outdated')
         intent = row.state['context']['intent']; item = SERVICES[intent]
         tx = row.state['bank_binding'].get('transaction_id')
+        if tx != conv.transaction_id: raise HTTPException(409, 'flow_not_ready')
         if intent in ('unrecognized-charge','incorrect-charge','payment-status') and not tx: raise HTTPException(422, 'tool_reference_required')
-        existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.request_key == body.requestKey))
-        if existing: raise HTTPException(409, 'conflict')
-        existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.transaction_id == tx)) if tx else None
+        if tx: transaction_evidence(db, user.id, tx)
+        existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.id == row.request_id)) if row.request_id else None
+        if row.request_id and not existing: raise HTTPException(404, 'not_found')
+        if not existing:
+            reused_key = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.request_key == body.requestKey))
+            if reused_key: raise HTTPException(409, 'conflict')
+            existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.transaction_id == tx)) if tx else None
+        linked = existing is not None
         if not existing:
             existing = RequestCase(id='NQ-'+uuid4().hex[:10].upper(), user_id=user.id, transaction_id=tx, request_key=body.requestKey,
                                    catalog_service_id=intent, service=item['category'], reason=item['reason'], details=body.details.strip(),
@@ -286,9 +344,29 @@ def chat_router(conversation_view, message_view):
             db.add(existing); db.flush()
             action = 'created'
         else: action = 'conversation_linked'
+        was_registered = bool(row.request_id)
         row.request_id = existing.id
-        db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, request_id=existing.id, conversation_id=conversation_id, transaction_id=tx, action=action))
+        if not was_registered:
+            db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, request_id=existing.id, conversation_id=conversation_id, transaction_id=tx, action=action))
+        # Linking another conversation does not overwrite the original case.
+        # Its confirmation still describes the newly reviewed summary, not an
+        # old transcript that may have been stored by an earlier application.
+        summary = claim_preview(db, conv, row.state, locale)['summary'] if was_registered else body.details.strip()
+        reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conversation_id, role='assistant',
+                        content=confirmation_text(existing.id, summary, locale, linked), locale=locale)
+        db.add(reply)
+        db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, request_id=existing.id,
+                          conversation_id=conversation_id, transaction_id=tx, action='assistant_replied'))
+        conv.updated_at = now()
+        db.flush()
+        response = {'id': existing.id, 'message': message_view(reply), 'summary': summary,
+                    'nextStep': CLAIM_NEXT[('es','en','pt').index(locale)], 'flow': flow_view(row)}
+        # This bank-enriched response is durable but never joins provider messages.
+        state = copy.deepcopy(row.state)
+        state['claim_registration'] = {'request_key': body.requestKey, 'fingerprint': fingerprint, 'response': response}
+        row.state = state
+        flag_modified(row, 'state')
         db.commit()
-        return {'id': existing.id}
+        return response
 
     return router

@@ -35,6 +35,7 @@ def classify(text):
     if re.search(r"\b(no|not|don['’]?t|nao|never|nunca)\b.{0,18}\b(abr|open|naveg|navigate|ir)" ,value): return "unknown"
     for intent,pattern in [
         ("settings",r"configurac|settings|preferences|preferencias|tamano de letra|tamanho da letra|text size|font size"),
+        ("documents",r"documentos|documents|pdf"),
         ("human",r"humano|human|persona|person|pessoa|agente|asesor|atendente"),
         ("report",r"no reconozco|nao reconheco|don.t recognize|unrecognized|cobro|cobranca|charge|reclamar|reportar|report a"),
         ("requests",r"seguimiento|solicitud|solicitac|reclamo|reclamac|acompanhar|request|track|case|complaint"),
@@ -84,6 +85,7 @@ def answer(text,locale,balance_minor,current_page="home"):
     destination={"balance":"products","movements":"movements","report":"new-request","requests":"requests","human":"new-request","unknown":None,"restricted":None}.get(intent,intent)
     if intent=="restricted":
         response={"es":"Tu cuenta no tiene acceso al panel administrativo. Puedo ayudarte a navegar tus productos y solicitudes.","en":"Your account cannot access the admin panel. I can help you navigate your products and requests.","pt":"Sua conta não tem acesso ao painel administrativo. Posso ajudar a navegar seus produtos e solicitações."}[locale]
+    elif intent=='documents':response={'es':'Abrí Mis documentos. Aquí puedes consultar y descargar los PDF que solicitaste.','en':'I opened My documents. View and download the PDFs you requested here.','pt':'Abri Meus documentos. Consulte e baixe os PDFs que você solicitou aqui.'}[locale]
     elif intent in COPY[locale]: response=COPY[locale][intent].replace("{amount}",amount)
     else:
         response={"es":"Abrí {screen}. Puedes consultar la información o preparar una solicitud.","en":"I opened {screen}. You can view the information or prepare a request.","pt":"Abri {screen}. Você pode consultar informações ou preparar uma solicitação."}[locale].replace("{screen}",NAV_LABELS[locale][intent])

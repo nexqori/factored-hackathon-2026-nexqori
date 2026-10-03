@@ -1,6 +1,7 @@
 """Adapted from Santiago Leyva’s PDF renderer (3d85c57). See docs/consultas-y-documentos.md."""
 from io import BytesIO
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from xml.sax.saxutils import escape
 import json
@@ -19,6 +20,11 @@ def generar_pdf(packet, *, customer_name, language='es'):
     require(packet['type'] in DOCUMENT_TYPES and language in {'es', 'en', 'pt'}, 'INVALID_DOCUMENT', 'Plantilla o idioma inválido.')
     template = json.loads((TEMPLATES / (packet['type'] + '.json')).read_text(encoding='utf-8'))
     labels = json.loads((TEMPLATES / 'labels.json').read_text(encoding='utf-8'))[language]
+    def local_date(value):
+        dt=datetime.fromisoformat(value)
+        return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).astimezone(ZoneInfo('America/Mexico_City'))
+    date_format='%m/%d/%Y' if language=='en' else '%d/%m/%Y'
+    zone_label={'es':'Horario de Ciudad de México','en':'Mexico City time','pt':'Horário da Cidade do México'}[language]
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle('Cell', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#392C27'), wordWrap='CJK'))
     styles.add(ParagraphStyle('SmallNQ', parent=styles['Cell'], fontSize=9, leading=13))
@@ -40,9 +46,9 @@ def generar_pdf(packet, *, customer_name, language='es'):
         canvas.restoreState()
     fields = packet['fields']
     story = [p(template['title'][language], 'TitleNQ'), p(customer_name, 'SmallNQ'),
-             p(labels['generated'] + ': ' + packet['generated_at'], 'SmallNQ'), Spacer(1, 10)]
+             p(labels['generated'] + ': ' + local_date(packet['generated_at']).strftime(date_format+' %H:%M')+' · '+zone_label, 'SmallNQ'), Spacer(1, 10)]
     if packet['type'] == 'statement':
-        period = labels['all_history'] if fields.get('all_history') else f"{fields.get('start')} / {fields.get('end')} ({labels['exclusive']})"
+        period = labels['all_history'] if fields.get('all_history') else local_date(fields['start']).strftime(date_format)+' — '+(local_date(fields['end'])-timedelta(days=1)).strftime(date_format)
         story += [p(labels['period'] + ': ' + period, 'SmallNQ'), Spacer(1, 10)]
     story += [p(template['note'][language], 'SmallNQ'), Spacer(1, 18)]
     for section in template['sections']:
@@ -60,10 +66,7 @@ def generar_pdf(packet, *, customer_name, language='es'):
                 if c in {'type', 'status', 'service'}:
                     value = labels.get(str(value), value)
                 elif c in {'occurred_at', 'created_at', 'updated_at'} and value:
-                    dt = datetime.fromisoformat(value)
-                    if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
-                    offset = dt.strftime('%z')
-                    value = dt.strftime('%Y-%m-%d\n%H:%M:%S ') + offset[:3] + ':' + offset[3:]
+                    value = local_date(value).strftime(date_format+'\n%H:%M')
                 cells.append(p(value))
             data.append(cells)
         width = 511 / len(cols)

@@ -88,6 +88,7 @@ npm run test:ui
 npm run test:experience
 npm run test:services
 npm run test:banking
+npm run test:documents:context
 ```
 
 Las pruebas de navegador usan Microsoft Edge instalado. Para Chromium de Playwright, instala su navegador con `npx playwright install chromium` y define `PLAYWRIGHT_CHANNEL=chromium` en tu terminal. Los recorridos integrales crean solicitudes identificadas como verificación y guardan capturas locales en `.local/verification/`. CI ejecuta pruebas de frontend, compilación y pruebas API; los recorridos Docker/navegador se ejecutan localmente.
@@ -109,6 +110,8 @@ Las devoluciones aprobadas por un administrador abonan el saldo local. Las trans
 Lecturas: [arquitectura y API](docs/arquitectura.md), [catálogo y evidencia](docs/catalogo-servicios.md), [acceso y conversaciones](docs/acceso-y-conversaciones.md), [contrato del agente](docs/agente.md), [README](README.md). OpenAPI: [contrato local](http://localhost:5180/api/openapi.json).
 
 ## Pruebas de la versión integrada
+
+Para pruebas manuales de UX hay [cinco perfiles con cuentas, movimientos y recibos](docs/usuarios-prueba-ux.md). Ejecuta `npm run test:ux:prepare` después de actualizar Docker y abre `.local/ux-users/equipo-ux/INICIAR.private.md` para los accesos. Repetir el comando conserva su actividad. Los casos cubren cargo no reconocido, importe incorrecto, pago pendiente, problema de la app y consulta con PDF; no alteran Andrea.
 
 `git switch main` y `docker compose up --build -d` aplican también la migración de metadatos de tarjetas sin reemplazar registros. Abre [Tarjetas](http://localhost:5180/cards). La consulta completa pide la contraseña y se oculta automáticamente. Ejecuta `npm run test:cards`; las pruebas de navegador deben correr en serie porque comparten perfiles locales.
 

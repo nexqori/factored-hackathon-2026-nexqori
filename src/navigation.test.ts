@@ -2,6 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { currentDestination, navigateWithCommand, safeNavigation } from './navigation';
 
 describe('Agent navigation boundary', () => {
+  it('validates movement filters and their exact route without accepting extra parameters',()=>{
+    const command={tool:'navigate_in_app',destination:'movements',filters:{start:'2026-09-01',end:'2026-09-30',product:'account-01'},route:'/movements?start=2026-09-01&end=2026-09-30&product=account-01'};
+    expect(safeNavigation(command)).toBe(command.route);
+    for(const filters of [{...command.filters,start:'2026-02-30'}, {...command.filters,end:'2024-01-01'}, {...command.filters,owner:'other'}, {start:'2026-09-01'}, {product:'../admin'}, {}])expect(safeNavigation({...command,filters})).toBeNull();
+    expect(safeNavigation({...command,route:command.route+'&action=pay'})).toBeNull();
+    expect(safeNavigation({...command,destination:'requests'})).toBeNull();
+  });
   it('opens a permitted destination and rejects arbitrary, mismatched or inherited routes', () => {
     expect(safeNavigation({ tool: 'navigate_in_app', destination: 'cards', route: '/products?kind=cards' })).toBe('/products?kind=cards');
     for (const command of [null, {}, { tool: 'navigate_in_app', destination: 'cards', route: 'https://example.com' },

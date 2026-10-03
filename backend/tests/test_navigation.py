@@ -9,6 +9,7 @@ from backend.navigation import NavigateInput, navigate_in_app, ROUTES
     ('pt', ['Abrir início','Meus produtos','Movimentações','Minhas solicitações','Minhas reclamações','Serviços','Ajuda','Contas','Cartões','Transferências','Pagamentos','Empréstimos','Investimentos','Seguros','Saques','Configurações']),
 ])
 def test_all_destinations_in_three_languages(locale,messages):
+    messages.insert(5,{'es':'Mis documentos','en':'My documents','pt':'Meus documentos'}[locale])
     for destination,message in zip(ROUTES,messages,strict=True):
         result=answer(message,locale,100)
         assert result['destination']==destination,(message,result)
@@ -28,3 +29,11 @@ def test_context_and_request_preparation():
     assert answer('there','en',100,'cards')['navigation']['destination']=='cards'
     result=answer('No reconozco un movimiento','es',100)
     assert result['destination']=='new-request' and result['navigation'] is None
+
+def test_filtered_navigation_is_structured_bounded_and_read_only():
+    filters={'product':'account-01','start':'2026-09-01','end':'2026-09-30'}
+    result=navigate_in_app('movements','customer',filters=filters)
+    assert result['route']=='/movements?start=2026-09-01&end=2026-09-30&product=account-01'
+    for invalid in ({'start':'2026-09-01'},{'start':'2026-02-30','end':'2026-03-01'},{'user':'someone'}, {'product':'../admin'},{}):
+        with pytest.raises(ValueError):navigate_in_app('movements','customer',filters=invalid)
+    with pytest.raises(ValueError):navigate_in_app('requests','customer',filters=filters)

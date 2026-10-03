@@ -103,14 +103,14 @@ def test_three_queries_keep_actual_topic_without_bank_records_in_model_history(s
     first = send(client, '¿Cuál es mi saldo?')
     cid = first['conversation']['id']
     control['intent'] = 'account-activity'
-    second = send(client, 'Muéstrame los movimientos de esa cuenta', cid)
+    second = send(client, 'Muéstrame los movimientos de todas mis cuentas', cid)
     assert 'TX-1002' in second['text']
     control['intent'] = 'documents'
     third = send(client, 'Y quiero un documento de eso', cid)
     assert third['flow']['canDocument'] and 'PDF' in third['text']
     transcript = calls[-1][1]
     assert [entry['content'] for entry in transcript if entry['role'] == 'user'] == [
-        '¿Cuál es mi saldo?', 'Muéstrame los movimientos de esa cuenta', 'Y quiero un documento de eso']
+        '¿Cuál es mi saldo?', 'Muéstrame los movimientos de todas mis cuentas', 'Y quiero un documento de eso']
     assert chat.SERVICES['account-balance']['copy']['es']['title'] in transcript[1]['content']
     assert chat.SERVICES['account-activity']['copy']['es']['title'] in transcript[3]['content']
     provider_text = json.dumps(calls, ensure_ascii=False)

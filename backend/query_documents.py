@@ -13,6 +13,7 @@ from .models import User, Product, Transaction, RequestCase, Conversation, Conve
 from .schemas import StrictModel, Locale
 from .security import customer, customer_read, db_session
 from .document_renderer import generar_pdf
+from .query_context import conversation_defaults
 
 DOCUMENT_INTENTS = {'documents','account-balance','account-activity','my-cards','request-status'}
 MAX_ROWS = 250
@@ -99,6 +100,14 @@ def document_packet(db, owner, body):
 def document_router(message_view):
     router=APIRouter()
 
+    @router.get('/api/conversations/{conversation_id}/document-context')
+    def context(conversation_id:str,user=Depends(customer_read),db=Depends(db_session)):
+        conv=db.scalar(select(Conversation).where(Conversation.id==conversation_id,Conversation.user_id==user.id))
+        if not conv:raise HTTPException(404,'not_found')
+        row=db.get(ConversationFlow,conv.id)
+        if not can_document(row):raise HTTPException(409,'document_query_required')
+        return conversation_defaults(db,user.id,row.state)
+
     @router.post('/api/conversations/{conversation_id}/documents')
     def create(conversation_id:str, body:DocumentInput, user=Depends(customer), db=Depends(db_session)):
         db.scalar(select(User).where(User.id==user.id).with_for_update())
@@ -115,9 +124,9 @@ def document_router(message_view):
         content=generar_pdf(packet,customer_name=user.name,language=body.locale)
         if len(content)>2_000_000:raise HTTPException(422,'document_too_many_rows')
         title=TITLES[body.kind][('es','en','pt').index(body.locale)]
-        reply=('Tu documento está listo. Puedes descargarlo aquí o desde Documentos solicitados en Mis solicitudes.',
-               'Your document is ready. Download it here or from Requested documents in My requests.',
-               'Seu documento está pronto. Baixe aqui ou em Documentos solicitados em Minhas solicitações.')[('es','en','pt').index(body.locale)]
+        reply=('Tu documento está listo. Puedes descargarlo aquí o desde Mis documentos.',
+               'Your document is ready. Download it here or from My documents.',
+               'Seu documento está pronto. Baixe aqui ou em Meus documentos.')[('es','en','pt').index(body.locale)]
         message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conv.id,role='assistant',content=title+'\n'+reply,locale=body.locale)
         db.add(message);db.flush()
         ident=str(uuid4());doc=ChatDocument(id=ident,user_id=user.id,conversation_id=conv.id,message_id=message.id,
