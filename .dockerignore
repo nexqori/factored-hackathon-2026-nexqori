@@ -16,3 +16,11 @@
 **/__pycache__/
 **/*.pyc
 **/.pytest_cache/
+
+!chat-agente/
+!chat-agente/nexqori_chat/
+!chat-agente/nexqori_chat/*.py
+!chat-agente/config/
+!chat-agente/config/*.json
+!chat-agente/templates/
+!chat-agente/templates/*.json

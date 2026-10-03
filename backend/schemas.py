@@ -28,3 +28,9 @@ class ChatInput(StrictModel):
     currentPage: Destination = "home"
     message: str = Field(min_length=1, max_length=1000)
     locale: Locale
+    conversationId: str | None = Field(default=None, pattern=r"^[0-9a-fA-F-]{36}$")
+    messageId: str | None = Field(default=None, min_length=16, max_length=64, pattern=r"^[a-zA-Z0-9-]+$")
+
+class HumanMessageInput(StrictModel):
+    text: str = Field(min_length=1, max_length=2000)
+    messageId: str = Field(min_length=16, max_length=64, pattern=r"^[a-zA-Z0-9-]+$")

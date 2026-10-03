@@ -97,6 +97,39 @@
       "expected_evidence_class": "automatico",
       "execution_authorized": false,
       "origin": "team_generated_specification"
+    },
+    {
+      "id": "document_missing_type",
+      "intent": "documents",
+      "action_id": "document",
+      "fields": {},
+      "expected_evidence_class": "insatisfecho",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "document_statement_missing_period",
+      "intent": "documents",
+      "action_id": "document",
+      "fields": {
+        "document_type": "statement",
+        "scope": "all"
+      },
+      "expected_evidence_class": "insatisfecho",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
+    },
+    {
+      "id": "document_products_pdf",
+      "intent": "documents",
+      "action_id": "document",
+      "fields": {
+        "document_type": "products_summary",
+        "scope": "all"
+      },
+      "expected_evidence_class": "automatico",
+      "execution_authorized": false,
+      "origin": "team_generated_specification"
     }
   ]
 }

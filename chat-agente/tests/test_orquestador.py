@@ -84,9 +84,13 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(self.repo.reads, 0)
 
     def test_pending_adapters_never_retrieve(self):
-        for text, kind in [('abrir', 'navigate'), ('documento', 'document'), ('persona', 'human')]:
+        for text, kind in [('abrir', 'navigate'), ('persona', 'human')]:
             result = self.send(text)
             self.assertEqual(result['pending_kind'], kind)
+        self.assertEqual(self.repo.reads, 0)
+
+    def test_document_without_minimum_fields_asks_instead_of_exporting(self):
+        self.assertEqual(self.send('documento')['status'], 'awaiting_user')
         self.assertEqual(self.repo.reads, 0)
 
     def test_replay_does_not_call_models_twice(self):

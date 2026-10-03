@@ -1,6 +1,6 @@
 # Chat agente Nexqori
 
-Implementación Python independiente en cinco componentes reutilizables. **Los programas, pruebas, consultas, modelos y SQL no se ejecutaron durante la autoría.** No está conectada a `/api/assistant`; el backend y sus respuestas actuales permanecen intactos.
+Implementación Python en siete componentes reutilizables, conectada a `/api/assistant`. Incluye RAG de lectura, documentos PDF propios y atención humana interna con confirmación. Las pruebas de integración usan proveedores falsos; no acreditan calidad ni disponibilidad de modelos reales.
 
 ## Componentes
 
@@ -11,6 +11,8 @@ Implementación Python independiente en cinco componentes reutilizables. **Los p
 | 3 | `codigo3_intencion.py` | `detectar_intencion(...)`: Jev selecciona intención y acción del contrato copiado |
 | 4 | `codigo4_evidencia.py` | `clasificar_evidencia(...)`: Jev devuelve las cinco clases; OpenAI extrae campos anclados a citas y redacta preguntas |
 | 5 | `codigo5_rag.py` | `responder_rag(...)`: PostgreSQL recupera información propia y GPT-6 Luna genera la respuesta natural |
+| 6 | `codigo6_documentos.py` | `recuperar_documento(...)` y `generar_pdf(...)`: datos propios y plantillas financieras → bytes PDF |
+| 7 | `codigo7_humano.py` | `preparar_contexto_humano(...)` y `solicitar_atencion(...)`: contexto mínimo → oferta de revisión humana |
 
 `postgres.py` concentra consultas y autorización; `proveedores.py` valida respuestas y registra llamadas; `contratos.py` define mensajes, conversación y trazas. Importar estos módulos no conecta servicios ni inicia programas. Las funciones de los notebooks se adaptaron al flujo sin importar/ejecutar celdas, entrenamiento ni evaluaciones.
 
@@ -21,21 +23,21 @@ Implementación Python independiente en cinco componentes reutilizables. **Los p
 3. Para solicitudes, código 3 usa la taxonomía adaptada. `report` (reclamo) se elimina; `documents` significa reporte/documento/exportación. Una acción única se selecciona en código sin atribuirle probabilidad de modelo.
 4. El LLM propone campos con citas literales del último mensaje. Se verifican identificadores, tipos y procedencia, y Jev evalúa evidencia. Los requisitos deterministas pueden convertir una predicción suficiente en `insatisfecho`; una predicción nunca concede permisos.
 5. `insatisfecho` devuelve `awaiting_user` y una pregunta específica basada en las reglas. El chatbot presenta la pregunta y pasa la siguiente respuesta a la misma conversación. Se vuelve a clasificar. No hay un loop que invente respuestas del usuario.
-6. Si no se entiende una respuesta a la pregunta pendiente, se pide reformular. Se permiten **dos respuestas adicionales**: tras tres respuestas consecutivas no entendidas, se devuelve el punto pendiente de atención humana. Una respuesta pertinente reinicia ese contador. Hay además un máximo de ocho rondas de aclaración para evitar ciclos sin progreso; también termina en atención humana pendiente.
+6. Si no se entiende una respuesta a la pregunta pendiente, se pide reformular. Se permiten **dos respuestas adicionales**: tras tres respuestas consecutivas no entendidas, se prepara una oferta de atención humana (en la integración HTTP). Una respuesta pertinente reinicia ese contador. Hay además un máximo de ocho rondas de aclaración para evitar ciclos sin progreso; también ofrece compartir contexto con atención humana.
 7. Sólo una lectura con evidencia suficiente alcanza código 5. Se revalida sesión y titularidad, se ejecuta SQL parametrizado y el LLM redacta con referencias. Selección ajena/inexistente produce la misma petición de aclaración, sin revelar existencia de datos de terceros.
 
-Reclamos, navegación, documentos y atención humana tienen placeholders en `mensajes.py`: **no abren pantallas, generan archivos, envían correos, notifican personas ni conectan operadores**. La respuesta contiene “aún está pendiente de programar” y explica la integración faltante. Una solicitud supervisada también queda pendiente del formulario, confirmación, permisos y adaptador de escritura: no registra un caso ni realiza operaciones monetarias.
+Reclamos, navegación y operaciones bancarias siguen como pendientes. Documentos y atención humana se conectan mediante `document_handler` y `human_handler` en `ChatAgent`; el puente HTTP los provee automáticamente. Si se utiliza el paquete independiente sin estos callbacks, los adaptadores conservan su aviso pendiente. La atención humana no registra casos bancarios ni cambia permisos.
 
 ES/EN/PT tienen cobertura en contratos y mensajes. El canal `voice` acepta texto ya transcrito y una referencia local opcional; no implementa micrófono, transcripción ni síntesis de voz. No cambia la moneda según idioma.
 
 ## Contratos copiados y adaptados
 
-Todos están en `config/`, con versión `2.0.0-chat-agent`:
+Todos están en `config/`, con versión `2.1.0-chat-agent`:
 
 - `intent-taxonomy.json`: copia derivada de `backend/config/intent-taxonomy.json`, sin intención `report`; añade `documents`.
 - `reglas_resolucion.json`: deriva del catálogo de evidencia; reduce el contrato a consultas/solicitudes, mínimos por acción, cinco clases, preguntas ES/EN/PT, destinos declarativos y placeholders.
 - `reglas_resolucion.schema.json`: esquema adaptado para validar ese contrato reducido; no es intercambiable con el esquema original v1.1.0.
-- `casos_clasificacion_cinco_tipos.json`: nueve especificaciones con IDs únicos y las cinco clases, sin reclamos. El archivo repetido en la petición se copia/adapta una sola vez. No son resultados de modelos.
+- `casos_clasificacion_cinco_tipos.json`: doce especificaciones con IDs únicos y las cinco clases, sin reclamos. El archivo repetido en la petición se copia/adapta una sola vez. No son resultados de modelos.
 - `provenance.json`: fuentes y hashes de los contratos/notebooks tomados como referencia.
 
 Las reglas originales y los notebooks no se modifican. `fresh_data` y titularidad no se simulan como hechos extraídos del usuario: se verifican en la recuperación. La evidencia del código 4 expresa suficiencia para iniciar una consulta/propuesta, no que la base ya devolvió información ni que una acción fue autorizada.
@@ -201,3 +203,46 @@ Usa `FakeRepository` y `FakeProviders` para comprobar bloqueo de reclamos, aclar
 **Estas pruebas no se ejecutaron durante esta edición.** La validación de autoría fue estática. Las verificaciones de citas/esquema no demuestran que toda afirmación natural sea correcta; evaluar calidad y seguridad offline y luego en shadow antes de integrar.
 
 Fuentes: [skill TypeSafe](C:/Users/santi/.codex/skills/typesafe-ai/SKILL.md), [API TypeSafe](https://docs.typesafe.ai/api), [Choice](https://docs.typesafe.ai/primitives/choice), [clasificación jerárquica](https://docs.typesafe.ai/cookbooks/hierarchical_classification), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna). Disponibilidad de modelos/credenciales y ejecución real pendientes de validación autorizada.
+
+
+## Integración con la aplicación web
+
+La aplicación utiliza `backend/chat_gateway.py` y el mismo `ChatAgent`, con cookie automática y aislamiento por sesión. No se requiere `NEXQORI_SESSION_TOKEN` manual en el navegador; esa variable sigue siendo sólo para el CLI independiente. La configuración activa de Docker se toma del entorno de la API (`.env` raíz mediante Compose), no de `chat-agente/.env`.
+
+Ver [activación, datos enviados y límites](../README.md#chat-conectado-a-chat-agente). La integración no llama `persistencia.py` ni aplica la propuesta SQL. El chat no guarda mensajes nuevos en ninguna tabla ni modifica permisos. Los 12 tests de configuración/orquestador se ejecutaron con dobles locales durante la integración; no se ejecutaron notebooks ni modelos reales.
+
+
+## PDF y atención humana en la aplicación
+
+Las reglas v2.1.0 exigen `document_type` y `scope`; `statement` además requiere `start/end` ISO con zona (fin exclusivo) o `all_history=true` explícito. Selección individual: `product_id` para estado/productos o `request_id` para solicitudes. Si faltan datos, el código 4 pregunta antes de exportar.
+
+Plantillas editables en `templates/`: `statement.json`, `products_summary.json`, `requests_summary.json` y textos ES/EN/PT en `labels.json`. El renderer usa ReportLab y marca Nexqori; escapa texto del usuario, pagina tablas y repite encabezados. No emplea HTML, SQL, rutas o importes generados por el modelo. Los PDF muestran fechas con zona, moneda original, referencias y saldo actual; no inventan saldos históricos, firmas ni certificados fiscales. El límite del lector sigue siendo 20 filas por consulta: se detiene ante exceso, sin truncar ni afirmar completitud.
+
+Pide, por ejemplo: “Genera un PDF con el resumen de todos mis productos” o “Quiero un estado de cuenta informativo de todos mis productos con todo el historial disponible”. Tras completar los datos, aparece **Descargar PDF**. El navegador guarda el archivo en el dispositivo, según sus ajustes. La descarga exige la misma sesión y titular; caduca a los 15 minutos, logout o reinicio del servidor. No se envía por correo.
+
+Para atención: “Quiero hablar con una persona”, una evidencia `humano` o el límite de aclaraciones generan una oferta. El cliente revisa y pulsa **Confirmar y compartir contexto**. Sólo entonces aparece en **Atención del chat** del panel administrativo. Incluye mensajes, idioma, intención/acción, campos aportados con sus citas, última clasificación de evidencia y razón de derivación; no contiene claves, cookies, SQL, prompts internos ni trazas de proveedor. Las declaraciones del usuario se distinguen de hechos bancarios verificados.
+
+El operador autenticado responde en esa bandeja; su primera respuesta le asigna la conversación. El cliente responde desde la sección de atención del chat. La actualización ocurre cada cinco segundos. No se promete que haya un operador disponible ni que un caso bancario esté resuelto. No hay email/webhook externo ni claves adicionales de mensajería.
+
+Todo se guarda sólo en memoria del proceso: máximo 100 documentos (hasta 2 MB cada uno), 100 hilos humanos, 100 mensajes por hilo. Los hilos caducan a las dos horas desde su preparación y se eliminan al cerrar sesión/reiniciar. La caducidad se aplica al acceder; no hay borrado temporizado en ausencia de tráfico. Un único worker. No se crean tablas, no se invoca `persistencia.py` y no se modifican roles. La autorización HTTP del administrador usa el rol existente; clientes no pueden leer la bandeja ni responder como operadores.
+
+### Pruebas y muestras locales
+
+```powershell
+.\.venv-app\Scripts\python.exe chat-agente/scripts/preview_documents.py
+docker compose exec -e NEXQORI_TEST_POSTGRES=1 api python -m pytest backend/tests -q -p no:cacheprovider
+node scripts/chat-actions-smoke.mjs
+```
+
+Ejecutar la primera orden desde la raíz con las dependencias instaladas. Produce tres PDF ficticios en `.local/verification/pdf-templates`, sin DB ni APIs. La prueba UI usa respuestas de transporte simuladas; la autorización, la lectura PostgreSQL, la descarga y la entrega real al almacén temporal se comprueban por separado en pytest. Ninguna de estas pruebas hace inferencias externas.
+
+## Evidencia local de pruebas
+
+La batería local de 100 casos, sus resultados CSV/JSON, trazas, PDF, capturas y el
+registro de correcciones se encuentran en `private/INFORME_PRUEBAS.md` y
+`private/ERRORES_Y_CORRECCIONES.md`. `private/` está excluido de Git y Docker;
+estos archivos sólo existen en el entorno donde se ejecutó la verificación.
+El informe distingue proveedores simulados de llamadas reales a Jev/OpenAI e
+incluye los comandos de reproducción. La ejecución real requiere autorización
+de envío externo y las credenciales locales; añadir una clave no activa el modo.
+

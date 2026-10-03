@@ -33,3 +33,12 @@ typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.4
 uvicorn==0.54.0
+attrs==26.1.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==2026.6.3
+reportlab==4.4.9
+pillow==12.3.0
+charset-normalizer==3.4.7
+pypdf==6.10.0

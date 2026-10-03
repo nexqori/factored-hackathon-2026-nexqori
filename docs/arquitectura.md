@@ -7,11 +7,13 @@ flowchart LR
   C[Cliente: ES / EN / PT] --> W[Nginx + React :5180]
   W --> A[FastAPI :8000]
   A --> P[(PostgreSQL 17)]
-  A --> N[Agente guiado y herramientas permitidas]
-  N --> R[Comando de navegación validado por React]
+  A --> N[Puente autenticado chat-agente]
+  N --> P
+  N --> L[Jev y OpenAI opcionales]
+  N --> R[Texto, PDF y atención temporal]
 ```
 
-Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Compose. Web y API se ejecutan sin root; la API usa el rol PostgreSQL `nexqori_app`, sin superusuario. El volumen `nexqori_postgres_data` conserva los datos al detener/recrear contenedores. La API aplica migraciones y un seed idempotente al arrancar. Cambiar claves en `.env` después del primer arranque no cambia automáticamente las claves persistidas.
+Web publica 127.0.0.1:5180 y PostgreSQL 127.0.0.1:5433; la API es interna. Dentro de Compose, PostgreSQL utiliza db:5432. Web y API se ejecutan sin root; la API usa el rol PostgreSQL `nexqori_app`, sin superusuario. El volumen `nexqori_postgres_data` conserva los datos al detener/recrear contenedores. La API aplica migraciones y un seed idempotente al arrancar. Cambiar claves en `.env` después del primer arranque no cambia automáticamente las claves persistidas.
 
 ## Modelo
 
@@ -23,7 +25,7 @@ Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Com
 | transactions | Titular y producto coherentes por FK compuesta; importe entero y estado. |
 | requests | Titular, servicio, movimiento opcional, detalle, clave de idempotencia, estado. |
 | audit_events | Actor, fecha y acción: login, logout, solicitud, revisión, derivación, navegación propuesta. |
-| messages | Conversación por usuario; contenido e idioma original. |
+| messages | Historial anterior por usuario; el nuevo chat no escribe en esta tabla. |
 
 No es un libro mayor: no hay asientos contables, liquidación, conciliación ni operaciones monetarias. El saldo del seed es ilustrativo y no se calcula sumando el historial de ejemplo. Moneda y fecha de presentación pertenecen al escenario de México; elegir portugués o inglés no convierte MXN.
 
@@ -41,7 +43,13 @@ Contrato completo en `/api/openapi.json`.
 | GET /api/bootstrap | Productos, movimientos, solicitudes, mensajes y auditoría propios. |
 | POST /api/requests | Cliente, confirmación, idempotencia y movimiento propio si existe. |
 | POST /api/requests/{id}/handoff | Cliente titular y confirmación; derivación simulada idempotente. |
-| POST /api/assistant | Cliente, mensaje ES/EN/PT, página permitida; respuesta guiada y navegación opcional. |
+| POST /api/assistant | Cliente, CSRF, texto ES/EN/PT; chat-agente opcional, estado por sesión, respuesta, PDF u oferta de atención sin escrituras SQL. |
+| GET /api/assistant/documents/{id} | Descarga PDF temporal de la misma sesión/titular, sin escrituras. |
+| GET /api/assistant/handoffs | Hilos temporales propios de la sesión. |
+| POST /api/assistant/handoffs/{id}/confirm | Cliente + CSRF + confirmed=true; compartir contexto en memoria. |
+| POST /api/assistant/handoffs/{id}/messages | Mensaje del cliente al hilo propio compartido; sólo memoria. |
+| GET /api/admin/chat-handoffs | Administrador; bandeja de hilos confirmados, sin borradores. |
+| POST /api/admin/chat-handoffs/{id}/messages | Administrador + CSRF; asignación al primer operador y respuesta temporal. |
 | GET /api/admin/overview | Administrador: usuarios sin hashes, solicitudes y auditoría. |
 | POST /api/admin/requests/{id}/review | Administrador y confirmación; recibida → en revisión. |
 

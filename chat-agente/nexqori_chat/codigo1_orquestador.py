@@ -11,6 +11,7 @@ from .codigo2_tipo import detectar_tipo
 from .codigo3_intencion import detectar_intencion
 from .codigo4_evidencia import extraer_datos, merge_fields, clasificar_evidencia, preguntar
 from .codigo5_rag import responder_rag
+from .codigo7_humano import solicitar_atencion
 from .mensajes import accion_pendiente, ERROR
 
 
@@ -23,17 +24,21 @@ class MemoryStore:
 
 
 class ChatAgent:
-    def __init__(self, settings, repository, store=None, provider_factory=Providers, contracts=None):
+    def __init__(self, settings, repository, store=None, provider_factory=Providers, contracts=None, document_handler=None, human_handler=None):
+        self.document_handler, self.human_handler = document_handler, human_handler
         self.settings, self.repository = settings, repository
         self.store, self.provider_factory = store or MemoryStore(), provider_factory
         self.taxonomy, self.rules, self.versions = contracts or load_contracts()
+
+    def _human(self, conversation, language, reason='rule'):
+        return solicitar_atencion(conversation, self.human_handler, reason=reason) if self.human_handler else accion_pendiente('human', language)
 
     def _question(self, conversation, action, missing, providers, language, *, misunderstood=False):
         if misunderstood and conversation.question:
             conversation.misunderstood_replies += 1
         # Respuesta inicial no entendida + dos respuestas adicionales no entendidas = 3.
         if conversation.misunderstood_replies >= 3 or conversation.clarification_rounds >= self.settings.max_clarification_rounds:
-            return accion_pendiente('human', language)
+            return self._human(conversation, language, 'clarification_limit')
         question = preguntar(conversation.model_context(), self.rules, action, missing, language,
                               providers, not_understood=misunderstood)
         conversation.question = question
@@ -65,16 +70,21 @@ class ChatAgent:
         merge_fields(conversation, extracted)
         trace.add('codigo4.campos', fields=conversation.fields, sources=conversation.field_sources)
         evidence = clasificar_evidencia(conversation.model_context(), action, self.rules, providers)
+        conversation.cache['last_evidence'] = evidence['effective']
         trace.add('codigo4.resultado', evidence=evidence)
-        if action['kind'] in {'navigate', 'document', 'human', 'unsupported'}:
+        if action['kind'] in {'navigate', 'unsupported'}:
             return accion_pendiente(action['kind'], message.language)
         if evidence['effective'] == 'desconocido':
             return self._question(conversation, action, ['objective'], providers, message.language, misunderstood=True)
         conversation.misunderstood_replies = 0
         if evidence['effective'] == 'insatisfecho':
             return self._question(conversation, action, evidence['missing'] or ['objective'], providers, message.language)
-        if evidence['effective'] == 'humano':
-            return accion_pendiente('human', message.language)
+        if evidence['effective'] == 'humano' or action['kind'] == 'human':
+            return self._human(conversation, message.language)
+        if action['kind'] == 'document':
+            if self.document_handler:
+                return trace.call('codigo6.documento', self.document_handler, conversation, token, self.repository, trace)
+            return accion_pendiente('document', message.language)
         if action['kind'] == 'supervised' or evidence['effective'] == 'supervisado':
             return accion_pendiente('supervised', message.language)
         response = trace.call('codigo5', responder_rag, conversation, intent, selected['rule'], action,
@@ -112,7 +122,8 @@ class ChatAgent:
                     conversation = Conversation(str(uuid.uuid4()), msg.user_id)
                 require(len(conversation.messages) < self.settings.max_messages, 'CONVERSATION_LIMIT', 'Iniciar otra conversación: límite alcanzado.')
                 require(conversation.status != 'error', 'STOPPED_CONVERSATION', 'Conversación detenida por error; revisar causa e iniciar otra.')
-                if conversation.status in {'answered', 'pending_implementation'}:
+                if conversation.status in {'answered', 'pending_implementation', 'document_ready', 'human_offer'}:
+                    conversation.cache.clear()
                     conversation.fields.clear(); conversation.field_sources.clear()
                     conversation.question = None
                     conversation.misunderstood_replies = conversation.clarification_rounds = 0

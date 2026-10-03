@@ -2,7 +2,7 @@
 from .contratos import require, parse_date
 from .proveedores import object_schema
 
-FIELDS = ['scope', 'product_id', 'transaction_id', 'request_id', 'start', 'end', 'all_history', 'details', 'service', 'topic']
+FIELDS = ['document_type', 'scope', 'product_id', 'transaction_id', 'request_id', 'start', 'end', 'all_history', 'details', 'service', 'topic']
 EXTRACTION_SCHEMA = object_schema({
     'understood': {'type': 'boolean'},
     'fields': {'type': 'array', 'items': object_schema({
@@ -14,9 +14,13 @@ def extraer_datos(context, latest_text, action, providers):
         'Extrae sólo datos aportados por el último mensaje. fields contiene nombre, valor y una cita literal del '
         'último texto que respalda el valor. understood indica si el mensaje es comprensible y pertinente a la '
         'solicitud/pregunta pendiente, incluso si dice no saber el dato. No inventes IDs, fechas, permisos ni datos '
-        'bancarios. No copies datos afirmados sólo por el agente. scope=all o selected; all_history=true o false; '
+        'bancarios. No copies datos afirmados sólo por el agente. scope=all o selected; '
+        'scope=all exige que el usuario pida explícitamente todos/todas/all/todos os productos, cuentas o registros. '
+        'Una petición como "mi saldo" o "meu saldo" no define scope: omite ese campo y deja que se pregunte. '
+        'Si identifica un producto o registro concreto, extrae scope=selected además de su ID literal. '
+        'all_history=true o false; '
         'start/end ISO8601 con zona explícita (end exclusivo). Sin zona/periodo inequívoco no extraer fechas. '
-        'IDs deben aparecer literalmente. details copia descripción literal. service usa general, accounts, cards, '
+        'document_type sólo puede ser statement, products_summary o requests_summary según el documento pedido; no inferirlo de una petición genérica de PDF. IDs deben aparecer literalmente. details copia descripción literal. service usa general, accounts, cards, '
         'transfers, payments, loans, investments, insurance, cash, support. Sólo extrae campos pertinentes.',
         EXTRACTION_SCHEMA)
     require(len(value['fields']) <= len(FIELDS), 'EXTRACTION_DUPLICATES', 'Demasiados campos extraídos.')
@@ -27,6 +31,8 @@ def extraer_datos(context, latest_text, action, providers):
         require(bool(quote.strip()) and quote in latest_text and len(text) <= 1000, 'UNSUPPORTED_EXTRACTION', 'Valor sin cita literal del usuario.')
         if name.endswith('_id'):
             require(text in quote and 0 < len(text) <= 64, 'INVENTED_ID', 'Identificador no literal.')
+        elif name == 'document_type':
+            require(text in {'statement', 'products_summary', 'requests_summary'}, 'INVALID_DOCUMENT', 'Documento no admitido.')
         elif name == 'scope':
             require(text in {'all', 'selected'}, 'INVALID_SCOPE', 'Alcance inválido.')
         elif name == 'all_history':
@@ -71,6 +77,13 @@ def missing_fields(action, fields):
             valid = bool(fields.get(name))
         if not valid:
             missing.append(name)
+    if action['kind'] == 'document':
+        kind = fields.get('document_type')
+        if kind == 'statement' and not (fields.get('all_history') is True or (fields.get('start') and fields.get('end'))):
+            missing.append('period')
+        if fields.get('scope') == 'selected':
+            selection = 'request_id' if kind == 'requests_summary' else 'product_id'
+            if not fields.get(selection): missing.append('selection')
     if fields.get('start') and fields.get('end'):
         require(parse_date(fields['start']) < parse_date(fields['end']), 'INVALID_PERIOD', 'Inicio debe ser anterior al fin.')
     if action['kind'] == 'read' and fields.get('scope') == 'selected':

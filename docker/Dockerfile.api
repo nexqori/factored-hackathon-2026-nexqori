@@ -4,6 +4,9 @@ WORKDIR /app
 COPY backend/requirements.lock /app/backend/requirements.lock
 RUN pip install --no-cache-dir -r /app/backend/requirements.lock && useradd --create-home --uid 10001 nexqori
 COPY backend /app/backend
+COPY chat-agente/nexqori_chat /app/chat-agente/nexqori_chat
+COPY chat-agente/config /app/chat-agente/config
+COPY chat-agente/templates /app/chat-agente/templates
 COPY alembic.ini /app/alembic.ini
 USER nexqori
 EXPOSE 8000

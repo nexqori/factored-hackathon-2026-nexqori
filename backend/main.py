@@ -5,14 +5,14 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select, delete, func, or_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
 from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, now
-from .schemas import Login, LocaleInput, RequestInput, ConfirmInput, ChatInput
+from .schemas import Login, LocaleInput, RequestInput, ConfirmInput, ChatInput, HumanMessageInput
 from .security import db_session, current_session, current_user, csrf, customer, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
-from .assistant import answer
+from .chat_gateway import ChatGateway
 from .presentation import present_message
 
 def user_view(user):
@@ -51,7 +51,7 @@ class BodyLimit:
             return await receive()
         await self.app(scope,replay,send)
 
-def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
+def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10, chat_gateway=None):
     owned_engine=engine is None
     engine=engine or make_engine()
     allowed=origins or os.getenv("APP_ORIGINS","http://localhost:5180,http://127.0.0.1:5180").split(",")
@@ -62,6 +62,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         if owned_engine: engine.dispose()
     app=FastAPI(title="Nexqori API",version="0.1.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
     app.state.sessions=make_sessions(engine)
+    app.state.chat_gateway=chat_gateway or ChatGateway(engine, app.state.sessions)
     limiter=LoginLimiter(login_limit)
     app.add_middleware(BodyLimit)
     @app.middleware("http")
@@ -109,7 +110,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def get_session(auth=Depends(current_session)):
         return {"user":user_view(auth[1]),"csrfToken":auth[0].csrf_token}
     @app.post("/api/auth/logout")
-    def logout(user=Depends(csrf),auth=Depends(current_session),db=Depends(db_session)):
+    def logout(request: Request,user=Depends(csrf),auth=Depends(current_session),db=Depends(db_session)):
+        app.state.chat_gateway.forget(request.cookies.get(COOKIE, ""))
         db.delete(auth[0]); add_audit(db,user.id,"logout",user.id); db.commit()
         response=JSONResponse({"ok":True})
         response.delete_cookie(COOKIE,path="/api",httponly=True,secure=secure,samesite="lax")
@@ -163,17 +165,28 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             add_audit(db,user.id,"handed_off",user.id,case.id);db.commit()
         return {"ok":True}
     @app.post("/api/assistant")
-    def chat(payload: ChatInput,user=Depends(customer),db=Depends(db_session)):
-        message=payload.message.strip()
-        if not message: raise HTTPException(422,"invalid_message")
-        balance=db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id==user.id,Product.type.in_(["account","savings"]),Product.currency=="MXN"))
-        result=answer(message,payload.locale,balance,payload.currentPage)
-        if result["navigation"]: add_audit(db,user.id,"navigate_"+result["navigation"]["destination"],user.id)
-        db.add(Message(id=str(uuid4()),user_id=user.id,role="user",content=message,locale=payload.locale))
-        db.flush()
-        db.add(Message(id=str(uuid4()),user_id=user.id,role="assistant",content=result["text"],locale=payload.locale))
-        db.commit()
-        return result
+    def chat(payload: ChatInput,request: Request,user=Depends(customer)):
+        if not payload.message.strip(): raise HTTPException(422,"invalid_message")
+        return app.state.chat_gateway.handle(payload,request.cookies.get(COOKIE,""),user.id)
+    @app.get("/api/assistant/documents/{document_id}")
+    def chat_document(document_id: str, request: Request, user=Depends(current_user)):
+        content, filename = app.state.chat_gateway.actions.download(document_id, request.cookies.get(COOKIE,""), user.id)
+        return Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    @app.get("/api/assistant/handoffs")
+    def chat_handoffs(request: Request, user=Depends(current_user)):
+        return app.state.chat_gateway.actions.customer_list(request.cookies.get(COOKIE,""), user.id)
+    @app.post("/api/assistant/handoffs/{ticket_id}/confirm")
+    def confirm_chat_handoff(ticket_id: str, payload: ConfirmInput, request: Request, user=Depends(customer)):
+        return app.state.chat_gateway.actions.confirm(ticket_id, request.cookies.get(COOKIE,""), user.id)
+    @app.post("/api/assistant/handoffs/{ticket_id}/messages")
+    def chat_human_message(ticket_id: str, payload: HumanMessageInput, request: Request, user=Depends(customer)):
+        return app.state.chat_gateway.actions.post_message(ticket_id, payload, token=request.cookies.get(COOKIE,""), user_id=user.id)
+    @app.get("/api/admin/chat-handoffs")
+    def admin_chat_handoffs(_user=Depends(admin)):
+        return app.state.chat_gateway.actions.admin_list()
+    @app.post("/api/admin/chat-handoffs/{ticket_id}/messages")
+    def admin_chat_reply(ticket_id: str, payload: HumanMessageInput, user=Depends(admin_write)):
+        return app.state.chat_gateway.actions.post_message(ticket_id, payload, operator=user)
     @app.get("/api/admin/overview")
     def admin_overview(_user=Depends(admin),db=Depends(db_session)):
         cases=db.execute(select(RequestCase,User.name).join(User,User.id==RequestCase.user_id).order_by(RequestCase.created_at.desc())).all()

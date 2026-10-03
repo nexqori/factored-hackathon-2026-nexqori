@@ -36,11 +36,23 @@ class Providers:
             probabilities = answer['probabilities']
             require(answer['type'] == 'choice' and set(probabilities) == set(criteria), 'JEV_SCHEMA', 'Distribución Jev incompatible.')
             require(all(type(v) in (float, int) and math.isfinite(v) and 0 <= v <= 1 for v in probabilities.values()), 'JEV_PROBABILITY', 'Probabilidades inválidas.')
-            require(abs(sum(probabilities.values()) - 1) < 1e-4, 'JEV_SUM', 'Distribución no normalizada.')
+            total = math.fsum(probabilities.values())
+            raw_probabilities = dict(probabilities)
+            # Respuestas reales de Jev pueden redondear cada componente a centésimas
+            # (por ejemplo 0.68+0.19+0.11+0.01=0.99). Admitir sólo ese error acotado,
+            # conservar los valores originales y no alterar la opción ni la confianza.
+            rounded = all(abs(v * 100 - round(v * 100)) < 1e-8 for v in probabilities.values())
+            tolerance = min(0.025, len(probabilities) * 0.005) if rounded else 1e-4
+            require(total > 0 and abs(total - 1) <= tolerance + 1e-12, 'JEV_SUM', 'Distribución no normalizada.')
+            if abs(total - 1) > 1e-12:
+                probabilities = {key: value / total for key, value in probabilities.items()}
+                self.trace.add(stage, normalization='bounded_rounding', raw_sum=total,
+                               raw_probabilities=raw_probabilities)
             label, confidence = answer['choice'], answer['confidence']
             require(label in probabilities and probabilities[label] >= max(probabilities.values()) - 1e-6, 'JEV_CHOICE', 'Opción incompatible con distribución.')
             require(type(confidence) in (float, int) and math.isfinite(confidence) and 0 <= confidence <= 1, 'JEV_CONFIDENCE', 'Confianza inválida.')
             return {'label': label, 'probability': probabilities[label], 'probabilities': probabilities,
+                    'raw_probabilities': raw_probabilities, 'raw_probability_sum': total,
                     'confidence': confidence, 'model': data.get('model'), 'usage': data.get('usage', {}),
                     'calibrated_on_nexqori': False}
         return self.trace.call(stage, operation)

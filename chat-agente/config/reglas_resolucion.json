@@ -1,12 +1,12 @@
 {
-  "version": "2.0.0-chat-agent",
-  "status": "standalone_not_connected_to_app",
+  "version": "2.1.0-chat-agent",
+  "status": "documentos_pdf_y_atencion_interna_con_confirmacion",
   "source_version": "1.1.0",
   "classes": {
-    "automatico": "Información mínima suficiente para una consulta de lectura; sin ejecutar operaciones.",
+    "automatico": "Información suficiente para consulta de lectura o generación de PDF propio; sin operaciones bancarias.",
     "supervisado": "Información suficiente, pero requiere confirmación y permisos fuera del modelo.",
     "insatisfecho": "Faltan datos mínimos; preguntar específicamente y volver a evaluar en otro turno.",
-    "humano": "Se requiere una persona o una capacidad no disponible; punto de integración pendiente.",
+    "humano": "Se requiere una persona; preparar contexto para revisión y confirmar entrega en el panel interno.",
     "desconocido": "No se entiende la solicitud o la respuesta; pedir reformulación."
   },
   "questions": {
@@ -44,6 +44,11 @@
       "es": "No entendí tu solicitud. ¿Puedes indicar nuevamente qué necesitas consultar o solicitar?",
       "en": "I did not understand your request. Could you explain what you need to view or request?",
       "pt": "Não entendi sua solicitação. Pode explicar novamente o que deseja consultar ou solicitar?"
+    },
+    "document_type": {
+      "es": "¿Quieres un estado de cuenta informativo, un resumen de productos o un seguimiento de solicitudes en PDF?",
+      "en": "Would you like an informational account statement, a product summary or a request tracking PDF?",
+      "pt": "Você quer um extrato informativo, um resumo de produtos ou um acompanhamento de solicitações em PDF?"
     }
   },
   "rules": {
@@ -73,9 +78,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -94,7 +102,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -138,9 +146,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -159,7 +170,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -202,9 +213,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -223,7 +237,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -241,12 +255,12 @@
       ]
     },
     "human": {
-      "definition": "Preparar atención humana; no conectar operador.",
+      "definition": "Solicitar comunicación con un operador humano en la aplicación; requiere confirmar compartir el contexto.",
       "actions": [
         {
           "id": "human",
           "kind": "human",
-          "description": "Pedir atención humana; integración pendiente.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -280,9 +294,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -301,7 +318,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -344,9 +361,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -365,7 +385,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -406,9 +426,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -427,7 +450,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -468,9 +491,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -489,7 +515,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -530,9 +556,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -551,7 +580,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -592,9 +621,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -613,7 +645,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -654,9 +686,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -675,7 +710,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -716,9 +751,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -737,7 +775,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -780,9 +818,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -801,7 +842,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -842,9 +883,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -863,7 +907,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -886,7 +930,7 @@
         {
           "id": "read",
           "kind": "read",
-          "description": "Informar: se pueden consultar productos, movimientos y solicitudes; operaciones, navegación y contacto humano no están conectados en este agente.",
+          "description": "Informar: se pueden consultar productos, movimientos y solicitudes; las operaciones y navegación no se ejecutan; los PDF y atención humana interna requieren su flujo específico.",
           "query": "catalog",
           "requires": [
             "topic"
@@ -906,9 +950,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -927,7 +974,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -968,9 +1015,12 @@
         {
           "id": "document",
           "kind": "document",
-          "description": "Pedir un archivo, reporte, documento o envío de resumen; no una consulta textual.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         },
@@ -989,7 +1039,7 @@
         {
           "id": "human",
           "kind": "human",
-          "description": "Solicitar atención de una persona.",
+          "description": "Preparar contexto para atención humana en la bandeja interna; compartir sólo después de confirmación explícita fuera del LLM.",
           "query": null,
           "requires": [],
           "destination": null,
@@ -1035,14 +1085,17 @@
       ]
     },
     "documents": {
-      "definition": "Solicitar reporte, estado de cuenta como archivo, documento, exportación o envío de un resumen; capacidad pendiente.",
+      "definition": "Solicitar PDF propio: estado de cuenta informativo, resumen de productos o seguimiento de solicitudes.",
       "actions": [
         {
           "id": "document",
           "kind": "document",
-          "description": "Crear, exportar o enviar reporte/documento; integración pendiente.",
+          "description": "Generar PDF propio con plantilla: statement (periodo explícito o todo el historial), products_summary o requests_summary. No enviar por correo ni generar certificados oficiales.",
           "query": null,
-          "requires": [],
+          "requires": [
+            "document_type",
+            "scope"
+          ],
           "destination": null,
           "execution_authorized": false
         }
@@ -1053,6 +1106,8 @@
     "complaint_gate",
     "unknown",
     "missing_fields",
+    "human_confirmation",
+    "document_pdf",
     "pending_adapter",
     "supervised",
     "read"

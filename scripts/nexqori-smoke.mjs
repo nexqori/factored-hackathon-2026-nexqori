@@ -5,14 +5,14 @@ import { parseEnv } from 'node:util';
 import { strict as assert } from 'node:assert';
 const credentials = parseEnv(readFileSync('.env', 'utf8'));
 const origin = process.env.NEXQORI_URL || 'http://localhost:5180';
-const output = '.local/verification';
+const output = process.env.NEXQORI_TEST_OUTPUT || '.local/verification';
 mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 1512, height: 1050 }, locale: 'es-MX' });
 const page = await context.newPage();
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
-const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], securityHeaders: false };
+const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, chatReadOnly: [], securityHeaders: false };
 const snapshot = async name => { const path = output + '/' + name + '.png'; await page.screenshot({ path, fullPage: true }); results.screenshots.push(path); };
 async function noOverflow() { assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Horizontal overflow: ' + page.url()); }
 async function axe(name) {
@@ -48,6 +48,34 @@ try {
       results.pages.push({locale,route,width:1512});
     }
   }
+  // Contrato conversacional del navegador: doble local, sin llamadas a proveedores.
+  const turns = [];
+  const fixtureConversation = '00000000-0000-4000-8000-000000000001';
+  await page.route('**/api/assistant', async route => {
+    turns.push(route.request().postDataJSON());
+    await route.fulfill({ json: {
+      text: turns.length === 1 ? '¿Una cuenta o todas?' : 'Respuesta de verificación local.',
+      status: turns.length === 1 ? 'awaiting_user' : 'answered', conversationId: fixtureConversation,
+      // Incluso una respuesta no confiable no puede abrir pantallas/formularios.
+      destination: 'new-request', navigation: { tool: 'navigate_in_app', destination: 'transfers', route: '/services/transfers' }
+    } });
+  });
+  const initialChatURL = page.url();
+  for (const text of ['saldo', 'todas']) {
+    const count = await page.locator('.chat-bubble.assistant').count();
+    await page.locator('.chat-composer input').fill(text);
+    await page.locator('.chat-composer button').click();
+    await page.waitForFunction(expected => document.querySelectorAll('.chat-bubble.assistant').length === expected, count + 1);
+  }
+  assert.equal(turns[0].conversationId, null);
+  assert.equal(turns[1].conversationId, fixtureConversation);
+  assert.notEqual(turns[0].messageId, turns[1].messageId);
+  assert.ok(turns.every(turn => !('user_id' in turn) && !('session_token' in turn) && !('history' in turn)));
+  assert.equal(page.url(), initialChatURL);
+  assert.equal(await page.locator('dialog').count(), 0);
+  await page.getByRole('button', {name:'Nueva conversación', exact:true}).click();
+  assert.equal(await page.locator('.chat-bubble').count(), 0);
+  await page.unroute('**/api/assistant');
   const commands = {
     es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/products?kind=cards']],
     en: [['Open bill payments','/services/payments'],['Show my accounts','/products?kind=accounts']],
@@ -57,14 +85,17 @@ try {
     await page.locator('.language-picker select').selectOption(locale);
     await page.waitForFunction(language => document.documentElement.lang === language, locale);
     for (const [message, route] of cases) {
+      const unchangedURL = page.url();
+      const count = await page.locator('.chat-bubble.assistant').count();
       await page.locator('.chat-composer input').fill(message);
       await page.locator('.chat-composer button').click();
-      await page.waitForURL(origin+route);
+      await page.waitForFunction(expected => document.querySelectorAll('.chat-bubble.assistant').length === expected, count + 1);
+      assert.equal(page.url(), unchangedURL, 'Chat must not navigate');
+      assert.match(await page.locator('.chat-bubble.assistant').last().innerText(), /pendiente|pending|pendente/);
       await page.locator('.chat-composer input').waitFor({state:'visible'});
       await noOverflow();
-      results.agentNavigation.push({locale,message,route});
-      if (route.includes('kind=cards')) assert.equal(await page.locator('.product-card').count(),1);
-      if (route.includes('kind=accounts')) assert.equal(await page.locator('.product-card').count(),2);
+      results.chatReadOnly.push({locale,message,route});
+      assert.equal(await page.locator('dialog').count(), 0, 'Chat must not open write forms');
     }
     for (const service of ['transfers','payments','loans','investments','insurance','cash']) {
       await page.goto(origin+'/services/'+service);
@@ -96,9 +127,10 @@ try {
   assert.ok(await page.getByText(results.createdRequest,{exact:true}).count()>0,'Request persisted');
   await page.getByRole('textbox', {name:'Mensaje para Nexqori'}).fill('¿Cuál es mi saldo?');
   await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
-  await page.getByRole('heading',{name:'Mis productos',exact:true}).waitFor();
+  assert.equal(page.url(), origin + '/requests', 'Balance query must not navigate');
   await page.locator('.chat-bubble.assistant').last().waitFor();
   assert.ok((await page.locator('.chat-bubble.assistant').last().innerText()).includes('24,850.00'));
+  await snapshot('chat-readonly-desktop');
   for (const width of [1024,768,390,320]) {
     await page.setViewportSize({width,height:900});
     for (const route of ['/','/movements','/services','/requests','/help']) {
@@ -125,7 +157,7 @@ try {
   writeFileSync(output+'/ui-results.json',JSON.stringify({...results,pageErrors},null,2));
   const violations=results.accessibility.flatMap(r=>r.violations);
   assert.equal(violations.length,0,JSON.stringify(violations));
-  console.log(JSON.stringify({pages:results.pages.length,accessibility:results.accessibility.length,pageErrors:pageErrors.length,createdRequest:results.createdRequest,agentNavigation:results.agentNavigation.length,securityHeaders:results.securityHeaders}));
+  console.log(JSON.stringify({pages:results.pages.length,accessibility:results.accessibility.length,pageErrors:pageErrors.length,createdRequest:results.createdRequest,chatReadOnly:results.chatReadOnly.length,securityHeaders:results.securityHeaders}));
 } finally {
   writeFileSync(output+'/ui-results.json',JSON.stringify({...results,pageErrors},null,2));
   await browser.close();

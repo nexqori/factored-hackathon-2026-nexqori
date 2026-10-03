@@ -20,6 +20,7 @@ def setup(tmp_path):
     with make_sessions(engine)() as db:
         seed(db,PASSWORDS)
     app=create_app(engine,[ORIGIN],False)
+    app.state.chat_gateway.mode="rules"
     yield app,engine
     engine.dispose()
 
@@ -148,7 +149,7 @@ def test_language_saved_and_assistant_scoped(setup,locale,message,marker):
     result=client.post("/api/assistant",json={"message":message,"locale":locale})
     assert result.status_code==200
     assert marker in result.json()["text"]
-    assert result.json()["destination"]=="products"
+    assert result.json()["destination"] is None
     assert "24,850" not in result.json()["text"]
     assert client.patch("/api/profile/locale",json={"locale":"fr"}).status_code==422
 
@@ -161,23 +162,24 @@ def test_ambiguous_chat_never_executes_banking_action(setup):
     after=client.get("/api/bootstrap").json()
     assert after["requests"]==before["requests"]
     assert after["products"]==before["products"]
-    assert len(after["messages"])==2
+    assert after["messages"]==before["messages"]
 
 def test_payload_limit(setup):
     app,_=setup
     client,_=login(app)
     assert client.post("/api/assistant",json={"message":"x"*18000,"locale":"es"}).status_code==413
 
-def test_navigation_is_audited_and_cannot_create_requests_or_move_money(setup):
+def test_chat_does_not_navigate_audit_create_requests_or_move_money(setup):
     app,_=setup
     client,_=login(app)
     before=client.get('/api/bootstrap').json()
     result=client.post('/api/assistant',json={'message':'Transfer money','locale':'en','currentPage':'home'})
     assert result.status_code==200
-    assert result.json()['navigation']['route']=='/services/transfers'
+    assert result.json()['navigation'] is None
+    assert result.json()['status']=='pending_implementation'
     after=client.get('/api/bootstrap').json()
     assert after['products']==before['products'] and after['transactions']==before['transactions'] and after['requests']==before['requests']
-    assert any(e['action']=='navigate_transfers' for e in after['audit'])
+    assert after['audit']==before['audit']
     assert client.post('/api/assistant',json={'message':'open','locale':'en','currentPage':'admin'}).status_code==422
     assert client.post('/api/assistant',json={'message':'open admin','locale':'en'}).json()['navigation'] is None
     operator,_=login(app,'nora')

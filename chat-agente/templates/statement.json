@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "title": {
+    "es": "Estado de cuenta informativo",
+    "en": "Informational account statement",
+    "pt": "Extrato informativo"
+  },
+  "note": {
+    "es": "Información de consulta obtenida al generar el documento. El saldo mostrado es actual, no un saldo de apertura o cierre del periodo. No es un comprobante fiscal ni un certificado firmado.",
+    "en": "Information retrieved when this document was generated. The displayed balance is current, not a period opening or closing balance. This is not a tax receipt or a signed certificate.",
+    "pt": "Informações obtidas ao gerar o documento. O saldo exibido é atual, não o saldo inicial ou final do período. Não é comprovante fiscal nem certificado assinado."
+  },
+  "sections": [
+    {
+      "table": "products",
+      "columns": [
+        "id",
+        "type",
+        "last4",
+        "balance_display"
+      ]
+    },
+    {
+      "table": "transactions",
+      "columns": [
+        "id",
+        "product_id",
+        "occurred_at",
+        "merchant",
+        "amount_display",
+        "status"
+      ],
+      "widths": [
+        0.12,
+        0.14,
+        0.2,
+        0.26,
+        0.16,
+        0.12
+      ]
+    }
+  ]
+}

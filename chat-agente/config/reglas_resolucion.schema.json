@@ -13,7 +13,7 @@
   ],
   "properties": {
     "version": {
-      "const": "2.0.0-chat-agent"
+      "const": "2.1.0-chat-agent"
     },
     "status": {
       "type": "string"
@@ -58,7 +58,8 @@
         "service",
         "selection",
         "topic",
-        "objective"
+        "objective",
+        "document_type"
       ],
       "properties": {
         "scope": {
@@ -200,6 +201,26 @@
             }
           },
           "additionalProperties": false
+        },
+        "document_type": {
+          "type": "object",
+          "required": [
+            "es",
+            "en",
+            "pt"
+          ],
+          "properties": {
+            "es": {
+              "type": "string"
+            },
+            "en": {
+              "type": "string"
+            },
+            "pt": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -288,7 +309,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -368,7 +390,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -448,7 +471,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -528,7 +552,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -608,7 +633,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -688,7 +714,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -768,7 +795,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -848,7 +876,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -928,7 +957,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1008,7 +1038,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1088,7 +1119,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1168,7 +1200,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1248,7 +1281,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1328,7 +1362,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1408,7 +1443,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1488,7 +1524,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1568,7 +1605,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1648,7 +1686,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1728,7 +1767,8 @@
                         "period",
                         "details",
                         "service",
-                        "topic"
+                        "topic",
+                        "document_type"
                       ]
                     }
                   },
@@ -1784,5 +1824,5 @@
   },
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "Copia adaptada de reglas_resolucion.schema.json: contrato reducido de solicitudes, sin intención report."
+  "$comment": "Copia adaptada de reglas_resolucion.schema.json: contrato reducido de solicitudes, sin intenciÃ³n report."
 }

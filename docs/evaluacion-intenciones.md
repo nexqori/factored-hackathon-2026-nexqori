@@ -1,6 +1,6 @@
 # Evaluación de intención antes de activar un modelo
 
-Estado: protocolo preparado, no evaluación ejecutada ni mejora demostrada. La clasificación es un componente del recorrido bancario; no acredita resolución de casos.
+Estado: protocolo preparado, sin evaluación semántica de modelos reales ni mejora demostrada. La integración de chat-agente tiene pruebas técnicas con proveedores falsos y PostgreSQL; estas pruebas no miden precisión, calibración ni disponibilidad de APIs. La clasificación es un componente del recorrido bancario; no acredita resolución de casos.
 
 ## Datos y etiquetas
 

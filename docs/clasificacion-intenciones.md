@@ -1,6 +1,6 @@
 # Configuración inicial de clasificación
 
-Estado: configuración declarativa preparada; adaptador, lectura de los JSON e inferencia remota **no implementados**. Cambiar una variable o añadir una clave no activa Jev. `/api/assistant` conserva sus reglas, respuestas y contrato actuales. No hay migraciones ni cambios de frontend.
+Estado de este contrato `backend/config/`: configuración declarativa del baseline, sin adaptador propio conectado. La integración posterior de `/api/assistant` utiliza las copias versionadas de `chat-agente/config/` y los interruptores `CHAT_AGENT_*`, descritos en [agente](agente.md); no activa estos JSON ni `INTENT_*`. Las reglas originales permanecen como referencia y modo local, pero el chat actual no navega ni escribe. Añadir una clave no activa Jev.
 
 ## Flujo y compatibilidad
 

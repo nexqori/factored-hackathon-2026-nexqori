@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "title": {
+    "es": "Seguimiento de solicitudes",
+    "en": "Request tracking",
+    "pt": "Acompanhamento de solicitações"
+  },
+  "note": {
+    "es": "Resumen de las solicitudes accesibles al generar el documento. El estado describe su seguimiento; no acredita resolución, reembolso ni ejecución de operaciones.",
+    "en": "Summary of requests accessible when this document was generated. Status describes progress; it does not prove resolution, reimbursement or execution of operations.",
+    "pt": "Resumo das solicitações acessíveis ao gerar o documento. O estado descreve o acompanhamento; não comprova resolução, reembolso nem execução de operações."
+  },
+  "sections": [
+    {
+      "table": "requests",
+      "columns": [
+        "id",
+        "service",
+        "status",
+        "created_at",
+        "updated_at"
+      ]
+    }
+  ]
+}

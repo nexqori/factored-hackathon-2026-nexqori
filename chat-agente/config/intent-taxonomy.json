@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0-chat-agent",
+  "version": "2.1.0-chat-agent",
   "status": "standalone_not_connected_to_app",
   "locales": [
     "es",
@@ -42,7 +42,7 @@
     },
     {
       "id": "human",
-      "definition": "Preparar atención humana; no conectar operador.",
+      "definition": "Solicitar atención humana en el panel interno, compartiendo contexto tras confirmación.",
       "examples": {
         "es": "Quiero atención humana",
         "en": "I want human support",
@@ -177,7 +177,7 @@
     },
     {
       "id": "documents",
-      "definition": "Solicitar reporte, estado de cuenta como archivo, documento, exportación o envío de un resumen; capacidad pendiente.",
+      "definition": "Solicitar PDF propio: estado de cuenta informativo, resumen de productos o seguimiento de solicitudes. No correo ni certificados oficiales.",
       "examples": {
         "es": "Necesito un reporte de mis movimientos en PDF.",
         "en": "I need a PDF report of my transactions.",
