@@ -18,14 +18,16 @@ El recibo de Andrea es un fixture persistente y ficticio de octubre de 2026. No 
 
 Las claves configuradas en `.local/intent-lab/providers.env` se cargan en la API, nunca en React. Compose admite que el archivo no exista; en ese caso el chat indica que falta conectar un proveedor. Tras cambiar claves de ese archivo, recrea la API con `docker compose up -d --force-recreate api`. No uses `docker compose config` para compartir diagnósticos: puede mostrar secretos resueltos.
 
-1. En el asistente, inicia una conversación nueva. Abre **Registros para esta conversación** y selecciona un movimiento del titular. También puedes empezar desde **Preguntar al asistente** en el detalle de un movimiento.
+1. En el asistente, inicia una conversación nueva. Abre **Detalles → Datos del caso** y selecciona un movimiento del titular. También puedes empezar desde **Preguntar al asistente** en el detalle de un movimiento.
 2. Escribe el problema. Jev deriva consulta/problema y elige el contrato. El motor consulta las herramientas permitidas y Luna extrae lo que declaró el cliente.
 3. Responde las preguntas pendientes. No se vuelve a clasificar mientras se reúnen los datos. Para un importe incorrecto, «me cobraron de más» no completa la comparación: se pide el importe esperado en cifras.
-4. Revisa **Seguimiento de la conversación**: caso, registros consultados, pasos, tiempos y JSON. El historial recupera el resultado sin ejecutarlo otra vez.
+4. El chat muestra los mensajes. **Detalles → Seguimiento** abre el caso, el estado y los registros consultados en un panel flotante. Abrir o cerrar conserva el borrador y no ejecuta modelos. El cliente no ve JSON, códigos de auditoría, pasos del motor ni tiempos técnicos; administración y el editor conservan esas herramientas. **Conversaciones** recupera el historial sin ejecutarlo otra vez.
 5. Cuando exista una propuesta, pulsa **Revisar y registrar reclamo**, revisa el relato y confirma. El servidor crea o recupera el folio del movimiento. No crea el reclamo al clasificar ni al consultar evidencia.
 6. Abre **Mis reclamos** para ver estado, conversación, lecturas, responsables y decisiones. **Revisar reclamo** abre las acciones existentes: pedir revisión de devolución o atención. La devolución exige aprobación del administrador; proteger una tarjeta sigue exigiendo contraseña y confirmación en Tarjetas.
 
 Una conversación registrada conserva su expediente. Los mensajes posteriores quedan vinculados al mismo reclamo. Para un problema distinto se usa **Nueva**. La voz mantiene sólo su entrada visual y continúa aplazada.
+
+Si el cliente dice «tengo un problema con una transferencia», Jev puede reconocer la familia problema y necesitar el síntoma para elegir un contrato. La pregunta estándar debe pedir qué pasó con la transferencia, sin volver a preguntar si es consulta o problema. La siguiente respuesta conserva el relato previo. Las preguntas personalizadas por el operador siguen intactas; el texto de aclaración nunca selecciona un contrato ni autoriza una operación.
 
 ## Motor y persistencia
 
@@ -67,6 +69,7 @@ npm run test:claims
 
 - `test:payments` requiere Docker :5180. Crea tres titulares ficticios de verificación en PostgreSQL. Prueba ES/EN/PT, importe precargado, confirmación, pérdida de respuesta después del commit, primer pago concurrente, reintento, lectura tras recarga y comprobante en Movimientos. No modifica los saldos de Andrea. Guarda resultados y accesos privados en `.local/verification/payments/`; `latest.json` señala el paquete reciente.
 - `test:chat:flow` requiere el entorno `.venv-app` y el puerto 5192 libre. Usa API e intérprete reales, SQLite aislado y proveedores controlados. Prueba tres contratos en ES/EN/PT, nueve conversaciones, preguntas/continuación, selección de registros, alta y trazabilidad del reclamo. Verifica que recuperar el historial no repita modelos. No usa claves ni compara calidad de proveedores.
+- `npm run test:chat:live` usa las claves ya configuradas y consume llamadas de Jev/Luna. Requiere Docker :5180. Crea titulares nuevos de verificación y ejecuta [18 escenarios redactados](../tests/scenarios/conversation-basics.json): transferencia vaga y aclaración, pago pendiente, cargo desconocido, importe incorrecto, app, sucursal, atención, saldo, teléfono, transferencia nueva, negación, saludo, cambio de consulta y seguimiento, con variantes ES/EN/PT. Comprueba respuestas, clasificación, recarga, reintentos y saldos/movimientos/solicitudes intactos; no confirma pagos ni reclamos. Guarda informe y accesos privados en `.local/verification/chat-live/`. Para repetir sólo uno: `npm run test:chat:live -- --only=transferencia-vaga`. Son casos de aceptación, no una medición representativa del dataset; el comando falla si un resultado no cumple lo esperado.
 - Los scripts antiguos de navegación/experiencia/catálogo/acciones comprueban la ruta guiada mediante una respuesta controlada de capacidades en el navegador. La prueba del chat conectado está separada.
 - Para un recorrido manual nuevo, entra con Andrea y usa sus movimientos. Para pruebas reproducibles sin alterar sus datos, utiliza los accesos del paquete privado de verificación. No publiques esos archivos ni capturas con credenciales.
 

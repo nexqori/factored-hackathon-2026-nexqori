@@ -553,5 +553,15 @@
   "complaints": "My complaints",
   "trace.event.flow_evaluated": "The assistant saved classification, questions and flow progress. Open the conversation to review results and evidence.",
   "trace.event.phone_bill_paid": "The bill payment was confirmed and the debit and associated transaction were recorded.",
-  "trace.event.conversation_linked": "The conversation was linked to this existing reference; no additional complaint was created."
+  "trace.event.conversation_linked": "The conversation was linked to this existing reference; no additional complaint was created.",
+  "chatDetails.open": "Details",
+  "chatDetails.title": "Conversation details",
+  "chatDetails.progress": "Follow-up",
+  "chatDetails.records": "Case details",
+  "chatDetails.empty": "Your case follow-up will appear here once we start the conversation.",
+  "chatDetails.back": "Back to chat",
+  "chatDetails.selectRecords": "Choose a transaction or complaint",
+  "chatFlow.intent.needs-clarification": "We need one more detail",
+  "chatFlow.intent.multiple-intents": "Choose which topic to review first",
+  "chatFlow.intent.out-of-scope": "Unsupported inquiry"
 }

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Headphones, History, MessageCircle, Plus, Phone } from 'lucide-react';
+import { ArrowUpRight, Headphones, History, MessageCircle, Plus, Phone, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from './api';
 import { Dialog } from './components';
-import { ChatFlow, type FlowResult } from './ChatFlow';
-import { formatMoney } from './components';
+import { type FlowResult } from './ChatFlow';
+import { ChatDetails } from './ChatDetails';
 import type { Dashboard } from './types';
 import { PasteComposer } from './PasteComposer';
 import { localeTags, type Locale } from './i18n';
@@ -31,6 +31,9 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   const [error, setError] = useState('');
   const [history, setHistory] = useState(false);
   const [voice, setVoice] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<'progress' | 'records'>('progress');
+  function openDetails(tab: 'progress' | 'records') { setDetailsTab(tab); setDetailsOpen(true); }
   const [historyItems, setHistoryItems] = useState<Conversation[]>([]);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [historyBusy, setHistoryBusy] = useState(false);
@@ -70,7 +73,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
     finally { setHistoryBusy(false); }
   }
   const [composerKey,setComposerKey]=useState(0);
-  function fresh() { setFlow(null); setSelectedTx(''); setSelectedRequest(''); attempt.current = null; conversationId.current = null; setConversation(null); setMessages([]); setBefore(null); setComposerKey(k=>k+1); setError(''); setHistory(false); }
+  function fresh() { setDetailsOpen(false); setFlow(null); setSelectedTx(''); setSelectedRequest(''); attempt.current = null; conversationId.current = null; setConversation(null); setMessages([]); setBefore(null); setComposerKey(k=>k+1); setError(''); setHistory(false); }
   useEffect(() => {
     if (!transactionQuestion || busy || historyBusy || handledTransaction.current === transactionQuestion.nonce) return;
     handledTransaction.current = transactionQuestion.nonce;
@@ -92,21 +95,21 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   const title = conversation?.title || t(conversation ? 'previousConversation' : 'newConversation');
   const formatTime = (value: string) => new Intl.DateTimeFormat(localeTags[locale], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
   return <aside className="assistant-panel" aria-label={t('assistant')}>
-    <div className="assistant-header"><Bot /><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div></div>
+    <div className="assistant-header"><Bot /><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div>{connected && <button className="chat-details-button" aria-haspopup="dialog" onClick={() => openDetails(flow ? 'progress' : 'records')}><Info size={16}/>{t('chatDetails.open')}</button>}</div>
     <div className="conversation-toolbar"><button disabled={busy} onClick={fresh}><Plus size={16} />{t('newConversationShort')}</button><button disabled={busy} onClick={() => { setHistory(true); void fetchHistory(); }}><History size={16} />{t('conversations')}</button></div>
     <button className="voice-entry" disabled={busy} onClick={()=>setVoice(true)}><Phone size={16}/>{t('startVoice')}</button>
     {voice&&<Dialog title={t('voiceTitle')} onClose={()=>setVoice(false)}><div className="voice-preview"><Bot large/><span className="round-icon"><Phone size={26}/></span><p>{t('voiceSoon')}</p><button className="button primary wide" onClick={()=>setVoice(false)}>{t('voiceContinue')}</button></div></Dialog>}
     {conversation && <div className="conversation-current" title={title}><MessageCircle size={13} /><span lang={conversation.title ? conversation.locale : locale}>{title}</span></div>}
-    {conversation?.transactionId && <p className="transaction-context"><strong>{t('linkedMovement')}</strong><code>{conversation.transactionId}</code><span>{t('transactionContextHint')}</span></p>}
     <div ref={log} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions">
       {!messages.length && <><div className="assistant-welcome"><Bot large /><h3>{t('assistantHello')}</h3><p>{t(guided ? 'guidedConversationWelcome' : 'conversationWelcome')}</p></div><div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={busy} onClick={() => submit(t(key))}>{t(key)}<ArrowUpRight size={15} /></button>)}</div></>}
       {before && <button className="text-link older-messages" disabled={busy} onClick={() => { void older(); }}>{t('olderMessages')}</button>}
       {messages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}</div>)}{busy && <p className="chat-thinking" role="status">{t('loading')}</p>}
+      {flow?.canRegister && <button className="button secondary chat-next-action" onClick={() => openDetails('progress')}>{t('chatFlow.prepareClaim')}<ArrowUpRight size={16}/></button>}
+      {flow?.missing_fields.some(field => field === 'transaction_id' || field === 'request_id') && <button className="text-link chat-next-action" onClick={() => openDetails('records')}>{t('chatDetails.selectRecords')}<ArrowUpRight size={16}/></button>}
     </div>
     {error && !history && <p className="error-text assistant-error" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}
     {connected && !configured && <p className="flow-provider-warning">{t('chatFlow.unconfigured')}</p>}
-    {connected && <details className="chat-flow"><summary>{t('chatFlow.references')}</summary><div className="form-stack"><label>{t('chooseTransaction')}<select disabled={busy || !!conversation?.transactionId} value={selectedTx} onChange={e => setSelectedTx(e.target.value)}><option value="">{t('noTransaction')}</option>{data.transactions.map(tx => <option key={tx.id} value={tx.id}>{tx.merchant} · {formatMoney(tx.amountMinor,locale)} · {tx.id}</option>)}</select></label><label>{t('chatFlow.case')}<select disabled={busy} value={selectedRequest} onChange={e => setSelectedRequest(e.target.value)}><option value="">—</option>{data.requests.map(r => <option key={r.id} value={r.id}>{r.id} · {t(r.status)}</option>)}</select></label><p>{t('chatFlow.referenceHint')}</p></div></details>}
-    {flow && conversation && <ChatFlow result={flow} conversationId={conversation.id} text={messages.filter(m => m.role === 'user').map(m => m.text).join('\n')} onRegistered={id => { setFlow({...flow,state:'registered',requestId:id,canRegister:false}); onClaim(id); }}/>}
+    {detailsOpen && <ChatDetails initialTab={detailsTab} result={flow} conversation={conversation} text={messages.filter(m => m.role === 'user').map(m => m.text).join('\n')} data={data} selectedTx={selectedTx} selectedRequest={selectedRequest} onTx={setSelectedTx} onRequest={setSelectedRequest} busy={busy} onClose={() => setDetailsOpen(false)} onRegistered={id => { if (flow) setFlow({...flow,state:'registered',requestId:id,canRegister:false}); setDetailsOpen(false); onClaim(id); }}/>}
     <div className="chat-bottom"><PasteComposer key={composerKey} busy={busy} onSend={(message,pasted)=>send(message,undefined,pasted)} copy={{text:t('pastedText'),preview:t('previewPasted'),remove:t('removePasted'),placeholder:t('chatPlaceholder'),label:t('chatLabel'),send:t('send'),limit:t('pasteLimit'),failed:t('error.generic')}}/><button className="human-link" disabled={busy} onClick={() => submit(t('talkHuman'))}><Headphones size={15} />{t('talkHuman')}</button></div>
     {history && <Dialog title={t('conversations')} onClose={() => setHistory(false)} busy={historyBusy}><p className="muted">{t('historyIntro')}</p><button className="button secondary wide history-new" disabled={historyBusy} onClick={fresh}><Plus size={18} />{t('newConversation')}</button>{error && <p className="error-text" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}<div className="conversation-list">{historyItems.map(item => <button className={item.id === conversationId.current ? 'current' : ''} key={item.id} disabled={historyBusy} onClick={() => { void select(item); }}><MessageCircle size={18} /><span><strong lang={item.title ? item.locale : locale}>{item.title || t('previousConversation')}</strong><time>{formatTime(item.updatedAt)}</time></span><ArrowUpRight size={17} /></button>)}</div>{!historyItems.length && !historyBusy && !error && <p className="empty-copy">{t('noConversations')}</p>}{historyBusy && <p role="status">{t('loading')}</p>}{nextOffset !== null && <button className="text-link" disabled={historyBusy} onClick={() => { void fetchHistory(nextOffset); }}>{t('loadMore')}</button>}</Dialog>}
   </aside>;

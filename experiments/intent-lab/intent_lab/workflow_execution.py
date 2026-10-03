@@ -12,6 +12,7 @@ from . import storage, app_diagnostics, flow_engine as flow, workflow_editor as 
 from .decision import INSTRUCTIONS
 from .providers import save_run
 from .workflow_previews import activation_plan, QUERY_REPLY
+from .workflow_routing import clarification_reply
 
 BOOT_ID = str(uuid.uuid4())
 MAX_REPLIES = 10
@@ -292,7 +293,8 @@ def _one(state, emit,bank_reader=None,persist=None):
             ctx['state'] = 'ask_customer' if ctx['questions'] else 'review_in_bank'
             ctx['reply'] = ' '.join([flow.COPY[ctx['state']][flow.LANGS.index(language)]]+[q['text'] for q in ctx['questions']])
         else:
-            ctx.update(reply=cfg['text'][language], questions=[{'field': None, 'text': cfg['text'][language]}], state='ask_customer')
+            question = clarification_reply(ctx, messages, language, cfg['text'][language])
+            ctx.update(reply=question, questions=[{'field': None, 'text': question}], state='ask_customer')
         if ctx['questions'] and (state['turn'] >= MAX_REPLIES or len(messages) >= 29):
             ctx.update(state='human_review', reply=flow.COPY['human_review'][flow.LANGS.index(language)], questions=[])
         output = {key: ctx[key] for key in ('state', 'reply', 'questions')}

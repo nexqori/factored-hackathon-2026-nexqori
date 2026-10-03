@@ -12,6 +12,7 @@ from pathlib import Path
 from uuid import uuid4, UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
+from sqlalchemy.orm.attributes import flag_modified
 from pydantic import Field
 from .models import User, Product, Conversation, Message, ConversationFlow, AssistantTurn, RequestCase, AuditEvent, now
 from .schemas import ChatInput, ConfirmInput
@@ -128,7 +129,10 @@ def chat_router(conversation_view, message_view):
         # Do not reclassify when the customer answers a pending context question.
         continuing = row is not None and row.state['phase'] == 'waiting_reply'
         registered = bool(row and row.request_id)
-        state = copy.deepcopy(row.state) if continuing or registered else execution.create(workflow_record(), [{'role':'user','content':message}],
+        # Reclassification after an unresolved subtype must retain the conversation.
+        # Use interpreter messages, never bank-enriched replies from the Message table.
+        prior_messages = copy.deepcopy(row.state.get('messages', [])[-28:]) if row else []
+        state = copy.deepcopy(row.state) if continuing or registered else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
                     body.locale, thread_id=conv.id, bank_binding=selection, persist=lambda _: None)
         state['language'] = body.locale
         if registered:
@@ -148,7 +152,9 @@ def chat_router(conversation_view, message_view):
             evidence = reader.collect(ctx['intent'], selection, body.locale, [])
             ctx['bank_evidence'] = evidence
             balance = db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id == user.id, Product.type.in_(('account','savings'))))
-            guided = answer(message, body.locale, balance, body.currentPage)
+            # Jev already chose the intent. A paraphrase like "cuánto dinero tengo"
+            # must still answer the balance instead of merely navigating to accounts.
+            guided = answer('balance' if ctx['intent'] == 'account-balance' else message, body.locale, balance, body.currentPage)
             ctx['reply'] = guided['text']; navigation = guided['navigation']
             item = SERVICES.get(ctx['intent'])
             if item and item['kind'] != 'claim':
@@ -168,7 +174,28 @@ def chat_router(conversation_view, message_view):
             selected_evidence = next((r['data'] for r in evidence['reads'] if r['tool']=='read-transaction-evidence'), None)
             if selected_evidence:
                 ctx['reply'] = transaction_reply(selected_evidence,body.locale)['text']
+        if not registered and ctx['state'] in ('review_in_bank', 'human_review') and ctx['intent'] in editor.PROBLEM_PORTS:
+            replies = {
+                'review_in_bank': ('Ya reuní el contexto de tu caso. Revisa el relato y confirma el reclamo para darle seguimiento.',
+                                  'I have gathered the context of your case. Review the details and confirm the complaint to track its progress.',
+                                  'Já reuni o contexto do seu caso. Revise o relato e confirme a reclamação para acompanhar o andamento.'),
+                'human_review': ('Tu caso necesita revisión de atención. Revisa el relato y confirma el reclamo para solicitarla.',
+                                 'Your case needs a review by customer support. Review the details and confirm the complaint to request it.',
+                                 'Seu caso precisa de análise do atendimento. Revise o relato e confirme a reclamação para solicitá-la.'),
+            }
+            ctx['reply'] = replies[ctx['state']][('es','en','pt').index(body.locale)]
+        for question in ctx.get('questions', []):
+            if question['field'] in ('transaction_id','request_id'):
+                question_text = {
+                    'transaction_id': ('Abre Detalles → Datos del caso y elige el movimiento que quieres revisar.', 'Open Details → Case details and choose the transaction to review.', 'Abra Detalhes → Dados do caso e escolha a movimentação que deseja revisar.'),
+                    'request_id': ('Abre Detalles → Datos del caso y elige el folio que quieres consultar.', 'Open Details → Case details and choose the reference you want to check.', 'Abra Detalhes → Dados do caso e escolha o protocolo que deseja consultar.'),
+                }[question['field']][('es','en','pt').index(body.locale)]
+                ctx['reply'] = ctx['reply'].replace(question['text'], question_text)
+                question['text'] = question_text
         row.state = copy.deepcopy(state)
+        # Read tools can autoflush the row before query evidence/reply is attached.
+        # Explicitly mark the JSON snapshot so the restored result matches this turn.
+        flag_modified(row, 'state')
         user_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='user', content=message, locale=body.locale)
         db.add(user_message); db.flush()
         reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='assistant', content=ctx['reply'], locale=body.locale)

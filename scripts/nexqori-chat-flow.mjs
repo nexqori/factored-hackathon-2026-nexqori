@@ -22,27 +22,39 @@ try{
   const context=await browser.newContext({viewport:{width:1512,height:1050}});page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
   const login=await context.request.post(origin+'/api/auth/login',{headers:{Origin:origin},data:{identifier:person.email,password:person.password}});assert.equal(login.status(),200);
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+person.locale+'"]').click();
-  const panel=page.locator('.assistant-panel');await panel.getByText(copy['chatFlow.references'],{exact:true}).click();
-  await panel.locator('.chat-flow select').first().selectOption(person.transactionId);
+  const panel=page.locator('.assistant-panel');
+  await panel.locator('.paste-composer textarea').fill('Mi borrador');
+  await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
+  const details=page.locator('.chat-details-dialog');await details.getByRole('tab',{name:copy['chatDetails.records'],exact:true}).click();
+  await details.locator('select').first().selectOption(person.transactionId);
+  await expect(details.locator('pre')).toHaveCount(0);await axe('details-'+person.locale+'-'+person.intent);
+  await page.keyboard.press('Escape');await expect(panel.locator('.paste-composer textarea')).toHaveValue('Mi borrador');
+  await expect(panel.getByRole('button',{name:copy['chatDetails.open'],exact:true})).toBeFocused();
   const message='Verificación ['+person.intent+'] '+{es:'Quiero revisar este movimiento.',en:'I need to review this transaction.',pt:'Quero revisar esta movimentação.'}[person.locale];
   const post=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
   await panel.locator('.paste-composer textarea').fill(message);await panel.locator('.paste-entry button').click();
   const response=await post;assert.equal(response.status(),200);let result=await response.json();
   assert.equal(result.flow.jev.intent,person.intent);const cid=result.conversation.id;
   if(person.intent==='incorrect-charge'){
-   await expect(panel).toContainText(copy['chatFlow.state.ask_customer']);assert.deepEqual(result.flow.missing_fields,['difference']);
+   assert.deepEqual(result.flow.missing_fields,['difference']);
    const next=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
    await panel.locator('.paste-composer textarea').fill('100 MXN');await panel.locator('.paste-entry button').click();result=await(await next).json();assert(result.flow.canRegister);
   }
-  await expect(panel).toContainText(copy['chatFlow.state.review_in_bank']);await axe(person.locale+'-'+person.intent);
+  await expect(panel.locator(':scope > .chat-flow')).toHaveCount(0);await expect(panel.locator('pre')).toHaveCount(0);
+  assert(await panel.locator('.chat-messages').evaluate(el=>el.clientHeight>300));await axe(person.locale+'-'+person.intent);
+  if(person.intent==='incorrect-charge')await page.screenshot({path:path.join(folder,'chat-clean-'+person.locale+'.png'),fullPage:true});
   const before=await(await context.request.get(origin+'/api/verification/summary')).json();
   await page.reload();await panel.locator('.conversation-toolbar button').nth(1).click();await page.locator('.conversation-list button').first().click();
-  await expect(panel).toContainText(copy['chatFlow.state.review_in_bank']);assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),before);
-  await panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();await page.locator('dialog input[type=checkbox]').check();await page.locator('dialog').getByRole('button',{name:copy.confirm,exact:true}).click();
+  await expect(panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true})).toBeVisible();assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),before);
+  await panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
+  await expect(details).toContainText(copy['chatFlow.state.review_in_bank']);await expect(details.locator('pre')).toHaveCount(0);
+  await expect(details).not.toContainText('needs-clarification');await expect(details).not.toContainText(' ms');
+  await details.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
+  await page.locator('dialog input[type=checkbox]').check();await page.locator('dialog').last().getByRole('button',{name:copy.confirm,exact:true}).click();
   await page.waitForURL(/\/complaints\?case=/);await expect(page.locator('.claim-choice')).toHaveCount(1);await page.locator('.trace-current').waitFor();
   const rid=new URL(page.url()).searchParams.get('case');await expect(page.locator('.claims-detail')).toContainText(rid);
   await page.locator('.claims-detail .trace-conversation').first().click();await expect(page.locator('.claims-detail')).toContainText(copy['chatFlow.title']);
-  await axe('claim-'+person.locale+'-'+person.intent);
+  await expect(page.locator('.claims-detail pre')).toHaveCount(0);await expect(page.locator('.claims-detail .trace-tabs')).toHaveCount(0);await axe('claim-'+person.locale+'-'+person.intent);
   if(person.intent==='incorrect-charge'){await page.screenshot({path:path.join(folder,'chat-claim-'+person.locale+'.png'),fullPage:true});await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+person.locale);}
   report.cases.push({locale:person.locale,intent:person.intent,conversationId:cid,requestId:rid});await context.close();
  }

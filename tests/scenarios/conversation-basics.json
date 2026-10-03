@@ -1,0 +1,23 @@
+{
+  "description": "Conversaciones de verificación redactadas; sin datos ni transcripciones de clientes.",
+  "cases": [
+    {"id":"transferencia-vaga","locale":"es","turns":[{"text":"tengo un problema con una transferencia","family":"problem","intent":"needs-clarification","contains":"transferencia"},{"text":"No le llegó al destinatario, se descontó de mi cuenta y sigue pendiente desde ayer.","family":"problem","intent":"payment-status"}]},
+    {"id":"transferencia-pendiente","locale":"es","turns":[{"text":"Mi transferencia sigue pendiente desde ayer y el dinero ya salió de mi cuenta.","family":"problem","intent":"payment-status"}]},
+    {"id":"cargo-no-reconocido","locale":"es","turns":[{"text":"No reconozco un cobro de 185 pesos en mi tarjeta. Yo no hice esa compra.","family":"problem","intent":"unrecognized-charge"}]},
+    {"id":"importe-incorrecto","locale":"es","turns":[{"text":"Me cobraron 500 pesos cuando tenía que pagar 300. Quiero revisar la diferencia.","family":"problem","intent":"incorrect-charge"}]},
+    {"id":"app-se-cierra","locale":"es","turns":[{"text":"La app se cierra al entrar. Ya la reinicié dos veces y sigue igual.","family":"problem","intent":"app-support"}]},
+    {"id":"sucursal","locale":"es","turns":[{"text":"En la sucursal esperé dos horas y no me atendieron. Quiero reclamar por eso.","family":"problem","intent":"branch-support"}]},
+    {"id":"atencion-telefonica","locale":"es","turns":[{"text":"La atención telefónica del banco fue pésima, el asesor me trató mal y me colgó.","family":"problem","intent":"service-feedback"}]},
+    {"id":"saldo","locale":"es","turns":[{"text":"¿Cuánto dinero tengo en mi cuenta?","family":"query","intent":"account-balance"}]},
+    {"id":"pagar-telefono","locale":"es","turns":[{"text":"Quiero pagar mi recibo del celular.","family":"query","intent":"phone-bill","route":"/services/catalog/phone-bill"}]},
+    {"id":"hacer-transferencia","locale":"es","turns":[{"text":"Quiero hacer una transferencia a otra cuenta.","family":"query","intent":"bank-transfer"}]},
+    {"id":"negacion","locale":"es","turns":[{"text":"No tengo ningún problema con mi tarjeta. Sólo quiero consultar mi saldo.","family":"query","intent":"account-balance"}]},
+    {"id":"saludo-y-detalle","locale":"es","turns":[{"text":"Hola","family":"clarification","intent":null},{"text":"Necesito consultar el saldo de mi cuenta.","family":"query","intent":"account-balance"}]},
+    {"id":"cambio-de-consulta","locale":"es","turns":[{"text":"Quiero pagar mi teléfono.","family":"query","intent":"phone-bill"},{"text":"Antes de pagarlo, mejor dime cuánto saldo tengo.","family":"query","intent":"account-balance"}]},
+    {"id":"seguimiento-reclamo","locale":"es","turns":[{"text":"Quiero saber cómo va el reclamo que presenté ayer.","family":"query","intent":"request-status"}]},
+    {"id":"transfer-en","locale":"en","turns":[{"text":"I have a problem with a transfer","family":"problem","intent":"needs-clarification","contains":"transfer"},{"text":"It is still pending and the recipient has not received it, but the money left my account yesterday.","family":"problem","intent":"payment-status"}]},
+    {"id":"transfer-pt","locale":"pt","turns":[{"text":"Tenho um problema com uma transferência","family":"problem","intent":"needs-clarification","contains":"transferência"},{"text":"O dinheiro saiu da minha conta ontem, mas não chegou ao destinatário e está pendente.","family":"problem","intent":"payment-status"}]},
+    {"id":"balance-en","locale":"en","turns":[{"text":"What is my available account balance?","family":"query","intent":"account-balance"}]},
+    {"id":"celular-pt","locale":"pt","turns":[{"text":"Quero pagar a conta do meu celular.","family":"query","intent":"phone-bill","route":"/services/catalog/phone-bill"}]}
+  ]
+}

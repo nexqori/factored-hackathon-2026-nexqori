@@ -553,5 +553,15 @@
   "complaints": "Minhas reclamações",
   "trace.event.flow_evaluated": "O assistente salvou a classificação, as perguntas e o percurso do fluxo. Abra a conversa para consultar resultados e evidências.",
   "trace.event.phone_bill_paid": "O pagamento foi confirmado e o débito e a movimentação foram registrados.",
-  "trace.event.conversation_linked": "A conversa foi vinculada a este protocolo existente; não foi criada outra reclamação."
+  "trace.event.conversation_linked": "A conversa foi vinculada a este protocolo existente; não foi criada outra reclamação.",
+  "chatDetails.open": "Detalhes",
+  "chatDetails.title": "Detalhes da conversa",
+  "chatDetails.progress": "Acompanhamento",
+  "chatDetails.records": "Dados do caso",
+  "chatDetails.empty": "O acompanhamento aparecerá aqui quando conversarmos sobre o seu caso.",
+  "chatDetails.back": "Voltar ao chat",
+  "chatDetails.selectRecords": "Escolher movimentação ou reclamação",
+  "chatFlow.intent.needs-clarification": "Precisamos de mais um detalhe",
+  "chatFlow.intent.multiple-intents": "Escolha qual assunto revisar primeiro",
+  "chatFlow.intent.out-of-scope": "Consulta indisponível"
 }

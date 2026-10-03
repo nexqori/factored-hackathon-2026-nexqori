@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X, ArrowUpRight, ShoppingBag, Coffee, ArrowDownLeft, Zap, Play, CircleHelp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { localeTags, type Locale } from './i18n';
@@ -18,10 +18,10 @@ export function TransactionList({ rows, onSelect, compact = false }: { rows: Tra
     {!compact && <Badge status={tx.status} />}<span className={'transaction-amount ' + (tx.amountMinor > 0 ? 'positive' : '')}>{tx.amountMinor > 0 ? '+' : ''}{formatMoney(tx.amountMinor, locale, tx.currency)}{compact && tx.status !== 'completed' && <small>{t(tx.status)}</small>}</span><ArrowUpRight size={16} aria-hidden="true" />
   </button>)}</div>;
 }
-export function Dialog({ title, onClose, children, busy = false }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean }) {
-  const ref = useRef<HTMLDialogElement>(null); const { t } = useTranslation();
+export function Dialog({ title, onClose, children, busy = false, className = '' }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean; className?: string }) {
+  const ref = useRef<HTMLDialogElement>(null); const { t } = useTranslation(); const titleId = useId();
   useEffect(() => { const previous = document.activeElement as HTMLElement | null; const dialog = ref.current!; dialog.showModal(); return () => { dialog.close(); previous?.focus(); }; }, []);
-  return <dialog ref={ref} className="dialog" aria-labelledby="dialog-title" onCancel={e => { e.preventDefault(); if (!busy) onClose(); }} onClick={e => { if (e.target === ref.current && !busy) onClose(); }}>
-    <div className="dialog-inner"><div className="dialog-header"><h2 id="dialog-title">{title}</h2><button className="icon-button" aria-label={t('close')} disabled={busy} onClick={onClose}><X size={21} /></button></div>{children}</div>
+  return <dialog ref={ref} className={'dialog ' + className} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); if (!busy) onClose(); }} onClick={e => { if (e.target === ref.current && !busy) onClose(); }}>
+    <div className="dialog-inner"><div className="dialog-header"><h2 id={titleId}>{title}</h2><button className="icon-button" aria-label={t('close')} disabled={busy} onClick={onClose}><X size={21} /></button></div>{children}</div>
   </dialog>;
 }

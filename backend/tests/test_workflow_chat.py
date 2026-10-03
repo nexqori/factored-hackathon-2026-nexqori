@@ -121,3 +121,45 @@ def test_missing_reference_can_be_selected_on_next_turn(setup,models):
     assert result.status_code==200,result.text
     assert result.json()['flow']['canRegister']
     assert [c[0] for c in calls]==['triage','jev','llm','llm']
+
+
+@pytest.mark.parametrize('locale,first,follow,topic',[
+    ('es','tengo un problema con una transferencia','No llegó y sigue pendiente','transferencia'),
+    ('en','I have a problem with a transfer','It did not arrive and is still pending','transfer'),
+    ('pt','Tenho um problema com uma transferência','Não chegou e está pendente','transferência'),
+])
+def test_clarifying_a_problem_preserves_the_original_story(setup,models,locale,first,follow,topic):
+    app,_=setup;client,_=login(app);calls,control=models
+    control['intent']='needs-clarification'
+    value=client.post('/api/assistant/flow',json=message(locale=locale,message=first)).json()
+    assert value['flow']['triage']['family']=='problem'
+    assert topic in value['text'] and not value['flow']['canRegister']
+    cid=value['conversation']['id']
+    assert client.get('/api/conversations/'+cid+'/flow').json()['flow']==value['flow']
+    control['intent']='payment-status'
+    result=client.post('/api/assistant/flow',json=message(locale=locale,message=follow,conversationId=cid)).json()
+    assert result['flow']['jev']['intent']=='payment-status'
+    assert calls[2][1]==[{'role':'user','content':first},{'role':'assistant','content':value['text']},{'role':'user','content':follow}]
+    assert result['flow']['state']=='ask_customer' and not result['flow']['canRegister']
+
+
+def test_new_query_keeps_context_but_never_sends_bank_enriched_reply_to_models(setup,models):
+    app,_=setup;client,_=login(app);calls,control=models
+    control.update(family='query',intent='account-balance')
+    value=client.post('/api/assistant/flow',json=message(message='Quiero saber mi saldo')).json()
+    control['intent']='phone-bill'
+    result=client.post('/api/assistant/flow',json=message(message='Ahora quiero pagar mi teléfono',conversationId=value['conversation']['id'])).json()
+    assert result['navigation']['route']=='/services/catalog/phone-bill'
+    assert calls[2][1][0]['content']=='Quiero saber mi saldo'
+    assert value['text'] not in [m['content'] for m in calls[2][1]]
+
+
+@pytest.mark.parametrize('locale,question',[('es','¿Cuánto dinero tengo en mi cuenta?'),('en','How much money do I have?'),('pt','Quanto dinheiro tenho na minha conta?')])
+def test_balance_query_answers_the_classified_intent_and_persists_bank_enriched_result(setup,models,locale,question):
+    app,_=setup;client,_=login(app);calls,control=models
+    control.update(family='query',intent='account-balance')
+    value=client.post('/api/assistant/flow',json=message(locale=locale,message=question)).json()
+    assert 'MXN' in value['text']
+    assert value['flow']['bank_evidence']['reads'][0]['tool']=='read-balances'
+    assert client.get('/api/conversations/'+value['conversation']['id']+'/flow').json()['flow']==value['flow']
+    assert len(calls)==2
