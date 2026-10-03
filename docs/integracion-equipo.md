@@ -1,6 +1,6 @@
 # Integración del equipo
 
-Entrega integrada en `main` mediante [PR #3](https://github.com/nexqori/nexqori/pull/3), el 2 de octubre de 2026, America/Lima. Conserva React, FastAPI, PostgreSQL y las traducciones ES/EN/PT. La [CI final](https://github.com/nexqori/nexqori/actions/runs/37096855918) pasó: 247 pruebas API, 184 del editor, 22 frontend y 101 de Security Lab, además de las compilaciones.
+Integración final en `main` mediante [PR #4](https://github.com/nexqori/nexqori/pull/4), el 3 de octubre de 2026, America/Lima, sobre la entrega previa del [PR #3](https://github.com/nexqori/nexqori/pull/3). Añade LangGraph y pago telefónico pendiente. La [CI del PR final](https://github.com/nexqori/nexqori/actions/runs/37133828920) pasó: **267 pruebas API, 199 del editor, 22 frontend y 101 de Security Lab**, con las compilaciones. Conserva React, FastAPI, PostgreSQL y ES/EN/PT.
 
 | Origen | Incorporación |
 | --- | --- |
@@ -29,6 +29,8 @@ Se compararon los commits de la tabla con el código integrado, además de verif
 | Voz | Aplazada. La rama original tampoco contiene un motor de llamada/transcripción que pueda activarse mediante este merge. |
 
 Esta revisión documenta diferencias; no convierte las capacidades omitidas en un nuevo backlog. La propuesta de especialista del editor continúa mostrando qué se activaría.
+
+Tras la fusión se eliminaron las ramas `codex/*` y `security-lab-module`. Permanecen `main`, `bryan` y `araceli`. Las puntas originales adaptadas están preservadas en las etiquetas `archive/codex-bank-intent-es-pt-2026-10-03` y `archive/security-lab-module-2026-10-03`; el resto ya pertenece al historial de main. El PR antiguo #2 quedó cerrado. La limpieza de ramas no elimina el módulo Security Lab.
 
 ## Qué probar
 
