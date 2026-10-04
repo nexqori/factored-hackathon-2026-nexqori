@@ -10,7 +10,7 @@ const origin = 'http://localhost:5180';
 const output = '.local/verification/claims';
 mkdirSync(output, { recursive: true });
 const definitions = JSON.parse(readFileSync('tests/scenarios/banking-cases.json', 'utf8')).cases;
-const input = { mode: 'prepare', languages: ['es'], definitions };
+const input = { mode: 'prepare', languages: ['es'], definitions, integratedBanking: true };
 const fixture = spawnSync('docker', ['compose', 'exec', '-T', '-e', 'NEXQORI_LOCAL_VERIFY=1', '-e',
   'NEXQORI_CASES_INPUT=' + Buffer.from(JSON.stringify(input)).toString('base64'), 'api', 'python', '-'], {
   input: readFileSync('scripts/banking-cases-fixtures.py', 'utf8'), encoding: 'utf8', windowsHide: true, timeout: 120000,
@@ -60,7 +60,8 @@ try {
       const refund = await mutate(customer, '/requests/' + request.id + '/refund', { confirmed: true, requestKey: randomUUID() });
       if (index === 1) await mutate(admin, '/admin/refunds/' + refund.id + '/decision', { confirmed: true, requestKey: randomUUID(), decision: 'approve', note: 'Verificación: revisión de importe, titular y cuenta de abono en el panel de reclamos.', password: pack.admin.password });
     } else await mutate(customer, '/requests/' + request.id + '/handoff', { confirmed: true });
-    report.cases.push({ id: record.id, userId: record.userId, requestId: request.id, conversationId: chat.conversation.id, url: origin + '/admin/complaints?user=' + record.userId + '&case=' + request.id });
+    const document = (await mutate(customer, '/conversations/' + record.conversationId + '/documents', { kind: 'requests_summary', scope: 'selected', requestId: request.id, locale: 'es', requestKey: randomUUID() })).document;
+    report.cases.push({ documentId: document.id, id: record.id, userId: record.userId, requestId: request.id, conversationId: chat.conversation.id, url: origin + '/admin/complaints?user=' + record.userId + '&case=' + request.id });
   }
   const baselines = await Promise.all(customerContexts.map(c => bankData(c.context)));
   page = await admin.context.newPage(); page.setDefaultTimeout(20000); page.on('pageerror', e => report.errors.push(e.message));
@@ -93,10 +94,29 @@ try {
       await page.goto(result.url); await page.locator('[data-trace-ready=true]').waitFor();
       await expect(page.locator('.trace-current')).toContainText(t['trace.outcome.' + ['refund_pending', 'refund_approved', 'handed_off'][index]]);
       await expect(page.locator('.trace-facts').first()).toContainText(result.requestId);
+      await page.getByRole('button', { name: new RegExp('^' + t['caseAdmin.conversations']) }).click();
       await page.locator('.trace-conversation').first().click();
       await expect(page.locator('.trace-transcript')).toContainText(pack.cases[index].messages.es);
       if (index === 0) await axe(locale + '-transcript');
       await page.locator('.trace-transcript').getByRole('button', { name: t.close, exact: true }).click();
+      await page.getByRole('button', { name: new RegExp('^' + t['caseAdmin.documents']) }).click();
+      const card = page.locator('[data-case-document="' + result.documentId + '"]');
+      await expect(card).toBeVisible();
+      const link = card.getByRole('link', { name: new RegExp('^' + t['caseAdmin.openPdf']) });
+      await expect(link).toHaveAttribute('target', '_blank');
+      const fileUrl = await link.getAttribute('href');
+      const opened = await admin.context.request.get(origin + fileUrl);
+      assert.equal(opened.status(), 200); assert.equal((await opened.body()).subarray(0, 5).toString(), '%PDF-');
+      assert(opened.headers()['content-disposition'].startsWith('inline'));
+      const download = page.waitForEvent('download');
+      await card.getByRole('link', { name: new RegExp('^' + t['documents.download']) }).click();
+      await (await download).saveAs(runDir + '/case-' + index + '-' + locale + '.pdf');
+      if (index === 0) { await axe(locale + '-documents'); await page.screenshot({path: runDir + '/documents-' + locale + '.png', fullPage: true}); }
+      await page.getByRole('button', { name: t['caseAdmin.activity'], exact: true }).click();
+      await page.locator('.claim-trace').getByRole('button', {name: t.auditRefresh, exact: true}).click();
+      await page.locator('[data-trace-ready=true]').waitFor();
+      await expect(page.locator('.trace-events')).toContainText(t['auditActions.case_document_opened']);
+      await expect(page.locator('.trace-events')).toContainText(t['auditActions.case_document_downloaded']);
       await page.getByRole('button', { name: t['trace.json'], exact: true }).click();
       const json = JSON.parse(await page.locator('.trace-json').innerText());
       assert.equal(json.request.userId, result.userId); assert.equal(json.externalProcessorLogs, false);

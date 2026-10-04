@@ -4,6 +4,7 @@ import { Check, Clock3, FileText, MessageCircle, RefreshCw } from 'lucide-react'
 import { api } from './api';
 import { Badge, formatMoney } from './components';
 import { ChatFlow } from './ChatFlow';
+import { AdminCaseDocuments } from './AdminCaseDocuments';
 import { RequestStatus } from './RequestProgress';
 import type { Locale } from './i18n';
 import type { AuditEvent, Conversation, ConversationPage, RequestCase } from './types';
@@ -15,6 +16,7 @@ type Trace = {
   transaction: { id: string; productId: string; merchant: string; amountMinor: number; currency: string; status: string; date: string } | null;
   product: { id: string; type: string; last4: string; status: string | null } | null;
   refund: { id: string; status: string; amountMinor: number; currency: string; destinationLast4: string; decisionNote: string | null; decidedAt: string | null; decidedBy: { id: string; name: string } | null; creditTransactionId: string | null } | null;
+  documentCount: number | null;
   events: (AuditEvent & { relation: Relation })[]; before: string | null; eventCount: number;
   conversations: (Conversation & { messageCount: number; relation: Relation })[]; conversationCount: number; nextConversationOffset: number | null;
 };
@@ -22,7 +24,7 @@ type Trace = {
 export function ClaimTrace({ request, admin = false, compact = false }: { request: RequestCase; admin?: boolean; compact?: boolean }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const [trace, setTrace] = useState<Trace | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(false);
-  const [tab, setTab] = useState<'detail' | 'json'>('detail');
+  const [tab, setTab] = useState<'detail' | 'conversations' | 'documents' | 'activity' | 'json'>('detail');
   const [conversation, setConversation] = useState<ConversationPage | null>(null); const [conversationBusy, setConversationBusy] = useState(false); const [conversationError, setConversationError] = useState(false);
   const controller = useRef<AbortController | null>(null); const messageController = useRef<AbortController | null>(null);
   const path = admin ? `/admin/users/${encodeURIComponent(request.userId)}/requests/${encodeURIComponent(request.id)}/trace` : `/requests/${encodeURIComponent(request.id)}/trace`;
@@ -51,6 +53,9 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
     } catch { if (!control.signal.aborted) setConversationError(true); }
     finally { if (!control.signal.aborted) setConversationBusy(false); }
   }
+  const showSummary = !admin || tab === 'detail';
+  const showConversations = !admin || tab === 'conversations';
+  const showActivity = !admin || tab === 'activity';
   const visibleEvents = trace?.events.filter(event => admin || ['created','reviewed','handed_off','refund_requested','refund_approved','refund_rejected','card_blocked','conversation_linked'].includes(event.action)) || [];
   const eventTitle = (action: string) => action.startsWith('navigate_') ? t('navigationRecorded', { screen: t(action.slice(9)) }) : t('auditActions.' + action, { defaultValue: t('trace.recordedActivity') });
   function eventDescription(action: string) {
@@ -59,10 +64,13 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
   }
   return <section className={'claim-trace ' + (compact ? 'compact' : '')} aria-label={t('trace.title')} data-trace-ready={!!trace && !busy}>
     <div className="trace-toolbar"><h2>{t('trace.title')}</h2><button className="button secondary" disabled={busy} onClick={() => void load()}><RefreshCw size={15} />{t('auditRefresh')}</button></div>
-    {admin && <div className="trace-tabs" role="group" aria-label={t('trace.view')}><button aria-pressed={tab === 'detail'} onClick={() => setTab('detail')}>{t('trace.simple')}</button><button aria-pressed={tab === 'json'} onClick={() => setTab('json')}>{t('trace.json')}</button></div>}
+    {admin && <div className="trace-tabs" role="group" aria-label={t('trace.view')}>
+      {(['detail', 'conversations', 'documents', 'activity', 'json'] as const).map(item => <button key={item} aria-pressed={tab === item} onClick={() => setTab(item)}>{t(item === 'detail' ? 'trace.simple' : item === 'json' ? 'trace.json' : 'caseAdmin.' + item)}{trace && item === 'conversations' && <span className="trace-count">{trace.conversationCount}</span>}{trace && item === 'documents' && <span className="trace-count">{trace.documentCount ?? 0}</span>}</button>)}
+    </div>}
     {busy && <p role="status">{t('loading')}</p>}{error && <p role="alert" className="error-text">{t('trace.error')}</p>}
     {trace && (admin && tab === 'json' ? <pre className="trace-json" tabIndex={0} aria-label={t('trace.json')}>{JSON.stringify(trace, null, 2)}</pre> : <>
       <div className="trace-current"><div><span className="eyebrow">{t('trace.now')}</span><h3>{t('trace.outcome.' + trace.outcome)}</h3><p>{t('trace.next.' + trace.outcome)}</p></div>{!compact && <RequestStatus request={trace.request} />}</div>
+      {showSummary && <>
       <dl className="trace-facts"><div><dt>{t('reference')}</dt><dd><code>{request.id}</code></dd></div><div><dt>{t('customer')}</dt><dd>{trace.customer.name}</dd></div><div><dt>{t('trace.receivedAt')}</dt><dd>{timestamp(trace.request.createdAt)}</dd></div><div><dt>{t('trace.updatedAt')}</dt><dd>{timestamp(trace.request.updatedAt)}</dd></div></dl>
       {!compact && <section className="trace-section"><h3><FileText size={18} />{t('trace.report')}</h3><p className="trace-text">{trace.request.details}</p></section>}
       <section className="trace-section"><h3>{t('trace.evidence')}</h3><p className="muted">{t('trace.evidenceHint')}</p>{trace.transaction ? <dl className="trace-facts">
@@ -73,18 +81,20 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
       {!compact && trace.refund && <section className="trace-section"><h3>{t('trace.decision')}</h3><dl className="trace-facts"><div><dt>{t('operationId')}</dt><dd><code>{trace.refund.id}</code></dd></div><div><dt>{t('status')}</dt><dd>{t('refundStatus.' + trace.refund.status)}</dd></div><div><dt>{t('amount')}</dt><dd>{formatMoney(trace.refund.amountMinor, locale, trace.refund.currency)}</dd></div><div><dt>{t('refundDestination')}</dt><dd>•••• {trace.refund.destinationLast4}</dd></div>
         {trace.refund.decidedBy && <div><dt>{t('auditActor')}</dt><dd>{trace.refund.decidedBy.name}</dd></div>}{trace.refund.decidedAt && <div><dt>{t('date')}</dt><dd>{timestamp(trace.refund.decidedAt)}</dd></div>}{trace.refund.creditTransactionId && <div><dt>{t('refundCreditReference')}</dt><dd><code>{trace.refund.creditTransactionId}</code></dd></div>}</dl>
         {trace.refund.decisionNote && <div className="trace-decision"><strong>{t('refundEvidence')}</strong><p className="trace-text">{trace.refund.decisionNote}</p></div>}<p className="muted">{t('trace.separateStatus', { status: t(trace.request.status) })}</p></section>}
-      <section className="trace-section"><h3><MessageCircle size={18} />{t('trace.conversations')} <span className="trace-count">{trace.conversationCount}</span></h3><p className="muted">{t('trace.conversationHint')}</p>
+      </>}
+      {admin && tab === 'documents' && <AdminCaseDocuments userId={request.userId} requestId={request.id} />}
+      {showConversations && <section className="trace-section"><h3><MessageCircle size={18} />{t('trace.conversations')} <span className="trace-count">{trace.conversationCount}</span></h3><p className="muted">{t('trace.conversationHint')}</p>
         {!trace.conversations.length && <p>{t(admin ? 'trace.noConversations' : 'trace.noOwnConversations')}</p>}<div className="trace-conversations">{trace.conversations.map(c => <button className="trace-conversation" key={c.id} disabled={conversationBusy} onClick={() => void viewConversation(c.id)} aria-label={t('trace.openConversation', { title: c.title || t('previousConversation') })}><strong>{c.title || t('previousConversation')}</strong><span>{timestamp(c.updatedAt)} · {t('trace.messageCount', { count: c.messageCount })}</span><small>{t('trace.relation.' + c.relation)} · {c.locale.toUpperCase()}</small></button>)}</div>
         {trace.nextConversationOffset !== null && <button className="text-link" disabled={busy} onClick={() => void load('conversations')}>{t('loadMore')}</button>}
         {conversationBusy && <p role="status">{t('loading')}</p>}{conversationError && <p role="alert" className="error-text">{t('trace.error')}</p>}
         {conversation && <section className="trace-transcript" aria-label={t('conversation')}><div className="trace-toolbar"><strong>{t('conversation')}</strong><button className="text-link" onClick={() => { messageController.current?.abort(); setConversationBusy(false); setConversation(null); }}>{t('close')}</button></div><p className="muted">{t('trace.originalLanguage')}</p>
           {conversation.before && <button className="text-link" disabled={conversationBusy} onClick={() => void viewConversation(conversation.conversation.id, conversation.before!)}>{t('olderMessages')}</button>}
-          {conversation.flow && <ChatFlow readOnly technical={admin} result={conversation.flow} conversationId={conversation.conversation.id} text="" onRegistered={() => {}}/>}{conversation.messages.map(m => <article className={'trace-message ' + m.role} key={m.id}><strong>{t(m.role === 'user' ? 'customer' : 'assistant')}</strong><time dateTime={m.at}>{timestamp(m.at)}</time><p className="trace-text" lang={m.locale}>{m.text}</p></article>)}</section>}
-      </section>
-      <section className="trace-section"><h3><Clock3 size={18} />{t('trace.activity')} {admin && <span className="trace-count">{trace.eventCount}</span>}</h3><p className="muted">{t('trace.activityHint')}</p>
+          {conversation.flow && (admin ? <details className="case-engine-details"><summary>{t('caseAdmin.engineDetails')}</summary><ChatFlow readOnly technical result={conversation.flow} conversationId={conversation.conversation.id} text="" onRegistered={() => {}}/></details> : <ChatFlow readOnly technical={false} result={conversation.flow} conversationId={conversation.conversation.id} text="" onRegistered={() => {}}/>)}{conversation.messages.map(m => <article className={'trace-message ' + m.role} key={m.id}><strong>{t(m.role === 'user' ? 'customer' : 'assistant')}</strong><time dateTime={m.at}>{timestamp(m.at)}</time><p className="trace-text" lang={m.locale}>{m.text}</p></article>)}</section>}
+      </section>}
+      {showActivity && <section className="trace-section"><h3><Clock3 size={18} />{t('trace.activity')} {admin && <span className="trace-count">{trace.eventCount}</span>}</h3><p className="muted">{t('trace.activityHint')}</p>
         <ol className="trace-events">{visibleEvents.map(e => <li key={e.id}><span className="trace-event-icon"><Check size={14} /></span><article><div className="trace-event-heading"><strong>{eventTitle(e.action)}</strong><time dateTime={e.at}>{timestamp(e.at)}</time></div><p>{eventDescription(e.action)}</p><div className="trace-event-meta"><span>{t('auditActor')}: {e.actorName}</span><span>{t('trace.relation.' + e.relation)}</span></div>{admin && <details><summary>{t('trace.references')}</summary><dl><div><dt>{t('trace.auditId')}</dt><dd><code>{e.id}</code></dd></div>{e.transactionId && <div><dt>{t('linkedMovement')}</dt><dd><code>{e.transactionId}</code></dd></div>}{e.conversationId && <div><dt>{t('conversation')}</dt><dd><code>{e.conversationId}</code></dd></div>}<div><dt>{t('trace.eventCode')}</dt><dd><code>{e.action}</code></dd></div></dl></details>}</article></li>)}</ol>
         {!visibleEvents.length && <p>{t('trace.noEvents')}</p>}{trace.before && <button className="button secondary" disabled={busy} onClick={() => void load('events')}>{t('trace.olderEvents')}</button>}
-      </section><p className="trace-source">{t('trace.observed', { date: timestamp(trace.observedAt) })}</p>
+      </section>}<p className="trace-source">{t('trace.observed', { date: timestamp(trace.observedAt) })}</p>
     </>)}
   </section>;
 }

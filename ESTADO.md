@@ -603,3 +603,14 @@
 - [ ] Validar falsos positivos, reconocimiento/rechazo, ausencia de respuesta, aislamiento entre usuarios y tiempos. No ejecutar devoluciones automáticamente.
 - Último avance: especificado, aún no implementado ni desplegado. No se alteró historial ni se bloquearon tarjetas manuales. El bloqueo actual no ofrece este ciclo reversible.
 - Siguiente paso: inspeccionar el historial disponible y diseñar una primera evaluación repetible para los cinco perfiles antes de activar protección automática.
+
+## Frente: Nexqori — expediente administrativo para el pitch
+- Fecha: 2026-10-03 19:02 -0500, America/Lima. E:/factoredai; rama codex/admin-expedientes desde dce7161.
+- Pedido vigente: comprobar PR nuevos y completar el panel para gestionar casos, ver lo ocurrido y abrir documentos. Referencias de canales de IA descartadas; no abrir PR todavía.
+- [x] Comprobar GitHub al inicio y al cierre: no hay PR abiertos. No se afirma que todas las ramas carezcan de commits nuevos.
+- [x] Organizar Resumen, Conversaciones, Documentos y Actividad; mantener evaluación técnica desplegable y JSON sólo en administración. Inicio con casos pendientes y actualización manual de la bandeja.
+- [x] Abrir/descargar PDFs del caso o conversación relacionada, con rol administrativo, titularidad y relación comprobados en servidor. Lecturas auditadas y sin caché; una apertura no amplía el conjunto de archivos vinculados. No se añadieron cargas arbitrarias.
+- [x] Validar nueve pruebas específicas; tres expedientes PostgreSQL en ES/EN/PT con conversaciones, PDF, auditoría y 19 axe sin infracciones. Lecturas no modifican saldo, movimientos ni solicitudes. Informe .local/verification/claims/c6e22bf0e9ec/report.json; captura documents-es.png revisada.
+- [x] Compilación y 33 pruebas frontend; navegación 56 vistas/nueve comandos/cinco axe y experiencia cinco axe. API completa: 417 pruebas correctas con dos advertencias previas Alembic/SQLite. Usuarios de verificación separados, sin reinicios manuales.
+- Último avance: implementado, desplegado y validado en Docker :5180. Guía docs/panel-admin-expedientes.md. Sin PR, push ni cambios en main/bryan. Borrador de ayuda conservado sin publicar.
+- Siguiente paso: ensayar cliente → reclamo confirmado → revisión administrativa; los PDFs existentes se abren desde Documentos. La asignación de especialistas, SLA y carga externa de archivos quedan fuera de esta entrega.
