@@ -20,7 +20,13 @@ try{
   const person=people.find(p=>p.locale===locale&&p.intent==='incorrect-charge'),copy=JSON.parse(await fs.readFile('src/locales/'+locale+'.json','utf8'));
   const context=await browser.newContext({viewport:{width:1512,height:1050}});page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
   await page.addInitScript(()=>{
-   window.__voiceCheck={microphones:0,stopped:0,controls:[]};
+   window.__voiceCheck={microphones:0,stopped:0,controls:[],rms:0,analysersClosed:0};
+   window.AudioContext=class{
+    state='running';
+    createMediaStreamSource(){return{connect(){},disconnect(){}};}
+    createAnalyser(){return{fftSize:256,getFloatTimeDomainData(values){values.fill(window.__voiceCheck.rms);},disconnect(){}};}
+    async resume(){}async close(){this.state='closed';window.__voiceCheck.analysersClosed++;}
+   };
    const track={enabled:true,stop(){window.__voiceCheck.stopped++;}};
    Object.defineProperty(navigator,'mediaDevices',{value:{async getUserMedia(){window.__voiceCheck.microphones++;return{getAudioTracks:()=>[track],getTracks:()=>[track]};}}});
    window.RTCPeerConnection=class{
@@ -78,11 +84,33 @@ try{
   await expect(call.locator('.voice-transcript-row')).toHaveCount(3);
   await expect(call.locator('.voice-transcript-row.user p').first()).toHaveText(spoken[0]+spoken[1]);
   await expect(call.locator('.voice-transcript-row.assistant p')).toHaveText(spoken[2]);
+  await expect(call).toHaveAttribute('data-speaking','false'); // Captions alone are not playing audio.
+  await page.evaluate(()=>{
+   const audio=document.querySelector('.voice-call audio');audio.srcObject=new MediaStream();
+   audio.dispatchEvent(new Event('playing'));
+  });
+  await expect(call).toHaveAttribute('data-speaking','false');
+  await page.evaluate(()=>window.__voiceCheck.rms=.08);
+  await expect(call).toHaveAttribute('data-speaking','true');
+  await expect(call.locator('.voice-call-status')).toHaveText(copy['voiceCall.speaking']);
+  assert.notEqual(await call.locator('.voice-agent-wave span').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await call.locator('.voice-agent-wave span').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.locator('.assistant-panel').screenshot({path:path.join(folder,'speaking-'+locale+'.png')});
+  await page.evaluate(()=>window.__voiceCheck.rms=0);
+  await expect(call).toHaveAttribute('data-speaking','false');
   await call.locator('.voice-bank-result summary').click();await expect(call.locator('.voice-bank-text')).toHaveText(reply.text);
   await call.locator('.voice-bank-result summary').click();
   await call.getByRole('button',{name:copy['voiceCall.mute'],exact:true}).click();
   await expect(call.getByRole('button',{name:copy['voiceCall.unmute'],exact:true})).toHaveAttribute('aria-pressed','true');
   await expect(call).toContainText(copy['voiceCall.muted']);
+  await page.evaluate(()=>window.__voiceCheck.rms=.08);
+  await expect(call).toHaveAttribute('data-speaking','true'); // Muting the client does not mute the agent.
+  await page.evaluate(()=>document.querySelector('.voice-call audio').dispatchEvent(new Event('pause')));
+  await expect(call).toHaveAttribute('data-speaking','false');
+  assert.equal(await page.evaluate(()=>window.__voiceCheck.analysersClosed),1);
+  await page.evaluate(()=>{window.__voiceCheck.rms=0;document.querySelector('.voice-call audio').dispatchEvent(new Event('playing'));});
   await call.getByRole('button',{name:copy['voiceCall.unmute'],exact:true}).click();
   await axe('active-'+locale);await page.locator('.assistant-panel').screenshot({path:path.join(folder,'call-'+locale+'.png')});
   await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+locale);
@@ -91,13 +119,43 @@ try{
   assert(endBounds.y>=panelBounds.y&&endBounds.y+endBounds.height<=panelBounds.y+panelBounds.height,'End button must stay inside the panel');
   assert(endBounds.y+endBounds.height<=844,'End button must fit on a phone screen');
   await page.locator('.assistant-panel').screenshot({path:path.join(folder,'mobile-'+locale+'.png')});
+  // A long call must scroll its transcript, never grow over the bank page or hide controls.
+  await page.evaluate(parts=>{
+   for(let i=0;i<100;i++)window.__voiceCheck.channel.onmessage({data:JSON.stringify({
+    type:i%2?'session.output_transcript.delta':'session.input_transcript.delta',event_id:'long-'+i,
+    delta:parts[i%2?2:3],start_ms:10000+i*3000,end_ms:10100+i*3000})});
+  },spoken);
+  await expect(call.locator('.voice-transcript-row')).toHaveCount(103);
+  for(const viewport of [{width:1512,height:1050},{width:390,height:844},{width:844,height:390}]){
+   await page.setViewportSize(viewport);await call.scrollIntoViewIfNeeded();
+   const layout=await call.evaluate(el=>{
+    const bounds=selector=>{const b=el.querySelector(selector).getBoundingClientRect();return{top:b.top,bottom:b.bottom};};
+    const body=el.querySelector('.voice-call-body'),panel=el.parentElement;
+    return{header:bounds('.voice-call-heading'),body:bounds('.voice-call-body'),footer:bounds('.voice-call-footer'),
+     inside:el.scrollHeight<=el.clientHeight+1&&panel.scrollHeight<=panel.clientHeight+1,
+     scrollable:body.scrollHeight>body.clientHeight,atBottom:body.scrollHeight-body.clientHeight-body.scrollTop<5,
+     panel:panel.getBoundingClientRect().toJSON(),width:document.documentElement.scrollWidth<=innerWidth+1};
+   });
+   assert(layout.inside&&layout.scrollable&&layout.width,JSON.stringify({viewport,layout}));
+   assert(layout.body.top>=layout.header.bottom-1&&layout.body.bottom<=layout.footer.top+1);
+   assert(layout.footer.bottom<=layout.panel.bottom+1&&layout.panel.height<=viewport.height);
+  }
+  await page.setViewportSize({width:390,height:844});await call.scrollIntoViewIfNeeded();
+  await call.locator('.voice-call-body').focus();await page.keyboard.press('Control+Home');
+  await expect.poll(()=>call.locator('.voice-call-body').evaluate(el=>el.scrollTop)).toBe(0);
+  await page.evaluate(()=>window.__voiceCheck.channel.onmessage({data:JSON.stringify({type:'session.input_transcript.delta',event_id:'while-reading',delta:' Mensaje nuevo.',start_ms:500000,end_ms:500100})}));
+  await expect(call.locator('.voice-transcript-row')).toHaveCount(104);
+  assert.equal(await call.locator('.voice-call-body').evaluate(el=>el.scrollTop),0,'New captions must not interrupt reading older text');
+  await call.locator('.voice-call-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+  await page.locator('.assistant-panel').screenshot({path:path.join(folder,'long-call-'+locale+'.png')});
   await call.getByRole('button',{name:copy['voiceCall.end'],exact:true}).click();await expect(call).toHaveCount(0);await expect(page.locator('.paste-composer textarea')).toBeEnabled();
   await expect(page.locator('.paste-composer textarea')).toHaveValue('Borrador conservado');
   await expect(page.locator('.chat-bubble.assistant').last()).toHaveText(reply.text);
   await expect(page.getByRole('button',{name:copy.startVoice,exact:true})).toBeFocused();
   await expect(page.locator('.chat-details-button')).toBeEnabled();
   await expect.poll(()=>closed).toBeGreaterThan(1);assert((await page.evaluate(()=>window.__voiceCheck.stopped))>0);
-  report.checks.push({locale,disabledWithoutMicrophone:true,recoverPreviousCall:true,inlineVoiceOnly:true,chosenVoice,orderedTranscripts:true,bankResultSeparated:true,draftPreserved:true,closed:true});await context.close();
+  assert.equal(await page.evaluate(()=>window.__voiceCheck.analysersClosed),2);
+  report.checks.push({locale,disabledWithoutMicrophone:true,recoverPreviousCall:true,inlineVoiceOnly:true,chosenVoice,orderedTranscripts:true,audioDrivenAnimation:true,reducedMotion:true,longCallContained:true,keyboardScroll:true,bankResultSeparated:true,draftPreserved:true,closed:true});await context.close();
  }
  assert.deepEqual(report.errors,[]);await fs.writeFile(path.join(folder,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({folder,...report},null,2));
 }catch(error){if(page)await page.screenshot({path:path.join(folder,'failure.png'),fullPage:true}).catch(()=>{});throw error;}

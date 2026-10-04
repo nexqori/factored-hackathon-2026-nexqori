@@ -792,6 +792,7 @@
   "voiceCall.ready": "Escolha um agente para continuar.",
   "voiceCall.connecting": "Conectando a chamada…",
   "voiceCall.active": "Chamada em andamento",
+  "voiceCall.speaking": "O agente está falando…",
   "voiceCall.closed": "A chamada terminou. Sua conversa continua no chat.",
   "voiceCall.unavailable": "Chamadas indisponíveis no momento.",
   "voiceCall.intro": "Você falará com um assistente de IA. Ao iniciar, seu áudio será enviado à OpenAI. Máximo de 5 minutos. Não compartilhe senhas nem códigos.",

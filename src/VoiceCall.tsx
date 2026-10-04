@@ -1,9 +1,10 @@
-import {useEffect,useId,useMemo,useRef,useState} from 'react';
+import {useEffect,useId,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {useTranslation} from 'react-i18next';
-import {AudioLines,Mic,MicOff,PhoneOff,Volume2} from 'lucide-react';
+import {Mic,MicOff,PhoneOff,Volume2} from 'lucide-react';
 import {api,ApiError} from './api';
 import {VoiceClient,type VoiceCapabilities,type VoiceSelection} from './voiceClient';
 import {groupVoiceTranscript,type VoiceFragment} from './voiceTranscript';
+import {useVoiceActivity} from './useVoiceActivity';
 import type {ChatReply} from './AssistantPanel';
 
 export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<VoiceSelection,'voice'>;onReply:(reply:ChatReply)=>void;onClose:()=>void;onSession:(id:string)=>void}){
@@ -16,6 +17,7 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
   const audio=useRef<HTMLAudioElement>(null);const client=useRef<VoiceClient|null>(null);
   const heading=useRef<HTMLHeadingElement>(null);const body=useRef<HTMLDivElement>(null);
   const follow=useRef(true);const callback=useRef(onReply);callback.current=onReply;
+  const level=useVoiceActivity(audio,state==='active');
   const transcript=useMemo(()=>groupVoiceTranscript(fragments),[fragments]);
   useEffect(()=>{
     heading.current?.focus();
@@ -43,13 +45,18 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
   }
   const running=state==='active'||state==='connecting';
   const status=!capability?(error?'voiceCall.unavailable':'loading'):!capability.enabled?'voiceCall.unavailable':
-    state==='active'&&muted?'voiceCall.muted':'voiceCall.'+state;
-  return <section className="voice-call" aria-label={t('voiceTitle')}>
+    state==='active'?(level>0?'voiceCall.speaking':muted?'voiceCall.muted':'voiceCall.active'):'voiceCall.'+state;
+  return <section className="voice-call" aria-label={t('voiceTitle')} data-speaking={level>0}>
     <header className="voice-call-heading">
-      <span className={'voice-call-symbol'+(state==='active'&&!muted?' is-live':'')} aria-hidden="true"><AudioLines size={28}/></span>
-      <div><h3 ref={heading} tabIndex={-1}>{t('voiceTitle')}</h3><p role="status">{t(status)}</p></div>
+      <h3 ref={heading} tabIndex={-1}>{t('voiceTitle')}</h3>
+      <div className="voice-agent-stage" aria-hidden="true" style={{'--voice-level':level} as CSSProperties}>
+        <div className="voice-agent-orbit"><img src="/nexqori-bot.png" alt=""/></div>
+        <div className="voice-agent-wave">{[0,1,2,3,4,5,6].map(i=><span key={i} style={{'--bar':i} as CSSProperties}/>)}</div>
+      </div>
+      <p className="voice-agent-name">{t('voiceCall.agent')} · {voice.charAt(0).toUpperCase()+voice.slice(1)}</p>
+      <p className="voice-call-status" role="status">{t(status)}</p>
     </header>
-    <div className="voice-call-body" ref={body} onScroll={()=>{const el=body.current;if(el)follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;}}>
+    <div className="voice-call-body" ref={body} tabIndex={0} role="region" aria-label={t(running||transcript.length?'voiceCall.transcript':'voiceCall.about')} onScroll={()=>{const el=body.current;if(el)follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;}}>
       {!running&&<div className="voice-call-setup">
         <div><label htmlFor={voiceId}>{t('voiceCall.agent')}</label><select id={voiceId} aria-describedby={agentDescriptionId} value={voice} onChange={e=>setVoice(e.target.value)}>{(capability?.voices||['marin']).map(v=><option key={v} value={v}>{v.charAt(0).toUpperCase()+v.slice(1)}</option>)}</select></div>
         <p id={agentDescriptionId} className="voice-agent-description">{t('voiceCall.agent.'+voice,{defaultValue:t('voiceCall.agent.marin')})}</p>

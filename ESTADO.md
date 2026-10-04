@@ -681,3 +681,12 @@
 
 ## Antecedente integrado: formularios de Araceli
 - Contribución 38912ae: encuestas NPS/CSAT/CES, métricas y migración b37d1f4c9a20. Integración local validada en codex/formularios-cierre; se conservan sus métricas y se adapta el plazo al pitch, sin temporizador de inactividad ni ocultación del historial.
+
+## Frente: Nexqori — animación y transcripción dentro del chat
+- Fecha: 2026-10-04 18:10 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado desde 9b2325f. Sin PR ni publicación remota.
+- Pedido vigente: contener la llamada dentro del panel del chatbot, con animación del agente arriba y transcripción debajo.
+- [x] Agente animado arriba según audio recibido, transcripción desplazable debajo y controles fijos. Sin animación por subtítulos o mero estado de conexión. Respeta movimiento reducido; pausa/silencio/cierre detienen el análisis local y no se captura otro micrófono.
+- [x] Validar ES/EN/PT, nueve axe sin infracciones, 104 intervenciones, móvil vertical/horizontal, desplazamiento por teclado y conservación del borrador. Informe .local/verification/voice-ui-Nx3lQG/report.json; capturas speaking-es.png y long-call-pt.png revisadas.
+- [x] Compilar y validar 40 pruebas frontend y 453 API previas a incorporar condiciones del servicio. Docker: navegación 56 vistas/nueve comandos/cinco axe; experiencia e historial con cinco axe, sólo perfil aislado. API y db estaban detenidos desde seis horas antes: se iniciaron sus contenedores; las primeras dos pruebas de conexión fallaron antes de que web quedara saludable, y la repetición pasó.
+- Último avance: interfaz implementada, desplegada y validada localmente. Voz real sigue pendiente del acceso al modelo; no se activaron micrófono real ni proveedores. Sin PR/push ni cambios en main/bryan.
+- Siguiente paso: revisar Iniciar llamada en el banco; validar audio real cuando se resuelva el acceso del proveedor.

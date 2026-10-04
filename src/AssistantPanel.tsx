@@ -111,7 +111,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   const selectedTransaction = data.transactions.find(tx => tx.id === selectedTx);
   const formatTime = (value: string) => new Intl.DateTimeFormat(localeTags[locale], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
   return <aside className="assistant-panel" aria-label={t('assistant')}>
-    <div className="assistant-header"><Bot /><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div>{connected && !voice && <button className="chat-details-button" aria-haspopup="dialog" onClick={() => openDetails()}><Info size={16}/>{t('chatDetails.open')}</button>}</div>
+    {!voice&&<div className="assistant-header"><Bot /><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div>{connected && <button className="chat-details-button" aria-haspopup="dialog" onClick={() => openDetails()}><Info size={16}/>{t('chatDetails.open')}</button>}</div>}
     <div className="chat-text-controls" hidden={voice}>
     <div className="conversation-toolbar"><button disabled={busy || voice} onClick={fresh}><Plus size={16} />{t('newConversationShort')}</button><button disabled={busy || voice} onClick={() => { setHistory(true); void fetchHistory(); }}><History size={16} />{t('conversations')}</button></div>
     <button ref={voiceEntry} className="voice-entry" disabled={busy || voice || historyBusy} onClick={()=>setVoice(true)}><Phone size={16}/>{t('startVoice')}</button>
