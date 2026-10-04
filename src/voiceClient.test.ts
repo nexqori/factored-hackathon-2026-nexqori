@@ -39,6 +39,11 @@ describe('optional voice client',()=>{
     expect(callbacks.session).toHaveBeenCalledWith('owned');expect(callbacks.reply).toHaveBeenCalledWith(reply);
     peer.channel.onmessage({data:JSON.stringify({type:'response.event',event:{type:'function_call',name:'transfer_money'}})});
     expect(callbacks.reply).toHaveBeenCalledTimes(1);
+    const event={type:'session.input_transcript.delta',event_id:'heard-1',delta:'Hola ',start_ms:100,end_ms:200};
+    peer.channel.onmessage({data:JSON.stringify(event)});
+    peer.channel.onmessage({data:JSON.stringify(event)});
+    peer.channel.onmessage({data:JSON.stringify({...event,type:'session.output_transcript.delta',event_id:'spoken-1',delta:'Te escucho.',start_ms:300,end_ms:600})});
+    expect(callbacks.caption.mock.calls.map(([r]:any[])=>[r.speaker,r.text,r.startMs,r.endMs])).toEqual([['user','Hola ',100,200],['assistant','Te escucho.',300,600]]);
     client.mute(true);expect(track.enabled).toBe(false);client.mute(false);expect(track.enabled).toBe(true);
     await client.stop();expect(track.stop).toHaveBeenCalled();expect(peer.close).toHaveBeenCalled();
     expect(peer.channel.send).toHaveBeenCalledWith(JSON.stringify({type:'session.close'}));

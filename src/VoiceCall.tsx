@@ -1,20 +1,35 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Mic,MicOff,PhoneOff} from 'lucide-react';
+import {AudioLines,Mic,MicOff,PhoneOff,Volume2} from 'lucide-react';
 import {api,ApiError} from './api';
 import {VoiceClient,type VoiceCapabilities,type VoiceSelection} from './voiceClient';
+import {groupVoiceTranscript,type VoiceFragment} from './voiceTranscript';
 import type {ChatReply} from './AssistantPanel';
 
 export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<VoiceSelection,'voice'>;onReply:(reply:ChatReply)=>void;onClose:()=>void;onSession:(id:string)=>void}){
   const {t}=useTranslation();const [capability,setCapability]=useState<VoiceCapabilities|null>(null);
+  const voiceId=useId();
   const [state,setState]=useState('ready');const [error,setError]=useState('');const [voice,setVoice]=useState('marin');
-  const [muted,setMuted]=useState(false);const [caption,setCaption]=useState({speaker:'user',text:''});
+  const [muted,setMuted]=useState(false);const [fragments,setFragments]=useState<VoiceFragment[]>([]);
+  const [bankReply,setBankReply]=useState('');
   const audio=useRef<HTMLAudioElement>(null);const client=useRef<VoiceClient|null>(null);
-  const callback=useRef(onReply);callback.current=onReply;
-  useEffect(()=>{const c=new AbortController();void api<VoiceCapabilities>('/voice/capabilities','GET',undefined,c.signal).then(setCapability).catch(e=>{if(!c.signal.aborted)setError(e instanceof ApiError?e.code:'voice_connection');});return()=>{c.abort();void client.current?.stop();};},[]);
+  const heading=useRef<HTMLHeadingElement>(null);const body=useRef<HTMLDivElement>(null);
+  const follow=useRef(true);const callback=useRef(onReply);callback.current=onReply;
+  const transcript=useMemo(()=>groupVoiceTranscript(fragments),[fragments]);
+  useEffect(()=>{
+    heading.current?.focus();
+    const c=new AbortController();
+    void api<VoiceCapabilities>('/voice/capabilities','GET',undefined,c.signal).then(setCapability)
+      .catch(e=>{if(!c.signal.aborted)setError(e instanceof ApiError?e.code:'voice_connection');});
+    return()=>{c.abort();void client.current?.stop();};
+  },[]);
+  useEffect(()=>{if(follow.current&&body.current)body.current.scrollTop=body.current.scrollHeight;},[fragments,bankReply]);
   async function start(){
-    if(!audio.current||!capability?.enabled)return;setError('');setMuted(false);setCaption({speaker:'user',text:''});
-    client.current=new VoiceClient({status:setState,error:setError,caption:(speaker,text)=>setCaption({speaker,text}),reply:r=>callback.current(r),session:onSession},audio.current);
+    if(!audio.current||!capability?.enabled)return;
+    setError('');setMuted(false);setFragments([]);setBankReply('');follow.current=true;
+    client.current=new VoiceClient({status:setState,error:setError,
+      caption:fragment=>setFragments(items=>[...items,fragment].slice(-400)),
+      reply:r=>{setBankReply(r.text);callback.current(r);},session:onSession},audio.current);
     await client.current.start({...selection,voice});
   }
   async function closePrevious(){
@@ -22,20 +37,44 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
     try{await api('/voice/sessions/'+capability.pendingSessionId+'/close','POST',{});setCapability(await api<VoiceCapabilities>('/voice/capabilities'));}
     catch(e){setError(e instanceof ApiError?e.code:'voice_connection');}
   }
+  async function resumeAudio(){
+    try{await audio.current?.play();setError('');}catch{setError('voice_playback');}
+  }
   const running=state==='active'||state==='connecting';
+  const status=!capability?(error?'voiceCall.unavailable':'loading'):!capability.enabled?'voiceCall.unavailable':
+    state==='active'&&muted?'voiceCall.muted':'voiceCall.'+state;
   return <section className="voice-call" aria-label={t('voiceTitle')}>
-    <h3>{t('voiceTitle')}</h3>
-    <p role="status">{t(capability?.enabled?'voiceCall.'+state:'voiceCall.unavailable')}</p>
-    {!running&&<><p className="muted">{t('voiceCall.intro')}</p><label>{t('voiceCall.voice')}<select value={voice} onChange={e=>setVoice(e.target.value)}>{(capability?.voices||['marin']).map(v=><option key={v} value={v}>{v}</option>)}</select></label></>}
-    {running&&<p className="muted">{t('voiceCall.screen')}</p>}
-    {caption.text&&<p className="voice-caption"><strong>{t(caption.speaker==='user'?'voiceCall.you':'assistant')}: </strong>{caption.text}</p>}
-    <audio ref={audio} controls={running} aria-label={t('voiceCall.audio')}/>
-    {error&&<p className="error-text" role="alert">{t('error.'+error,{defaultValue:t('error.voice_connection')})}</p>}
-    <div className="voice-call-actions">
+    <header className="voice-call-heading">
+      <span className={'voice-call-symbol'+(state==='active'&&!muted?' is-live':'')} aria-hidden="true"><AudioLines size={28}/></span>
+      <div><h3 ref={heading} tabIndex={-1}>{t('voiceTitle')}</h3><p role="status">{t(status)}</p></div>
+    </header>
+    <div className="voice-call-body" ref={body} onScroll={()=>{const el=body.current;if(el)follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;}}>
+      {!running&&<div className="voice-call-setup">
+        <div><label htmlFor={voiceId}>{t('voiceCall.voice')}</label><select id={voiceId} value={voice} onChange={e=>setVoice(e.target.value)}>{(capability?.voices||['marin']).map(v=><option key={v} value={v}>{v.charAt(0).toUpperCase()+v.slice(1)}</option>)}</select></div>
+        <p className="muted">{t('voiceCall.voiceHint')}</p>
+        <p className="muted">{t('voiceCall.intro')}</p>
+      </div>}
+      {(running||transcript.length>0)&&<>
+        <p className="voice-transcript-hint">{t('voiceCall.captionsHint')}</p>
+        <div className="voice-transcript" role="log" aria-label={t('voiceCall.transcript')} aria-live="polite" aria-relevant="additions text">
+          {!transcript.length&&<p className="voice-transcript-empty">{t('voiceCall.waiting')}</p>}
+          {transcript.map(row=><div key={row.id} className={'voice-transcript-row '+row.speaker}>
+            <strong>{t(row.speaker==='user'?'voiceCall.heard':'voiceCall.spoken')}</strong><p>{row.text}</p>
+          </div>)}
+        </div>
+        {bankReply&&<details className="voice-bank-result"><summary>{t('voiceCall.bankResult')}</summary><p className="voice-bank-text">{bankReply}</p><small>{t('voiceCall.screen')}</small></details>}
+      </>}
+    </div>
+    <audio ref={audio} aria-label={t('voiceCall.audio')}/>
+    <footer className="voice-call-footer">
+      {error&&<p className="error-text" role="alert">{t('error.'+error,{defaultValue:t('error.voice_connection')})}</p>}
+      {running&&error==='voice_playback'&&<button className="button secondary" onClick={()=>void resumeAudio()}><Volume2 size={16}/>{t('voiceCall.resumeAudio')}</button>}
       {!running&&capability?.pendingSessionId&&<button className="button secondary" onClick={()=>void closePrevious()}>{t('voiceCall.closePrevious')}</button>}
+      <div className="voice-call-actions">
       {!running&&<button className="button primary" disabled={!capability?.enabled||!!capability?.pendingSessionId} onClick={()=>void start()}><Mic size={16}/>{t('voiceCall.start')}</button>}
       {state==='active'&&<button className="button secondary" aria-pressed={muted} onClick={()=>{client.current?.mute(!muted);setMuted(!muted);}}>{muted?<MicOff size={16}/>:<Mic size={16}/>} {t(muted?'voiceCall.unmute':'voiceCall.mute')}</button>}
-      <button className="button secondary" onClick={()=>{void client.current?.stop();onClose();}}><PhoneOff size={16}/>{t(running?'voiceCall.end':'voiceContinue')}</button>
-    </div>
+      <button className={'button '+(running?'voice-call-end':'secondary')} onClick={()=>{void client.current?.stop();onClose();}}><PhoneOff size={16}/>{t(running?'voiceCall.end':'voiceContinue')}</button>
+      </div>
+    </footer>
   </section>;
 }

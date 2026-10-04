@@ -1,18 +1,19 @@
 import { api, ApiError } from './api';
 import type { ChatReply } from './AssistantPanel';
 import type { Locale } from './i18n';
+import type { VoiceFragment } from './voiceTranscript';
 
 export type VoiceCapabilities = {enabled:boolean;maxSeconds:number;voices:string[];pendingSessionId?:string|null};
 export type VoiceState = {id:string;conversationId:string;status:string;expiresAt:number;revision:number;reply:ChatReply|null;reason:string|null;remoteClosed:boolean};
 export type VoiceSelection = {conversationId:string|null;transactionId:string|null;requestId:string|null;locale:Locale;voice:string};
-export type VoiceCallbacks = {status:(state:string)=>void;caption:(speaker:'user'|'assistant',text:string)=>void;reply:(reply:ChatReply)=>void;error:(code:string)=>void;session?:(id:string)=>void};
+export type VoiceCallbacks = {status:(state:string)=>void;caption:(fragment:VoiceFragment)=>void;reply:(reply:ChatReply)=>void;error:(code:string)=>void;session?:(id:string)=>void};
 
 /** The data channel is captions-only. Tools and bank results use our server. */
 export class VoiceClient {
   private peer:RTCPeerConnection|null=null; private stream:MediaStream|null=null;
   private channel:RTCDataChannel|null=null; private audio:HTMLAudioElement;
   private id:string|null=null; private timer:ReturnType<typeof setTimeout>|null=null;
-  private cancelled=false; private revision=0; private captions={user:'',assistant:''};
+  private cancelled=false; private revision=0; private captionSequence=0;
   private seen=new Set<string>(); private remaining=0;
   constructor(private callbacks:VoiceCallbacks,audio:HTMLAudioElement){this.audio=audio;}
 
@@ -57,8 +58,9 @@ export class VoiceClient {
       }
       const speaker=event.type==='session.input_transcript.delta'?'user':event.type==='session.output_transcript.delta'?'assistant':null;
       if(speaker&&typeof event.delta==='string'){
-        this.captions[speaker]=(this.captions[speaker]+event.delta).slice(-500);
-        this.callbacks.caption(speaker,this.captions[speaker]);
+        this.callbacks.caption({id:String(++this.captionSequence),speaker,text:event.delta.slice(0,4000),
+          startMs:typeof event.start_ms==='number'&&Number.isFinite(event.start_ms)?event.start_ms:null,
+          endMs:typeof event.end_ms==='number'&&Number.isFinite(event.end_ms)?event.end_ms:null});
       }
       if(event.type==='session.closed'){this.cancelled=true;this.cleanup();this.callbacks.status('closed');}
       if(event.type==='error')void this.fail('voice_connection');

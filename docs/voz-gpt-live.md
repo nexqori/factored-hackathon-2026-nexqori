@@ -1,10 +1,10 @@
 # Base de llamada con GPT-Live
 
-Estado al 3 de octubre de 2026, America/Lima: implementación para pruebas posteriores. La voz permanece desactivada en Compose normal. No se ha probado una llamada real ni el acceso de la cuenta a `gpt-live-1`. No se ha usado el micrófono ni consumido crédito de voz durante el desarrollo.
+Estado al 3 de octubre de 2026, America/Lima: interfaz integrada para pruebas posteriores. La voz permanece desactivada en Compose normal. La última consulta de acceso a `gpt-live-1` devolvió 404; no se ha validado una llamada real. No se ha usado el micrófono ni consumido crédito de voz durante el desarrollo.
 
 ## Recorrido
 
-1. El cliente abre Iniciar llamada y elige una voz. El navegador comprueba que la función está habilitada antes de pedir permiso para el micrófono.
+1. El cliente abre Iniciar llamada dentro del panel del asistente y elige una voz. La vista de llamada ocupa ese panel; el historial y el borrador de texto se conservan al volver. El navegador comprueba que la función está habilitada antes de pedir permiso para el micrófono.
 2. FastAPI comprueba sesión, titular de la conversación y referencias seleccionadas. Crea una sesión GPT-Live por WebRTC y abre un canal de control del servidor (*sideband*). La clave queda en el servidor.
 3. GPT-Live envía fragmentos de transcripción y delegaciones por el canal del servidor. El adaptador agrupa los fragmentos anteriores a la delegación y llama a `run_chat_turn`, el mismo servicio que usa `/api/assistant/flow`.
 4. Jev, el contrato y LangGraph conservan el estado de la conversación. Cada delegación usa una clave de idempotencia estable. Los resultados se guardan en PostgreSQL y aparecen en el chat.
@@ -15,7 +15,9 @@ La confirmación de reclamos, pagos, transferencias, bloqueo y devoluciones sigu
 
 ## Qué está construido
 
-Durante la llamada, los resultados aparecen en el chat. Para cambiar el movimiento, seleccionar otro caso, preparar un PDF o confirmar una gestión, terminar primero la llamada. La conversación permanece disponible. Esta primera implementación evita cambios simultáneos de contexto entre los controles y la voz.
+Durante la llamada, el panel muestra por separado «Lo que entendí de tu voz» y «Respuesta por voz», sin superponer el chat de texto. Silenciar y Terminar llamada permanecen al pie, fuera del área desplazable. El resultado bancario aparece bajo «Ver resultado de tu consulta», separado de los subtítulos del proveedor. Para cambiar el movimiento, seleccionar otro caso, preparar un PDF o confirmar una gestión, terminar primero la llamada. La conversación y el borrador permanecen disponibles. Esta primera implementación evita cambios simultáneos de contexto entre los controles y la voz.
+
+Marin es la voz inicial; el selector ofrece las voces permitidas por el servidor (Marin, Cedar, Coral, Bossa y Tempo). Se elige antes de iniciar: GPT-Live requiere una sesión nueva para cambiarla. El idioma sigue la selección ES/EN/PT y las instrucciones actuales piden un tono cálido y breve. No hay selector de acentos ni prueba de pronunciación regional. Los fragmentos recibidos se ordenan por sus tiempos del proveedor, conservando espacios y palabras repetidas; el panel mantiene hasta 400 fragmentos recientes en memoria y no los almacena en el navegador.
 
 | Parte | Implementación |
 |---|---|
@@ -26,7 +28,7 @@ Durante la llamada, los resultados aparecen en el chat. Para cambiar el movimien
 | Cierre | `POST /api/voice/sessions/{id}/close`, controles del navegador y del servidor |
 | Persistencia | `voice_sessions`; delegaciones, último resultado, revisión, duración observada y uso final si llega |
 | Recuperación | Botón para cerrar una llamada anterior; al arrancar con voz habilitada se intenta cerrar sesiones activas anteriores |
-| Interfaz | Voz, silencio, terminar, subtítulos recientes, respuesta bancaria en el chat y regreso a texto |
+| Interfaz | Vista exclusiva dentro del chatbot, voz elegible antes de iniciar, silencio, terminar, transcripción por hablante, resultado bancario desplegable y regreso a texto conservando borrador |
 
 No se guarda audio local ni se solicita grabación para futuras bifurcaciones (`store: false`). Los fragmentos son temporales; los turnos atendidos permanecen en el historial bancario. La salida hablada exacta sólo aparece como subtítulos temporales; la auditoría conserva el resultado verificado del banco, no una grabación certificada de lo que el modelo dijo.
 
@@ -39,7 +41,7 @@ npm run test:voice:ui
 npm run test:chat:flow
 ```
 
-Las pruebas de API sustituyen OpenAI/Jev/LLM por proveedores falsos. La prueba de interfaz levanta una base SQLite aislada en `127.0.0.1:5192` y sustituye WebRTC, micrófono y transporte. Comprueba ES/EN/PT, cierre, silencio, bloqueo del compositor durante la llamada y resultados visibles. No usa los usuarios manuales del banco. El puerto 5192 debe estar libre.
+Las pruebas de API sustituyen OpenAI/Jev/LLM por proveedores falsos. La prueba de interfaz levanta una base SQLite aislada en `127.0.0.1:5192` y sustituye WebRTC, micrófono y transporte. Comprueba ES/EN/PT, elección de voz, transcripciones de ambos hablantes con fragmentos tardíos/duplicados, cierre, silencio, vista exclusiva de llamada, controles en móvil y conservación del borrador/resultado al regresar al chat. No usa los usuarios manuales del banco. El puerto 5192 debe estar libre.
 
 ## Activación posterior, cuando se decida probar una llamada real
 

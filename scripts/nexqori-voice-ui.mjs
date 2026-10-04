@@ -26,7 +26,7 @@ try{
    window.RTCPeerConnection=class{
     iceGatheringState='complete';localDescription={sdp:'v=0'};connectionState='connected';
     addTrack(){} async createOffer(){return{type:'offer',sdp:'v=0'};}async setLocalDescription(){}async setRemoteDescription(){}close(){}
-    createDataChannel(){return{readyState:'open',onmessage:null,onclose:null,close(){},send(v){window.__voiceCheck.controls.push(JSON.parse(v));}};}
+    createDataChannel(){const channel={readyState:'open',onmessage:null,onclose:null,close(){},send(v){window.__voiceCheck.controls.push(JSON.parse(v));}};window.__voiceCheck.channel=channel;return channel;}
    };
   });
   const login=await context.request.post(origin+'/api/auth/login',{headers:{Origin:origin},data:{identifier:person.email,password:person.password}});assert.equal(login.status(),200);
@@ -34,30 +34,63 @@ try{
   const result=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,transactionId:person.transactionId,message:'Verificación [incorrect-charge] me cobraron de más'}});
   assert.equal(result.status(),200);const reply=await result.json();
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();
+  await page.locator('.paste-composer textarea').fill('Borrador conservado');
   await page.getByRole('button',{name:copy.startVoice,exact:true}).click();const call=page.locator('.voice-call');
   await expect(call).toContainText(copy['voiceCall.unavailable']);await expect(call.getByRole('button',{name:copy['voiceCall.start'],exact:true})).toBeDisabled();
   assert.equal(await page.evaluate(()=>window.__voiceCheck.microphones),0);await axe('disabled-'+locale);
   await call.getByRole('button',{name:copy.voiceContinue,exact:true}).click();
+  await expect(page.locator('.paste-composer textarea')).toHaveValue('Borrador conservado');
+  await expect(page.getByRole('button',{name:copy.startVoice,exact:true})).toBeFocused();
   let pendingSessionId='previous-call';
   await page.route('**/api/voice/capabilities',route=>route.fulfill({json:{enabled:true,maxSeconds:300,voices:['marin','cedar','bossa'],pendingSessionId}}));
-  await page.route('**/api/voice/sessions',route=>route.fulfill({json:{id:'fake-voice',conversationId:reply.conversation.id,status:'active',sdp:'v=0',expiresAt:Math.floor(Date.now()/1000)+300}}));
+  let chosenVoice;await page.route('**/api/voice/sessions',route=>{chosenVoice=route.request().postDataJSON().voice;return route.fulfill({json:{id:'fake-voice',conversationId:reply.conversation.id,status:'active',sdp:'v=0',expiresAt:Math.floor(Date.now()/1000)+300}});});
   await page.route('**/api/voice/sessions/*/heartbeat',route=>route.fulfill({json:{status:'active',revision:1,reply}}));
   let closed=0;await page.route('**/api/voice/sessions/*/close',route=>{closed++;pendingSessionId=null;return route.fulfill({json:{status:'closed',remoteClosed:true}});});
   await page.getByRole('button',{name:copy.startVoice,exact:true}).click();
   await expect(call.getByRole('button',{name:copy['voiceCall.start'],exact:true})).toBeDisabled();
   assert.equal(await page.evaluate(()=>window.__voiceCheck.microphones),0);
   await call.getByRole('button',{name:copy['voiceCall.closePrevious'],exact:true}).click();
+  await call.getByLabel(copy['voiceCall.voice'],{exact:true}).selectOption('cedar');
   await call.getByRole('button',{name:copy['voiceCall.start'],exact:true}).click();
-  await expect(call).toContainText(copy['voiceCall.active']);await expect(page.locator('.chat-bubble.assistant').last()).toHaveText(reply.text);
-  await expect(page.locator('.chat-details-button')).toBeDisabled();
-  await expect(page.locator('.paste-composer textarea')).toBeDisabled();await call.getByRole('button',{name:copy['voiceCall.mute'],exact:true}).click();
+  await expect(call).toContainText(copy['voiceCall.active']);assert.equal(chosenVoice,'cedar');
+  await expect(page.locator('.assistant-panel > .voice-call')).toHaveCount(1);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.chat-details-button')).not.toBeVisible();
+  await expect(page.locator('.conversation-toolbar')).not.toBeVisible();
+  await expect(page.locator('.chat-messages')).not.toBeVisible();
+  await expect(page.locator('.paste-composer textarea')).not.toBeVisible();
+  await expect(call.locator('select')).toHaveCount(0);
+  const spoken={es:['No reconozco',' este cobro.','Vamos a revisarlo.','Sí, es ese.'],en:['I do not recognize',' this charge.','Let’s review it.','Yes, that one.'],pt:['Não reconheço',' esta cobrança.','Vamos verificar.','Sim, é essa.']}[locale];
+  await page.evaluate(parts=>{
+   const events=[['user',parts[0],100],['assistant',parts[2],500],['user',parts[1],200],['user',parts[3],1500]];
+   for(const [i,[speaker,delta,start]]of events.entries()){
+    const data=JSON.stringify({type:speaker==='user'?'session.input_transcript.delta':'session.output_transcript.delta',event_id:'caption-'+i,delta,start_ms:start,end_ms:start+100});
+    window.__voiceCheck.channel.onmessage({data});window.__voiceCheck.channel.onmessage({data});
+   }
+  },spoken);
+  await expect(call.locator('.voice-transcript-row')).toHaveCount(3);
+  await expect(call.locator('.voice-transcript-row.user p').first()).toHaveText(spoken[0]+spoken[1]);
+  await expect(call.locator('.voice-transcript-row.assistant p')).toHaveText(spoken[2]);
+  await call.locator('.voice-bank-result summary').click();await expect(call.locator('.voice-bank-text')).toHaveText(reply.text);
+  await call.locator('.voice-bank-result summary').click();
+  await call.getByRole('button',{name:copy['voiceCall.mute'],exact:true}).click();
   await expect(call.getByRole('button',{name:copy['voiceCall.unmute'],exact:true})).toHaveAttribute('aria-pressed','true');
-  await axe('active-'+locale);await call.screenshot({path:path.join(folder,'call-'+locale+'.png')});
+  await expect(call).toContainText(copy['voiceCall.muted']);
+  await call.getByRole('button',{name:copy['voiceCall.unmute'],exact:true}).click();
+  await axe('active-'+locale);await page.locator('.assistant-panel').screenshot({path:path.join(folder,'call-'+locale+'.png')});
   await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+locale);
+  await page.locator('.assistant-panel').scrollIntoViewIfNeeded();
+  const panelBounds=await page.locator('.assistant-panel').boundingBox(),endBounds=await call.getByRole('button',{name:copy['voiceCall.end'],exact:true}).boundingBox();
+  assert(endBounds.y>=panelBounds.y&&endBounds.y+endBounds.height<=panelBounds.y+panelBounds.height,'End button must stay inside the panel');
+  assert(endBounds.y+endBounds.height<=844,'End button must fit on a phone screen');
+  await page.locator('.assistant-panel').screenshot({path:path.join(folder,'mobile-'+locale+'.png')});
   await call.getByRole('button',{name:copy['voiceCall.end'],exact:true}).click();await expect(call).toHaveCount(0);await expect(page.locator('.paste-composer textarea')).toBeEnabled();
+  await expect(page.locator('.paste-composer textarea')).toHaveValue('Borrador conservado');
+  await expect(page.locator('.chat-bubble.assistant').last()).toHaveText(reply.text);
+  await expect(page.getByRole('button',{name:copy.startVoice,exact:true})).toBeFocused();
   await expect(page.locator('.chat-details-button')).toBeEnabled();
   await expect.poll(()=>closed).toBeGreaterThan(1);assert((await page.evaluate(()=>window.__voiceCheck.stopped))>0);
-  report.checks.push({locale,disabledWithoutMicrophone:true,recoverPreviousCall:true,fakeCall:true,bankReply:true,closed:true});await context.close();
+  report.checks.push({locale,disabledWithoutMicrophone:true,recoverPreviousCall:true,inlineVoiceOnly:true,chosenVoice,orderedTranscripts:true,bankResultSeparated:true,draftPreserved:true,closed:true});await context.close();
  }
  assert.deepEqual(report.errors,[]);await fs.writeFile(path.join(folder,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({folder,...report},null,2));
 }catch(error){if(page)await page.screenshot({path:path.join(folder,'failure.png'),fullPage:true}).catch(()=>{});throw error;}

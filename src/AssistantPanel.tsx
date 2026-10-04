@@ -34,6 +34,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   const [error, setError] = useState('');
   const [history, setHistory] = useState(false);
   const [voice, setVoice] = useState(false);
+  const voiceEntry = useRef<HTMLButtonElement>(null);
   const [documentsOpen,setDocumentsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   function openDetails() { setDetailsOpen(true); }
@@ -47,7 +48,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   const handledTransaction = useRef<string | null>(null);
   function fail(e: unknown) { setError('error.' + (e instanceof ApiError ? e.code : 'generic')); }
   useEffect(() => () => request.current?.abort(), []);
-  useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages.at(-1)?.id, pending, busy]);
+  useEffect(() => { if (!voice && log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages.at(-1)?.id, pending, busy, voice]);
 
   async function send(message: string, signal?: AbortSignal, pastedText='', transactionId?: string, replaceTransaction=false, selection?: ChatSelection): Promise<string> {
     if (voice || busyRef.current || (!message.trim()&&!pastedText.trim())) throw new ApiError('conflict', 409);
@@ -110,10 +111,13 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   const selectedTransaction = data.transactions.find(tx => tx.id === selectedTx);
   const formatTime = (value: string) => new Intl.DateTimeFormat(localeTags[locale], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
   return <aside className="assistant-panel" aria-label={t('assistant')}>
-    <div className="assistant-header"><Bot /><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div>{connected && <button className="chat-details-button" disabled={voice} aria-haspopup="dialog" onClick={() => openDetails()}><Info size={16}/>{t('chatDetails.open')}</button>}</div>
+    <div className="assistant-header"><Bot /><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div>{connected && !voice && <button className="chat-details-button" aria-haspopup="dialog" onClick={() => openDetails()}><Info size={16}/>{t('chatDetails.open')}</button>}</div>
+    <div className="chat-text-controls" hidden={voice}>
     <div className="conversation-toolbar"><button disabled={busy || voice} onClick={fresh}><Plus size={16} />{t('newConversationShort')}</button><button disabled={busy || voice} onClick={() => { setHistory(true); void fetchHistory(); }}><History size={16} />{t('conversations')}</button></div>
-    <button className="voice-entry" disabled={busy || voice} onClick={()=>setVoice(true)}><Phone size={16}/>{t('startVoice')}</button>
-    {voice&&<VoiceCall onSession={id=>{conversationId.current=id;}} selection={{conversationId:conversationId.current,transactionId:selectedTx||null,requestId:selectedRequest||null,locale}} onReply={result=>{conversationId.current=result.conversation.id;setConversation(result.conversation);setFlow(result.flow||null);setSelectedTx(result.conversation.transactionId||'');setSelectedRequest(result.flow?.selectedRequestId||'');setMessages(items=>[...items,...result.messages.filter(m=>!items.some(old=>old.id===m.id))]);replyHandler.current(result);}} onClose={()=>setVoice(false)}/>}
+    <button ref={voiceEntry} className="voice-entry" disabled={busy || voice || historyBusy} onClick={()=>setVoice(true)}><Phone size={16}/>{t('startVoice')}</button>
+    </div>
+    {voice&&<VoiceCall onSession={id=>{conversationId.current=id;}} selection={{conversationId:conversationId.current,transactionId:selectedTx||null,requestId:selectedRequest||null,locale}} onReply={result=>{conversationId.current=result.conversation.id;setConversation(result.conversation);setFlow(result.flow||null);setSelectedTx(result.conversation.transactionId||'');setSelectedRequest(result.flow?.selectedRequestId||'');setMessages(items=>[...items,...result.messages.filter(m=>!items.some(old=>old.id===m.id))]);replyHandler.current(result);}} onClose={()=>{setVoice(false);requestAnimationFrame(()=>voiceEntry.current?.focus());}}/>}
+    <div className="chat-text-view" hidden={voice}>
     {conversation && <div className="conversation-current" title={title}><MessageCircle size={13} /><span lang={conversation.title ? conversation.locale : locale}>{title}</span></div>}
     <div ref={log} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions">
       {!messages.length && !pending && <><div className="assistant-welcome"><Bot large /><h3>{t('assistantHello')}</h3><p>{t(guided ? 'guidedConversationWelcome' : 'conversationWelcome')}</p></div><div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={busy || voice} onClick={() => submit(t(key))}>{t(key)}<ArrowUpRight size={15} /></button>)}</div></>}
@@ -137,6 +141,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
     {documentsOpen && conversation && <ChatDocuments conversationId={conversation.id} data={data} onClose={()=>setDocumentsOpen(false)} onMessage={m=>setMessages(items=>items.some(x=>x.id===m.id)?items:[...items,m])}/>}
     {detailsOpen && <ChatDetails result={flow} conversation={conversation} data={data} selectedTx={selectedTx} selectedRequest={selectedRequest} onApply={applySelection} busy={busy || voice} onClose={() => setDetailsOpen(false)} onRegistered={claim => { setFlow(claim.flow); setMessages(items=>items.some(m=>m.id===claim.message.id)?items:[...items,claim.message]); setDetailsOpen(false); onClaim(claim.id); }}/>}
     <div className="chat-bottom"><PasteComposer key={composerKey} busy={busy || voice} onSend={(message,pasted)=>send(message,undefined,pasted)} copy={{text:t('pastedText'),preview:t('previewPasted'),remove:t('removePasted'),placeholder:t('chatPlaceholder'),label:t('chatLabel'),send:t('send'),limit:t('pasteLimit'),failed:t('chatSending.failed')}}/><button className="human-link" disabled={busy || voice} onClick={() => submit(t('talkHuman'))}><Headphones size={15} />{t('talkHuman')}</button></div>
+    </div>
     {history && <Dialog title={t('conversations')} onClose={() => setHistory(false)} busy={historyBusy}><p className="muted">{t('historyIntro')}</p><button className="button secondary wide history-new" disabled={historyBusy} onClick={fresh}><Plus size={18} />{t('newConversation')}</button>{error && <p className="error-text" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}<div className="conversation-list">{historyItems.map(item => <button className={item.id === conversationId.current ? 'current' : ''} key={item.id} disabled={historyBusy} onClick={() => { void select(item); }}><MessageCircle size={18} /><span><strong lang={item.title ? item.locale : locale}>{item.title || t('previousConversation')}</strong><time>{formatTime(item.updatedAt)}</time></span><ArrowUpRight size={17} /></button>)}</div>{!historyItems.length && !historyBusy && !error && <p className="empty-copy">{t('noConversations')}</p>}{historyBusy && <p role="status">{t('loading')}</p>}{nextOffset !== null && <button className="text-link" disabled={historyBusy} onClick={() => { void fetchHistory(nextOffset); }}>{t('loadMore')}</button>}</Dialog>}
   </aside>;
 }
