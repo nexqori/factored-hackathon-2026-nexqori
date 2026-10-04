@@ -24,6 +24,7 @@ services:
         required: false
     volumes:
       - ./.local/intent-lab:/app/flow-config:ro
+      - ./.local/provider-updates:/app/provider-updates
     build:
       context: .
       dockerfile: docker/Dockerfile.api
@@ -39,6 +40,9 @@ services:
       BANK_VOICE_ENABLED: "false"
       BANK_CARD_BLOCK_EMAIL_REQUIRED: "true"
       BANK_FLOW_CONFIG: /app/flow-config
+      PROVIDER_EXAMPLES_ENABLED: "true"
+      PROVIDER_EXAMPLES_CACHE: /app/provider-updates/state.json
+      PROVIDER_EXAMPLES_WATCH_SECONDS: "30"
       NEXQORI_LAB_DATA: /app/flow-config
     depends_on:
       db:

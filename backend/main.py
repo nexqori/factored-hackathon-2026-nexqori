@@ -18,6 +18,8 @@ from .workflows import workflow_view
 from .cards import reveal_local_card
 from .operations import operations_router
 from .notifications import notifications_router, email_required
+from .spending import spending_router
+from .provider_updates import ProviderUpdates, provider_updates_router
 from .agent_tools import agent_tools_router
 from .claim_trace import trace_router
 from .payments import payment_router
@@ -92,11 +94,15 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     @asynccontextmanager
     async def lifespan(_):
         app.state.voice.recover()
+        app.state.provider_updates.start()
         yield
+        app.state.provider_updates.shutdown()
         app.state.voice.shutdown()
         if owned_engine: engine.dispose()
     app=FastAPI(title="Nexqori API",version="0.2.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
     app.state.sessions=make_sessions(engine)
+    app.state.provider_updates=ProviderUpdates.from_env()
+    app.state.sessions.configure(info={'provider_updates':app.state.provider_updates})
     app.state.voice=VoiceRuntime(app.state.sessions,conversation_view,message_view)
     limiter=LoginLimiter(login_limit)
     card_limiter=LoginLimiter(5)
@@ -437,6 +443,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         return {"ok":True}
     app.include_router(operations_router())
     app.include_router(notifications_router())
+    app.include_router(spending_router())
+    app.include_router(provider_updates_router())
     app.include_router(payment_router())
     app.include_router(transfer_router())
     app.include_router(document_router(message_view))

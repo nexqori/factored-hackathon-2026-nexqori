@@ -3,6 +3,7 @@ from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy import select, func, exists
 from .models import Transaction, BillPayment, PhoneBill, Refund
+from .provider_updates import price_context, provider_context_text
 
 DAYS = 180
 LIMIT = 6
@@ -11,6 +12,13 @@ INCREASE_PERCENT = 20
 
 
 def compare_payments(db, tx):
+    result = _compare_payments(db, tx)
+    notice = price_context(db, tx)
+    if notice: result['providerNotice'] = notice
+    return result
+
+
+def _compare_payments(db, tx):
     result = {'windowDays': DAYS, 'limit': LIMIT, 'minimumSamples': MINIMUM,
               'thresholdPercent': INCREASE_PERCENT, 'transactionId': tx.id,
               'currency': tx.currency, 'samples': [], 'unusualIncrease': False}
@@ -76,6 +84,12 @@ def context_comparison(state, reference):
 
 
 def comparison_text(value, locale):
+    history = _comparison_text(value, locale)
+    notice = provider_context_text(value.get('providerNotice') if value else None, locale)
+    return '\n\n'.join(part for part in (history,notice) if part)
+
+
+def _comparison_text(value, locale):
     if not value or value.get('reason') == 'not_a_charge': return ''
     i = ('es', 'en', 'pt').index(locale)
     if value.get('reason') == 'bill_amount_mismatch':
@@ -107,5 +121,5 @@ def comparison_text(value, locale):
     elif value['unusualIncrease']:
         text += (' Supera el rango observado y merece revisión; no confirma un cobro incorrecto.', ' It exceeds the observed range and warrants review; this does not confirm an incorrect charge.', ' Supera a faixa observada e merece análise; isso não confirma uma cobrança incorreta.')[i]
     if value['basis'] == 'merchant-product':
-        text += (' El comercio no permite confirmar que sea la misma línea o plan.', ' The merchant name does not establish that this is the same line or plan.', ' O estabelecimento não confirma que seja a mesma linha ou plano.')[i]
+        text += (' El comercio no permite confirmar que sean los mismos artículos o el mismo plan.', ' The merchant name does not establish identical purchases or the same plan.', ' O estabelecimento não confirma compras ou planos idênticos.')[i]
     return text
