@@ -7,4 +7,5 @@ export type RequestCase = { id: string; userId: string; transactionId: string | 
 export type AuditEvent = { id: string; userId: string; requestId: string | null; action: string; actorId: string; actorName: string; at: string };
 export type Message = { id: string; role: 'assistant' | 'user'; text: string; locale: Locale; at: string };
 export type Dashboard = { products: Product[]; transactions: Transaction[]; requests: RequestCase[]; audit: AuditEvent[]; messages: Message[] };
-export type AdminData = { users: User[]; requests: RequestCase[]; audit: AuditEvent[] };
+export type ChatFeedbackMetric = { responses: number; averageScore: number | null; npsScore: number | null; csatPercent: number | null; averageFormDurationMs: number | null; averageConversationDurationMs: number | null };
+export type AdminData = { users: User[]; requests: RequestCase[]; audit: AuditEvent[]; chatFeedback: { nps: ChatFeedbackMetric; csat: ChatFeedbackMetric; ces: ChatFeedbackMetric } };

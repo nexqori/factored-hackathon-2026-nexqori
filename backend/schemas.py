@@ -28,3 +28,11 @@ class ChatInput(StrictModel):
     currentPage: Destination = "home"
     message: str = Field(min_length=1, max_length=1000)
     locale: Locale
+
+class ChatFeedbackInput(StrictModel):
+    metric: Literal["nps","csat","ces"]
+    score: int = Field(ge=0, le=10)
+    locale: Locale
+    submissionId: str = Field(min_length=36, max_length=36, pattern=r"^[0-9a-fA-F-]{36}$")
+    formDurationMs: int = Field(ge=0, le=86400000)
+    conversationDurationMs: int = Field(ge=0, le=604800000)

@@ -4,6 +4,12 @@ La base ya interpreta pedidos de navegación en español, inglés y portugués. 
 
 Ejemplos: “Llévame a transferencias”, “Show my cards”, “Abrir empréstimos”, “¿Cuál es mi saldo?”. Un pedido de revisión abre el formulario de solicitud. Una petición desconocida pide precisión; la navegación no crea solicitudes ni mueve dinero.
 
+## Seguimiento por inactividad
+
+Tras cinco minutos sin interacción en una conversación iniciada, la interfaz selecciona al azar una pregunta NPS, CSAT o CES. NPS acepta 0–10, CSAT 1–5 con emojis y CES 1–7. Enviar guarda la respuesta; después se reinicia la conversación visible y reaparecen el saludo y las cuatro intenciones iniciales. La opción para continuar conserva el historial visible y reinicia el contador. La sesión autenticada permanece abierta y los mensajes ya guardados en el servidor no se eliminan.
+
+Cada envío registra el idioma, la métrica, la puntuación, el tiempo desde que apareció la pregunta hasta el envío y el tiempo desde el primer mensaje de la conversación hasta la respuesta. La clave de envío hace idempotentes los reintentos. El panel de administración sólo muestra resultados agregados: NPS (promotores 9–10 menos detractores 0–6), CSAT (porcentaje de respuestas 4–5), promedio CES, volumen de respuestas y tiempos medios. No se muestran respuestas individuales.
+
 ## Herramienta
 
 `backend/navigation.py` expone `NAVIGATION_TOOL`, `NavigateInput` y `navigate_in_app`. La autorización parte de la sesión en `/api/assistant`, reservada al cliente. `src/navigation.ts` valida nuevamente herramienta, destino y ruta; no ejecuta una URL procedente del chat.

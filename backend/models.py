@@ -88,3 +88,23 @@ class Message(Base):
     locale: Mapped[str] = mapped_column(String(2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (CheckConstraint("role IN ('user','assistant')"), CheckConstraint("locale IN ('es','en','pt')"))
+
+class ChatFeedback(Base):
+    __tablename__ = "chat_feedback"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    submission_id: Mapped[str] = mapped_column(String(36))
+    metric: Mapped[str] = mapped_column(String(8))
+    score: Mapped[int] = mapped_column(Integer)
+    locale: Mapped[str] = mapped_column(String(2))
+    form_duration_ms: Mapped[int] = mapped_column(Integer)
+    conversation_duration_ms: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        UniqueConstraint("user_id", "submission_id"),
+        CheckConstraint("metric IN ('nps','csat','ces')"),
+        CheckConstraint("(metric = 'nps' AND score BETWEEN 0 AND 10) OR (metric = 'csat' AND score BETWEEN 1 AND 5) OR (metric = 'ces' AND score BETWEEN 1 AND 7)"),
+        CheckConstraint("locale IN ('es','en','pt')"),
+        CheckConstraint("form_duration_ms BETWEEN 0 AND 86400000"),
+        CheckConstraint("conversation_duration_ms BETWEEN 0 AND 604800000")
+    )

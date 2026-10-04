@@ -24,6 +24,7 @@ Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Com
 | requests | Titular, servicio, movimiento opcional, detalle, clave de idempotencia, estado. |
 | audit_events | Actor, fecha y acción: login, logout, solicitud, revisión, derivación, navegación propuesta. |
 | messages | Conversación por usuario; contenido e idioma original. |
+| chat_feedback | Métrica NPS/CSAT/CES, puntuación, idioma, tiempos de conversación/formulario y clave idempotente; acceso de lectura sólo agregado en administración. |
 
 No es un libro mayor: no hay asientos contables, liquidación, conciliación ni operaciones monetarias. El saldo del seed es ilustrativo y no se calcula sumando el historial de ejemplo. Moneda y fecha de presentación pertenecen al escenario de México; elegir portugués o inglés no convierte MXN.
 
@@ -42,7 +43,8 @@ Contrato completo en `/api/openapi.json`.
 | POST /api/requests | Cliente, confirmación, idempotencia y movimiento propio si existe. |
 | POST /api/requests/{id}/handoff | Cliente titular y confirmación; derivación simulada idempotente. |
 | POST /api/assistant | Cliente, mensaje ES/EN/PT, página permitida; respuesta guiada y navegación opcional. |
-| GET /api/admin/overview | Administrador: usuarios sin hashes, solicitudes y auditoría. |
+| POST /api/assistant/feedback | Cliente autenticado y CSRF; guarda una respuesta NPS/CSAT/CES con puntuación y tiempos validados, idempotente por envío y usuario. |
+| GET /api/admin/overview | Administrador: usuarios sin hashes, solicitudes, auditoría y métricas de feedback agregadas; no devuelve respuestas individuales. |
 | POST /api/admin/requests/{id}/review | Administrador y confirmación; recibida → en revisión. |
 
 Las mutaciones autenticadas comprueban CSRF y origen, además del esquema Pydantic (campos extra rechazados). Cookie HttpOnly, SameSite=Lax, token aleatorio almacenado por hash; Secure=false sólo para el HTTP local. No se guardan tokens en localStorage. En HTTPS debe activarse Secure y configurarse el origen concreto.

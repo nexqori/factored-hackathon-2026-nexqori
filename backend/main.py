@@ -9,8 +9,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, delete, func, or_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
-from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, now
-from .schemas import Login, LocaleInput, RequestInput, ConfirmInput, ChatInput
+from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, ChatFeedback, now
+from .schemas import Login, LocaleInput, RequestInput, ConfirmInput, ChatInput, ChatFeedbackInput
 from .security import db_session, current_session, current_user, csrf, customer, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
 from .assistant import answer
 from .presentation import present_message
@@ -174,11 +174,57 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         db.add(Message(id=str(uuid4()),user_id=user.id,role="assistant",content=result["text"],locale=payload.locale))
         db.commit()
         return result
+    @app.post("/api/assistant/feedback", status_code=201)
+    def assistant_feedback(payload: ChatFeedbackInput,user=Depends(customer),db=Depends(db_session)):
+        bounds={"nps":(0,10),"csat":(1,5),"ces":(1,7)}
+        lower,upper=bounds[payload.metric]
+        if not lower<=payload.score<=upper:
+            raise HTTPException(422,"invalid_feedback")
+        existing=db.scalar(select(ChatFeedback).where(ChatFeedback.user_id==user.id,ChatFeedback.submission_id==payload.submissionId))
+        if existing:
+            return {"ok":True,"duplicate":True}
+        feedback=ChatFeedback(
+            id=str(uuid4()),user_id=user.id,submission_id=payload.submissionId,
+            metric=payload.metric,score=payload.score,locale=payload.locale,
+            form_duration_ms=payload.formDurationMs,
+            conversation_duration_ms=payload.conversationDurationMs,
+        )
+        db.add(feedback)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            existing=db.scalar(select(ChatFeedback).where(ChatFeedback.user_id==user.id,ChatFeedback.submission_id==payload.submissionId))
+            if existing:
+                return {"ok":True,"duplicate":True}
+            raise HTTPException(409,"conflict")
+        return {"ok":True,"duplicate":False}
     @app.get("/api/admin/overview")
     def admin_overview(_user=Depends(admin),db=Depends(db_session)):
         cases=db.execute(select(RequestCase,User.name).join(User,User.id==RequestCase.user_id).order_by(RequestCase.created_at.desc())).all()
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
-        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name) for r,name in cases],"audit":[audit_view(e,name) for e,name in events]}
+        feedback={}
+        for metric in ("nps","csat","ces"):
+            count,average,form_time,conversation_time=db.execute(
+                select(
+                    func.count(ChatFeedback.id),
+                    func.avg(ChatFeedback.score),
+                    func.avg(ChatFeedback.form_duration_ms),
+                    func.avg(ChatFeedback.conversation_duration_ms),
+                ).where(ChatFeedback.metric==metric)
+            ).one()
+            promoters= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="nps",ChatFeedback.score>=9)) if metric=="nps" else 0
+            detractors= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="nps",ChatFeedback.score<=6)) if metric=="nps" else 0
+            satisfied= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="csat",ChatFeedback.score>=4)) if metric=="csat" else 0
+            feedback[metric]={
+                "responses":count,
+                "averageScore":round(float(average),2) if average is not None else None,
+                "npsScore":round((promoters-detractors)*100/count,1) if metric=="nps" and count else None,
+                "csatPercent":round(satisfied*100/count,1) if metric=="csat" and count else None,
+                "averageFormDurationMs":round(float(form_time)) if form_time is not None else None,
+                "averageConversationDurationMs":round(float(conversation_time)) if conversation_time is not None else None,
+            }
+        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name) for r,name in cases],"audit":[audit_view(e,name) for e,name in events],"chatFeedback":feedback}
     @app.post("/api/admin/requests/{request_id}/review")
     def review(request_id: str,payload: ConfirmInput,user=Depends(admin_write),db=Depends(db_session)):
         case=db.scalar(select(RequestCase).where(RequestCase.id==request_id).with_for_update())

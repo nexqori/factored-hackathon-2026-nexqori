@@ -7,6 +7,8 @@ import { api, ApiError, setCsrf } from './api';
 import { Brand, Badge, Dialog, TransactionList, formatMoney, formatDate } from './components';
 import { destinations, currentDestination, safeNavigation, type NavigationCommand } from './navigation';
 import { intentDestinations, isRoutedIntent, navigateForIntent } from './intent-router';
+import { scheduleChatFeedback } from './chat-session';
+import { chatSurveyScores, chooseChatSurvey, type ChatSurveyMetric } from './chat-survey';
 import type { User, Dashboard, AdminData, Transaction, RequestCase, Service } from './types';
 
 const languageLabels = { es: 'Español', en: 'English', pt: 'Português' };
@@ -15,6 +17,8 @@ const navigation = [{ path: '/', label: 'home', Icon: Home }, { path: '/movement
 const serviceItems: { id: Exclude<Service, 'general' | 'support'>; Icon: typeof Wallet }[] = [{ id: 'accounts', Icon: Wallet }, { id: 'cards', Icon: CreditCard }, { id: 'transfers', Icon: ArrowLeftRight }, { id: 'payments', Icon: Landmark }, { id: 'loans', Icon: Home }, { id: 'investments', Icon: ChartNoAxesCombined }, { id: 'insurance', Icon: Umbrella }, { id: 'cash', Icon: Banknote }];
 type Modal = { type: 'transaction'; transaction: Transaction } | { type: 'request'; id: string } | { type: 'create'; transactionId?: string; service?: Service } | { type: 'handoff'; id: string } | { type: 'review'; id: string };
 function errorText(error: unknown) { const key = error instanceof ApiError ? 'error.' + error.code : 'error.generic'; return i18n.t(i18n.exists(key) ? key : 'error.generic'); }
+function formatNumber(value: number, maximumFractionDigits = 2) { return new Intl.NumberFormat(i18n.language, { maximumFractionDigits }).format(value); }
+function formatDuration(milliseconds: number | null) { return milliseconds === null ? '—' : milliseconds < 60000 ? i18n.t('secondsValue', { value: Math.round(milliseconds / 1000) }) : i18n.t('minutesValue', { value: formatNumber(milliseconds / 60000, 1) }); }
 
 function LanguagePicker({ onChange }: { onChange: (locale: Locale) => void }) {
   const { t, i18n } = useTranslation();
@@ -42,13 +46,39 @@ function CreateRequest({ modal, data, close, saved }: { modal: Extract<Modal, { 
 
 function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) => void; signOut: () => Promise<void> }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale; const navigate = useNavigate(); const location = useLocation();
-  const [data, setData] = useState<Dashboard>(empty); const [adminData, setAdminData] = useState<AdminData>({ users: [], requests: [], audit: [] }); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [notice, setNotice] = useState(''); const [actionError, setActionError] = useState(''); const [busy, setBusy] = useState(false);
+  const emptyFeedbackMetric: AdminData['chatFeedback']['nps'] = { responses: 0, averageScore: null, npsScore: null, csatPercent: null, averageFormDurationMs: null, averageConversationDurationMs: null };
+  const [data, setData] = useState<Dashboard>(empty); const [adminData, setAdminData] = useState<AdminData>({ users: [], requests: [], audit: [], chatFeedback: { nps: emptyFeedbackMetric, csat: emptyFeedbackMetric, ces: emptyFeedbackMetric } }); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [notice, setNotice] = useState(''); const [actionError, setActionError] = useState(''); const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<Modal | null>(null); const [search, setSearch] = useState(''); const [filter, setFilter] = useState('all'); const [hidden, setHidden] = useState(false); const [large, setLarge] = useState(false); const [menu, setMenu] = useState(false); const [chat, setChat] = useState(''); const [chatBusy, setChatBusy] = useState(false);
+  const [chatSurvey, setChatSurvey] = useState<ChatSurveyMetric | null>(null); const [surveyScore, setSurveyScore] = useState<number | null>(null); const [surveyBusy, setSurveyBusy] = useState(false); const [conversationActive, setConversationActive] = useState(false); const [chatActivity, setChatActivity] = useState(0); const [hiddenChatMessages, setHiddenChatMessages] = useState<Set<string>>(() => new Set());
   const chatInput = useRef<HTMLInputElement>(null); const chatLog = useRef<HTMLDivElement>(null);
+  const conversationStartedAt = useRef<number | null>(null); const surveyPromptedAt = useRef<number | null>(null);
+  const surveySubmissionId = useRef<string | null>(null);
+  const visibleMessages = data.messages.filter(message => !hiddenChatMessages.has(message.id));
   async function refresh() { const next = await api<Dashboard>('/bootstrap'); setData(next); if (user.role === 'admin') setAdminData(await api<AdminData>('/admin/overview')); setLoadError(''); return next; }
   useEffect(() => { let active = true; void refresh().catch(e => { if (active) setLoadError(errorText(e)); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [user.id]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 5500); return () => clearTimeout(timer); }, [notice]);
-  useEffect(() => { if (chatLog.current) chatLog.current.scrollTop = chatLog.current.scrollHeight; }, [data.messages.length]);
+  useEffect(() => { if (chatLog.current) chatLog.current.scrollTop = chatLog.current.scrollHeight; }, [visibleMessages.length, chatSurvey]);
+  useEffect(() => {
+    if (user.role !== 'customer') return;
+    const markActivity = () => { setChatActivity(current => current + 1); };
+    window.addEventListener('pointerdown', markActivity);
+    window.addEventListener('keydown', markActivity);
+    window.addEventListener('input', markActivity);
+    return () => {
+      window.removeEventListener('pointerdown', markActivity);
+      window.removeEventListener('keydown', markActivity);
+      window.removeEventListener('input', markActivity);
+    };
+  }, [user.role]);
+  useEffect(() => {
+    if (user.role !== 'customer' || !conversationActive || chatSurvey) return;
+    return scheduleChatFeedback(() => {
+      surveyPromptedAt.current = performance.now();
+      surveySubmissionId.current = crypto.randomUUID();
+      setSurveyScore(null);
+      setChatSurvey(chooseChatSurvey());
+    });
+  }, [chatActivity, chatSurvey, conversationActive, user.role]);
   useEffect(() => { setMenu(false); setActionError(''); document.querySelector('main')?.focus(); }, [location.pathname, location.search]);
   const balance = data.products.reduce((total, p) => total + (p.balanceMinor || 0), 0);
   const productFilter = new URLSearchParams(location.search).get('product');
@@ -61,10 +91,56 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   function open(next: Modal) { setActionError(''); setModal(next); }
   async function changeLocale(value: Locale) { try { await api('/profile/locale', 'PATCH', { locale: value }); await i18n.changeLanguage(value); setUser({ ...user, locale: value }); } catch (e) { setActionError(errorText(e)); } }
   function focusChat() { document.querySelector('.assistant-panel')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); chatInput.current?.focus({ preventScroll: true }); }
+  function continueChat() {
+    setChatSurvey(null);
+    setSurveyScore(null);
+    surveyPromptedAt.current = null;
+    surveySubmissionId.current = null;
+    setActionError('');
+    setChatActivity(current => current + 1);
+  }
+  async function submitChatSurvey(event: FormEvent) {
+    event.preventDefault();
+    if (!chatSurvey || surveyScore === null || surveyBusy) return;
+    const submissionId = surveySubmissionId.current ?? crypto.randomUUID();
+    surveySubmissionId.current = submissionId;
+    const formDurationMs = Math.max(0, Math.round(performance.now() - (surveyPromptedAt.current ?? performance.now())));
+    const conversationDurationMs = Math.max(0, Math.round(performance.now() - (conversationStartedAt.current ?? performance.now())));
+    setSurveyBusy(true);
+    setActionError('');
+    try {
+      await api('/assistant/feedback', 'POST', {
+        metric: chatSurvey,
+        score: surveyScore,
+        locale,
+        submissionId,
+        formDurationMs,
+        conversationDurationMs,
+      });
+      setHiddenChatMessages(current => new Set([...current, ...data.messages.map(message => message.id)]));
+      setChat('');
+      setChatSurvey(null);
+      setSurveyScore(null);
+      setConversationActive(false);
+      conversationStartedAt.current = null;
+      surveyPromptedAt.current = null;
+      surveySubmissionId.current = null;
+      setChatActivity(current => current + 1);
+      setNotice(t('surveyThanks'));
+    } catch (error) {
+      setActionError(errorText(error));
+    } finally {
+      setSurveyBusy(false);
+    }
+  }
   async function sendChat(message: string) {
     if (!message.trim() || chatBusy) return; setChatBusy(true); setActionError('');
+    const startsNewConversation = !conversationActive;
+    const startedAt = startsNewConversation ? performance.now() : null;
     try {
       const result = await api<{ destination: string | null; intent: string; text: string; navigation: NavigationCommand | null }>('/assistant', 'POST', { message: message.trim(), locale, currentPage: currentDestination(location.pathname, location.search) });
+      if (startedAt !== null) conversationStartedAt.current = startedAt;
+      setConversationActive(true);
       setChat('');
       await refresh();
       if (isRoutedIntent(result.intent)) {
@@ -81,7 +157,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   }
   function readAnswer() {
     if (!('speechSynthesis' in window)) { setNotice(t('voiceUnavailable')); return; }
-    const text = [...data.messages].reverse().find(m => m.role === 'assistant');
+    const text = [...visibleMessages].reverse().find(m => m.role === 'assistant');
     const utterance = new SpeechSynthesisUtterance(text?.text || t('assistantIntro'));
     utterance.lang = text?.locale || locale;
     utterance.onerror = () => setNotice(t('voiceError'));
@@ -115,14 +191,25 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
         {serviceItems.filter(item => item.id !== 'accounts' && item.id !== 'cards').map(({ id, Icon }) => <Route key={id} path={'/services/' + id} element={<><PageHeading title={t(id)} subtitle={t(id + 'Hint')} /><section className="panel service-detail"><span className="round-icon"><Icon size={25} /></span><h2>{t('serviceNextStep')}</h2><p className="muted">{t('serviceDetail')}</p><div className="service-actions"><button className="button primary" onClick={() => open({ type: 'create', service: id })}><Plus size={18} />{t('newRequest')}</button><button className="button secondary" onClick={() => navigate('/movements')}>{t('seeMovements')}<ArrowRight size={17} /></button></div></section><p className="info-banner"><ShieldCheck size={20} />{t('serviceNote')}</p><button className="text-link" onClick={() => navigate('/services')}>{t('allServices')}<ArrowRight size={17} /></button></>} />)}
         <Route path="/requests" element={<><PageHeading title={t('requests')} subtitle={t('requestHint')} /><button className="button primary new-request" onClick={() => open({ type: 'create' })}><Plus size={18} />{t('newRequest')}</button><div className="requests-grid">{data.requests.map(caseCard)}</div>{!data.requests.length && <div className="empty-panel"><FileText size={32} /><h2>{t('noRequests')}</h2><p>{t('createFirst')}</p></div>}</>} />
         <Route path="/help" element={<><PageHeading title={t('helpTitle')} subtitle={t('helpBody')} /><div className="help-list">{[1, 2, 3].map(n => <details key={n}><summary>{t('help' + n)}<ChevronDown size={18} /></summary><p>{t('answer' + n)}</p></details>)}</div>{user.role === 'customer' && <button className="button primary" onClick={focusChat}><MessageCircle size={19} />{t('focusAssistant')}</button>}</>} />
-        <Route path="/admin" element={user.role !== 'admin' ? <Navigate to="/" replace /> : <><PageHeading title={t('adminTitle')} subtitle={t('adminNote')} /><div className="requests-grid">{adminData.requests.map(caseCard)}</div><section className="panel admin-users"><h2>{t('users')}</h2><div className="table-scroll"><table><thead><tr><th>{t('customer')}</th><th>{t('email')}</th><th>{t('status')}</th><th>{t('language')}</th></tr></thead><tbody>{adminData.users.map(u => <tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td>{t(u.role === 'admin' ? 'agent' : 'customer')}</td><td>{languageLabels[u.locale]}</td></tr>)}</tbody></table></div></section><section className="panel"><h2>{t('audit')}</h2><ul className="audit-list">{adminData.audit.slice(0, 30).map(event => <li key={event.id}><span><strong>{auditLabel(event.action)}</strong><small>{event.actorName} · {event.requestId || '—'}</small></span><time>{formatDate(event.at, locale)}</time></li>)}</ul></section></>} />
+        <Route path="/admin" element={user.role !== 'admin' ? <Navigate to="/" replace /> : <>
+          <PageHeading title={t('adminTitle')} subtitle={t('adminNote')} />
+          <FeedbackMetrics metrics={adminData.chatFeedback} />
+          <div className="requests-grid">{adminData.requests.map(caseCard)}</div>
+          <section className="panel admin-users"><h2>{t('users')}</h2><div className="table-scroll"><table><thead><tr><th>{t('customer')}</th><th>{t('email')}</th><th>{t('status')}</th><th>{t('language')}</th></tr></thead><tbody>{adminData.users.map(u => <tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td>{t(u.role === 'admin' ? 'agent' : 'customer')}</td><td>{languageLabels[u.locale]}</td></tr>)}</tbody></table></div></section>
+          <section className="panel"><h2>{t('audit')}</h2><ul className="audit-list">{adminData.audit.slice(0, 30).map(event => <li key={event.id}><span><strong>{auditLabel(event.action)}</strong><small>{event.actorName} · {event.requestId || '—'}</small></span><time>{formatDate(event.at, locale)}</time></li>)}</ul></section>
+        </>} />
         <Route path="*" element={<Navigate to={user.role === 'admin' ? '/admin' : '/'} replace />} />
       </Routes>}
       <footer className="main-footer"><ShieldCheck size={14} />{t('footerNote')}<span>ES / EN / PT</span></footer>
     </main>
     {user.role === 'customer' && <aside className="assistant-panel" aria-label={t('assistant')}><div className="assistant-header"><span className="assistant-symbol"><Sparkles size={20} /></span><div><h2>{t('assistant')}</h2><p>{t('guided')}</p></div><button className="icon-button" onClick={readAnswer} aria-label={t('readAnswers')}><Volume2 size={19} /></button></div>
-      <div ref={chatLog} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions"><div className="assistant-welcome"><div className="nexqori-flower" aria-hidden="true">✳</div><h3>{t('assistantHello')}</h3><p>{t('assistantIntro')}</p></div>{!data.messages.length && <div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={chatBusy} onClick={() => { void sendChat(t(key)); }}>{t(key)}<ArrowUpRight size={15} /></button>)}</div>}
-      {data.messages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}</div>)}{chatBusy && <p className="chat-thinking" role="status">{t('loading')}</p>}</div>
+      <div ref={chatLog} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions">
+        <div className="assistant-welcome"><div className="nexqori-flower" aria-hidden="true">✳</div><h3>{t('assistantHello')}</h3><p>{t('assistantIntro')}</p></div>
+        {!visibleMessages.length && <div className="chat-suggestions"><p className="eyebrow">{t('suggestions')}</p>{['askSaldo', 'askNavigate', 'askUnknown', 'askTrack'].map(key => <button key={key} disabled={chatBusy} onClick={() => { void sendChat(t(key)); }}>{t(key)}<ArrowUpRight size={15} /></button>)}</div>}
+        {visibleMessages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}</div>)}
+        {chatSurvey && <ChatSurveyForm metric={chatSurvey} score={surveyScore} setScore={setSurveyScore} busy={surveyBusy} onSubmit={event => { void submitChatSurvey(event); }} onContinue={continueChat} />}
+        {chatBusy && <p className="chat-thinking" role="status">{t('loading')}</p>}
+      </div>
       <div className="chat-bottom"><form className="chat-composer" onSubmit={e => { e.preventDefault(); void sendChat(chat); }}><input ref={chatInput} aria-label={t('chatLabel')} placeholder={t('chatPlaceholder')} value={chat} onChange={e => setChat(e.target.value)} maxLength={1000} disabled={chatBusy} /><button type="submit" disabled={!chat.trim() || chatBusy} aria-label={t('send')}><Send size={18} /></button></form><button className="human-link" onClick={() => { void sendChat(t('talkHuman')); }} disabled={chatBusy}><Headphones size={15} />{t('talkHuman')}</button></div></aside>}
     </div></div>
     {notice && <div className="toast" role="status"><Check size={18} />{notice}</div>}
@@ -133,6 +220,53 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   </div>;
 }
 function PageHeading({ title, subtitle }: { title: string; subtitle: string }) { return <div className="page-heading"><h1>{title}</h1><p>{subtitle}</p></div>; }
+
+function ChatSurveyForm({ metric, score, setScore, busy, onSubmit, onContinue }: { metric: ChatSurveyMetric; score: number | null; setScore: (score: number) => void; busy: boolean; onSubmit: (event: FormEvent) => void; onContinue: () => void }) {
+  const { t } = useTranslation();
+  const questionKey = metric === 'nps' ? 'surveyNpsQuestion' : metric === 'csat' ? 'surveyCsatQuestion' : 'surveyCesQuestion';
+  const scaleDescription = ['surveyCsat1', 'surveyCsat2', 'surveyCsat3', 'surveyCsat4', 'surveyCsat5'];
+  return <form className="chat-survey" onSubmit={onSubmit}>
+    <p className="survey-eyebrow">{t('surveyIntro')}</p>
+    <fieldset disabled={busy}>
+      <legend>{t(questionKey)}</legend>
+      <div className={'survey-scale survey-scale-' + metric} role="radiogroup">
+        {chatSurveyScores(metric).map(value => <label className={'survey-score ' + (score === value ? 'selected' : '')} key={value}>
+          <input type="radio" name={'chat-survey-' + metric} value={value} checked={score === value} onChange={() => setScore(value)} />
+          <span aria-hidden="true">{metric === 'csat' ? ['😡', '😕', '😐', '🙂', '😄'][value - 1] : value}</span>
+          <small>{metric === 'csat' ? t(scaleDescription[value - 1]) : value}</small>
+        </label>)}
+      </div>
+      {metric !== 'csat' && <div className="survey-endpoints"><span>{t(metric === 'nps' ? 'surveyNpsLow' : 'surveyCesLow')}</span><span>{t(metric === 'nps' ? 'surveyNpsHigh' : 'surveyCesHigh')}</span></div>}
+    </fieldset>
+    <div className="survey-actions">
+      <button type="submit" className="button primary" disabled={score === null || busy}>{busy ? t('loading') : t('submitSurvey')}</button>
+      <button type="button" className="text-link" disabled={busy} onClick={onContinue}>{t('continueChat')}</button>
+    </div>
+  </form>;
+}
+
+function FeedbackMetrics({ metrics }: { metrics: AdminData['chatFeedback'] }) {
+  const { t } = useTranslation();
+  const cards = (['nps', 'csat', 'ces'] as const).map(metric => {
+    const result = metrics[metric];
+    return {
+      metric,
+      result,
+      value: metric === 'nps' ? result.npsScore === null ? '—' : formatNumber(result.npsScore, 1) : metric === 'csat' ? result.csatPercent === null ? '—' : formatNumber(result.csatPercent, 1) + '%' : result.averageScore === null ? '—' : formatNumber(result.averageScore, 2),
+      label: metric === 'nps' ? 'npsLabel' : metric === 'csat' ? 'csatLabel' : 'cesLabel',
+      formula: metric === 'nps' ? 'npsResult' : metric === 'csat' ? 'csatResult' : 'cesResult',
+    };
+  });
+  return <section className="feedback-dashboard" aria-labelledby="feedback-dashboard-title">
+    <div className="section-heading"><div><h2 id="feedback-dashboard-title">{t('surveyMetricsTitle')}</h2><p>{t('surveyMetricsNote')}</p></div></div>
+    <div className="feedback-metrics">{cards.map(({ metric, result, value, label, formula }) => <article className="feedback-metric panel" key={metric}>
+      <div className="feedback-metric-heading"><h3>{t(label)}</h3><span>{t('surveyResponses', { count: result.responses })}</span></div>
+      <strong className="feedback-value">{value}</strong>
+      <p>{t(formula)}</p>
+      <dl><div><dt>{t('surveyAverageScore')}</dt><dd>{result.averageScore === null ? '—' : formatNumber(result.averageScore)}</dd></div><div><dt>{t('averageFormTime')}</dt><dd>{formatDuration(result.averageFormDurationMs)}</dd></div><div><dt>{t('averageConversationTime')}</dt><dd>{formatDuration(result.averageConversationDurationMs)}</dd></div></dl>
+    </article>)}</div>
+  </section>;
+}
 
 function Root() {
   const [user, setUser] = useState<User | null>(null); const [ready, setReady] = useState(false); const [bootError, setBootError] = useState(''); const navigate = useNavigate(); const { t } = useTranslation();

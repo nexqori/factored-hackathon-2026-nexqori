@@ -12,7 +12,7 @@ const context = await browser.newContext({ viewport: { width: 1512, height: 1050
 const page = await context.newPage();
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
-const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], securityHeaders: false };
+const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], chatFeedback: null, securityHeaders: false };
 const snapshot = async name => { const path = output + '/' + name + '.png'; await page.screenshot({ path, fullPage: true }); results.screenshots.push(path); };
 async function noOverflow() { assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Horizontal overflow: ' + page.url()); }
 async function axe(name) {
@@ -30,6 +30,59 @@ try {
   await page.getByLabel('Correo electrónico').fill('andrea@nexqori.local');
   await page.getByLabel('Contraseña', { exact: true }).fill(credentials.CUSTOMER_PASSWORD);
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).click();
+  await page.getByRole('heading', { name: 'Qué bueno tenerte aquí.' }).waitFor();
+  await page.evaluate(() => {
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    window.setTimeout = (handler, delay, ...args) => nativeSetTimeout(handler, delay === 300000 ? 50 : delay, ...args);
+  });
+  const surveyChecks = [];
+  for (const { metric, random, question, score, choices } of [
+    { metric: 'nps', random: 0, question: /escala del 0 al 10/i, score: 9, choices: 11 },
+    { metric: 'csat', random: 0.5, question: /qué tan satisfecho/i, score: 4, choices: 5 },
+    { metric: 'ces', random: 0.9, question: /qué tan fácil/i, score: 5, choices: 7 }
+  ]) {
+    await page.evaluate(value => { Math.random = () => value; }, random);
+    await page.locator('.chat-composer input').fill('Tengo una duda sobre mi cuenta');
+    await page.locator('.chat-composer button').click();
+    await page.waitForFunction(expected => [...document.querySelectorAll('.chat-bubble.user')].at(-1)?.textContent === expected, 'Tengo una duda sobre mi cuenta');
+    await page.getByRole('link', { name: 'Inicio', exact: true }).click();
+    const survey = page.locator('.chat-survey');
+    await survey.waitFor();
+    await survey.getByRole('radio').first().waitFor();
+    await noOverflow();
+    await axe('survey-' + metric);
+    assert.match(await survey.locator('legend').innerText(), question);
+    assert.equal(await survey.getByRole('radio').count(), choices, metric + ' scale');
+    await survey.locator('.survey-score').nth(metric === 'nps' ? score : score - 1).click();
+    assert.equal(await survey.locator('input[value="' + score + '"]').isChecked(), true, metric + ' score selection');
+    await survey.getByRole('button', { name: 'Enviar respuesta' }).click();
+    await page.waitForFunction(() => document.querySelectorAll('.chat-suggestions button').length === 4);
+    assert.equal(await page.locator('.chat-bubble').count(), 0, metric + ' resets the visible conversation');
+    surveyChecks.push({ metric, choices, responseSubmitted: true, intentsRestored: true });
+  }
+  await page.evaluate(() => { Math.random = () => 0.9; });
+  await page.locator('.chat-composer input').fill('Quisiera seguir con una consulta');
+  await page.locator('.chat-composer button').click();
+  await page.waitForFunction(expected => [...document.querySelectorAll('.chat-bubble.user')].at(-1)?.textContent === expected, 'Quisiera seguir con una consulta');
+  await page.getByRole('link', { name: 'Inicio', exact: true }).click();
+  const continueSurvey = page.locator('.chat-survey');
+  await continueSurvey.waitFor();
+  const visibleBubbleCount = await page.locator('.chat-bubble').count();
+  await continueSurvey.getByRole('button', { name: 'Continuar conversación' }).click();
+  await continueSurvey.waitFor({ state: 'hidden' });
+  assert.equal(await page.locator('.chat-bubble').count(), visibleBubbleCount, 'continuing keeps the conversation');
+  surveyChecks.push({ metric: 'continue', conversationKept: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileSurvey = page.locator('.chat-survey');
+  await mobileSurvey.waitFor();
+  await noOverflow();
+  await axe('survey-mobile');
+  await mobileSurvey.getByRole('button', { name: 'Continuar conversación' }).click();
+  await mobileSurvey.waitFor({ state: 'hidden' });
+  await page.setViewportSize({ width: 1512, height: 1050 });
+  await page.getByRole('heading', { name: 'Qué bueno tenerte aquí.' }).waitFor();
+  results.chatFeedback = { surveys: surveyChecks, accountSessionOpen: true };
+  await page.reload();
   await page.getByRole('heading', { name: 'Qué bueno tenerte aquí.' }).waitFor();
   await page.setViewportSize({ width:1512, height:780 });
   await page.getByRole('button', { name:'Cerrar sesión', exact:true }).waitFor({state:'visible'});
@@ -85,20 +138,18 @@ try {
     ['Ver mis tarjetas', '/products?kind=cards'],
   ];
   for (const [message, route] of intentRoutes) {
-    const previousMessages = await page.locator('.chat-bubble').count();
     await page.locator('.chat-composer input').fill(message);
     await page.locator('.chat-composer button').click();
-    await page.waitForFunction(previous => document.querySelectorAll('.chat-bubble').length >= previous + 2, previousMessages);
+    await page.waitForFunction(expected => [...document.querySelectorAll('.chat-bubble.user')].at(-1)?.textContent === expected, message);
     await page.waitForURL(origin + route);
     assert.equal(page.url(), origin + route);
     results.agentNavigation.push({locale:'es',message,route});
   }
   await page.locator('.language-picker select').selectOption('pt');
   await page.waitForFunction(() => document.documentElement.lang === 'pt');
-  const previousMessages = await page.locator('.chat-bubble').count();
   await page.locator('.chat-composer input').fill('Não reconheço uma compra');
   await page.locator('.chat-composer button').click();
-  await page.waitForFunction(previous => document.querySelectorAll('.chat-bubble').length >= previous + 2, previousMessages);
+  await page.waitForFunction(expected => [...document.querySelectorAll('.chat-bubble.user')].at(-1)?.textContent === expected, 'Não reconheço uma compra');
   await page.waitForURL(origin + '/requests');
   const portugueseReply = page.locator('.chat-bubble.assistant').last();
   await portugueseReply.getByText('Vamos por partes.').waitFor();
@@ -149,6 +200,8 @@ try {
   await page.getByLabel('Contraseña',{exact:true}).fill(credentials.ADMIN_PASSWORD);
   await page.getByRole('button',{name:'Entrar a mi espacio'}).click();
   await page.getByRole('heading',{name:'Solicitudes y trazabilidad'}).waitFor();
+  await page.getByRole('heading',{name:'Satisfacción con el asistente'}).waitFor();
+  assert.equal(await page.locator('.feedback-metric').count(),3,'Admin shows aggregate NPS, CSAT, and CES metrics');
   await snapshot('admin-desktop');
   await axe('admin');
   await noOverflow();
@@ -156,7 +209,7 @@ try {
   writeFileSync(output+'/ui-results.json',JSON.stringify({...results,pageErrors},null,2));
   const violations=results.accessibility.flatMap(r=>r.violations);
   assert.equal(violations.length,0,JSON.stringify(violations));
-  console.log(JSON.stringify({pages:results.pages.length,accessibility:results.accessibility.length,pageErrors:pageErrors.length,createdRequest:results.createdRequest,agentNavigation:results.agentNavigation.length,securityHeaders:results.securityHeaders}));
+  console.log(JSON.stringify({pages:results.pages.length,accessibility:results.accessibility.length,pageErrors:pageErrors.length,createdRequest:results.createdRequest,agentNavigation:results.agentNavigation.length,chatFeedback:results.chatFeedback,securityHeaders:results.securityHeaders}));
 } finally {
   writeFileSync(output+'/ui-results.json',JSON.stringify({...results,pageErrors},null,2));
   await browser.close();
