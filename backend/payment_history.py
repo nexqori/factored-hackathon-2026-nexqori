@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy import select, func, exists
 from .models import Transaction, BillPayment, PhoneBill, Refund
 from .provider_updates import price_context, provider_context_text
+from .service_agreements import agreement_context, agreement_text
 
 DAYS = 180
 LIMIT = 6
@@ -15,6 +16,8 @@ def compare_payments(db, tx):
     result = _compare_payments(db, tx)
     notice = price_context(db, tx)
     if notice: result['providerNotice'] = notice
+    agreement = agreement_context(db, tx)
+    if agreement: result['serviceAgreement'] = agreement
     return result
 
 
@@ -83,10 +86,24 @@ def context_comparison(state, reference):
     return None
 
 
-def comparison_text(value, locale):
+def comparison_text(value, locale, compact=False):
+    agreement = agreement_text(value.get('serviceAgreement') if value else None, locale,compact=compact)
+    if compact and agreement:
+        # Keep the review form within its 1,000-character limit without dropping the conditions.
+        notice = value.get('providerNotice',{})
+        observation = notice.get('observation',{})
+        publication = ''
+        if notice.get('status')=='candidate':
+            label = ('Aviso de tarifa', 'Tariff notice', 'Aviso de tarifa')[('es','en','pt').index(locale)]
+            publication = f"{label}: {observation['planName']}, {observation['priceMinor']/100:.2f} {observation['currency']} ({observation['effectiveDate']})."
+        history = ''
+        if value.get('count'):
+            label=('Promedio de {count} pagos anteriores', 'Average of {count} previous payments', 'Média de {count} pagamentos anteriores')[('es','en','pt').index(locale)]
+            history=label.format(count=value['count'])+f": {value['averageMinor']/100:.2f} {value['currency']}."
+        return '\n\n'.join(part for part in (agreement,history,publication) if part)
     history = _comparison_text(value, locale)
     notice = provider_context_text(value.get('providerNotice') if value else None, locale)
-    return '\n\n'.join(part for part in (history,notice) if part)
+    return '\n\n'.join(part for part in (history,agreement,notice) if part)
 
 
 def _comparison_text(value, locale):

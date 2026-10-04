@@ -8,7 +8,7 @@ import sys
 from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
-from .models import AuditEvent, BillPayment, CardProfile, PhoneBill, Product, Transaction, User
+from .models import AuditEvent, BillPayment, CardProfile, PhoneBill, Product, Transaction, User, ServiceAgreement
 from .ux_fixtures import manifest_plan
 
 
@@ -36,6 +36,24 @@ def scenario_plan(person):
             'fundingId':'TREND-FUND-'+suffix, 'fundingMinor':700000}
 
 
+def ensure_example_agreement(db,plan):
+    first=min(r['date'] for r in plan['rows']).date().replace(day=1)
+    last=first.replace(year=first.year+1)-timedelta(days=1)
+    terms={'id':'terms-'+plan['userId'],'user_id':plan['userId'],'service_id':'phone-bill',
+           'reference':plan['reference'],'provider_id':'empresa-telefonica','plan_id':'telefono-esencial',
+           'plan_name':'Teléfono Esencial','version':1,'valid_from':first,'valid_until':last,
+           'monthly_minor':29900,'currency':'MXN','taxes_included':True,
+           'extras_require_approval':True,'source':'constructed_fixture'}
+    existing=db.get(ServiceAgreement,terms['id'])
+    if existing:
+        if any(getattr(existing,k)!=v for k,v in terms.items()):
+            raise ValueError('Existing service conditions differ; do not overwrite')
+        return
+    db.add(ServiceAgreement(**terms))
+    db.add(AuditEvent(id='terms-created-'+plan['userId'],user_id=plan['userId'],actor_id=plan['userId'],action='service_conditions_created'))
+    db.flush()
+
+
 def ensure_spending_cases(db, person):
     if person['case']['id'] != 'cargo':
         raise ValueError('The spending scenarios belong to the cargo UX profile')
@@ -53,6 +71,7 @@ def ensure_spending_cases(db, person):
         for row in plan['rows']:
             tx = db.get(Transaction, row['id'])
             if not tx or tx.user_id != uid: raise ValueError('Incomplete scenarios; do not overwrite')
+        ensure_example_agreement(db,plan)
         return {k:v for k,v in plan.items() if k!='rows'} | {'created':False}
     # Every insertion and the ledger change must commit together.
     db.add(Transaction(id=plan['fundingId'],user_id=uid,product_id=account.id,merchant='Ingreso de ahorro',
@@ -80,6 +99,7 @@ def ensure_spending_cases(db, person):
     account.balance_minor += plan['fundingMinor'] + sum(r['amountMinor'] for r in plan['rows'])
     if account.balance_minor < 0: raise ValueError('Scenario cannot overdraw the account')
     db.add(AuditEvent(id=plan['marker'],user_id=uid,actor_id=uid,action='spending_fixture_created'))
+    ensure_example_agreement(db,plan)
     db.flush()
     return {k:v for k,v in plan.items() if k!='rows'} | {'created':True}
 

@@ -12,6 +12,32 @@ def iso_utc(value):
 class Base(DeclarativeBase):
     pass
 
+
+class ServiceAgreement(Base):
+    """Versioned conditions for one owner's service reference; never a payment command."""
+    __tablename__ = 'service_agreements'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    service_id: Mapped[str] = mapped_column(String(64))
+    reference: Mapped[str] = mapped_column(String(64))
+    provider_id: Mapped[str] = mapped_column(String(64))
+    plan_id: Mapped[str] = mapped_column(String(64))
+    plan_name: Mapped[str] = mapped_column(String(100))
+    version: Mapped[int] = mapped_column(Integer)
+    valid_from: Mapped[date] = mapped_column(Date)
+    valid_until: Mapped[date] = mapped_column(Date)
+    monthly_minor: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(String(3))
+    taxes_included: Mapped[bool] = mapped_column(Boolean)
+    extras_require_approval: Mapped[bool] = mapped_column(Boolean)
+    source: Mapped[str] = mapped_column(String(32))
+    __table_args__ = (
+        UniqueConstraint('user_id','service_id','reference','version'),
+        CheckConstraint('monthly_minor > 0'),
+        CheckConstraint('version > 0'),
+        CheckConstraint('valid_until >= valid_from'),
+    )
+
 class NotificationPreference(Base):
     __tablename__ = 'notification_preferences'
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), primary_key=True)

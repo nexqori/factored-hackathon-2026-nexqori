@@ -90,7 +90,7 @@ def claim_preview(db, conversation, state, locale):
                   'declined': ('rechazado', 'declined', 'recusado')}[tx.status][i]
         operation = f'{tx.merchant} · {tx.currency} {amount} · {date} · {tx.id}'
         lines.append(('Movimiento registrado: ', 'Recorded transaction: ', 'Movimentação registrada: ')[i] + operation + f' · {status}.')
-    history = comparison_text(context_comparison(state, reference), locale)
+    history = comparison_text(context_comparison(state, reference), locale, compact=True)
     if history: lines.append(history)
     for field, quote in useful_observations(state).items():
         line = FIELDS[field][i] + ': ' + quote

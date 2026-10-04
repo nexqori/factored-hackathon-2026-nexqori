@@ -54,11 +54,14 @@ try{
   await page.getByRole('searchbox',{name:t.search,exact:true}).fill('Empresa Telefónica');await page.getByLabel(t.status,{exact:true}).selectOption('pending');
   await expect(page.locator('.transaction-row')).toHaveCount(1);await page.reload();await expect(page.locator('.transaction-row')).toHaveCount(1);await page.locator('.transaction-row').click();
   await expect(page.locator('.spending-detail')).toContainText(locale==='es'||locale==='pt'?'53,5':'53.5');await expect(page.locator('dialog')).toContainText(person.scenarios.reference);
-  await expect(page.locator('.spending-source')).toContainText('Teléfono Esencial');await expect(page.locator('.spending-source')).toContainText('459');
+  await expect(page.locator('.spending-source:not(.spending-agreement)')).toContainText('Teléfono Esencial');await expect(page.locator('.spending-source:not(.spending-agreement)')).toContainText('459');
+  const agreement=page.locator('.spending-agreement');await expect(agreement).toContainText(t['spending.conditionsTitle']);
+  for(const amount of ['299','459','160'])await expect(agreement).toContainText(amount);
+  await expect(agreement).toContainText(t['spending.conditionsExtras']);await expect(agreement).toContainText(t['spending.conditionsLimit']);
   await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await axe('mobile-'+locale);
   await page.screenshot({path:path.join(folder,'mobile-'+locale+'.png'),fullPage:true});
   assert.deepEqual(await(await context.request.get(origin+'/api/bootstrap')).json(),before);
-  report.cases.push({locale,filters:true,history:true,receipt:true,readOnly:true});await context.close();
+  report.cases.push({locale,filters:true,history:true,receipt:true,serviceConditions:true,readOnly:true});await context.close();
  }
  assert.deepEqual(report.errors,[]);report.passed=true;console.log(JSON.stringify({passed:true,cases:report.cases.length,accessibility:report.accessibility.length,report:path.join(folder,'report.json')}));
 }catch(e){if(page&&!page.isClosed()){await page.screenshot({path:path.join(folder,'failure.png')});await fs.writeFile(path.join(folder,'failure.html'),await page.content());}throw e;}finally{await browser?.close();server.kill();await fs.writeFile(path.join(folder,'report.json'),JSON.stringify(report,null,2));await fs.writeFile(path.join(folder,'server.private.log'),diagnostics);}
