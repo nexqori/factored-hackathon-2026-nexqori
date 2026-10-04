@@ -11,11 +11,12 @@ from sqlalchemy import select, delete, func, or_, and_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
 from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, Refund, now
-from .schemas import CardRevealInput, RegisterInput, ExperienceInput
+from .schemas import CardRevealInput, CardCvvInput, RegisterInput, ExperienceInput
 from .models import CustomerProfile
 from .customer_profile import adult_birth_date, experience_view
 from .workflows import workflow_view
-from .cards import reveal_local_card
+from .catalog import request_kind
+from .cards import reveal_local_card, local_card_available, refresh_local_cvv
 from .operations import operations_router
 from .agent_tools import agent_tools_router
 from .claim_trace import trace_router
@@ -49,7 +50,7 @@ def request_view(r, name=None, refund=None):
         operation = {"id":refund.id,"status":refund.status,"amountMinor":refund.amount_minor,"currency":refund.currency,
                      "createdAt":refund.created_at.isoformat(),"decidedAt":refund.decided_at.isoformat() if refund.decided_at else None,
                      "creditTransactionId":refund.credit_transaction_id}
-    kind = 'claim' if not r.catalog_service_id or SERVICES.get(r.catalog_service_id, {}).get('kind') == 'claim' else 'application'
+    kind = request_kind(r)
     return {"id":r.id,"kind":kind,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation}
 
 def audit_view(e, name):
@@ -202,9 +203,9 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def cards(user=Depends(customer_read), db=Depends(db_session)):
         rows=db.execute(select(Product, CardProfile).outerjoin(CardProfile, and_(CardProfile.product_id==Product.id, CardProfile.user_id==Product.user_id)).where(Product.user_id==user.id, Product.type=="card")).all()
         return {"cards": [{"id": p.id, "last4": p.last4, "holder": user.name,
-            "expiryMonth": c.expiry_month if c else None, "expiryYear": c.expiry_year if c else None,
+            "expiryMonth": None, "expiryYear": None,
             "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"),
-            "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and c.provider_ref=="local-card-01")} for p,c in rows]}
+            "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and local_card_available(c))} for p,c in rows]}
 
     @app.post("/api/cards/{product_id}/reveal")
     def reveal_card(product_id: str, payload: CardRevealInput, request: Request, user=Depends(customer), db=Depends(db_session)):
@@ -214,8 +215,19 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         if not verify(payload.password, user.password_hash): raise HTTPException(403, "card_password")
         if profile.status=="blocked": raise HTTPException(409, "card_blocked")
         if os.getenv("CARD_PROVIDER")!="local_fixture": raise HTTPException(503, "card_unavailable")
-        result=reveal_local_card(profile)
+        result=reveal_local_card(profile, db.get(Product, product_id).last4, user.password_hash)
         add_audit(db, user.id, "card_details_viewed", user.id)
+        db.commit()
+        return result
+
+    @app.post('/api/cards/{product_id}/cvv')
+    def refresh_cvv(product_id: str, payload: CardCvvInput, user=Depends(customer), db=Depends(db_session)):
+        profile=db.scalar(select(CardProfile).where(CardProfile.product_id==product_id, CardProfile.user_id==user.id).with_for_update())
+        if not profile: raise HTTPException(404, 'not_found')
+        if profile.status=='blocked': raise HTTPException(409, 'card_blocked')
+        if os.getenv('CARD_PROVIDER')!='local_fixture': raise HTTPException(503, 'card_unavailable')
+        result=refresh_local_cvv(profile, user.password_hash, payload.revealToken)
+        add_audit(db, user.id, 'card_cvv_refreshed', user.id)
         db.commit()
         return result
 

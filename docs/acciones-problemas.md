@@ -71,3 +71,13 @@ node scripts/nexqori-operations.mjs
 ```
 
 El JSON contiene una contraseña aleatoria del usuario de verificación: permanece privado e ignorado por Git. El script crea registros persistentes marcados Verificación y prueba dos aprobaciones simultáneas del mismo cargo y dos cargos distintos sobre la misma cuenta; comprueba que los saldos anteriores de otros titulares no cambian. Las pruebas UI ordinarias del banco deben ejecutarse en serie.
+
+## Tarjetas desde el chat y revelación temporal
+
+El chatbot admite órdenes explícitas como «Ver datos de mi tarjeta», «Muéstrame el CVV de mi tarjeta» o «Bloquea mi tarjeta», y variantes ES/EN/PT. Abre Tarjetas y el diálogo existente de contraseña; si hay varias tarjetas compatibles, exige elegir una. Una terminación de cuatro dígitos puede acotar la selección. No envía la contraseña por el chat ni ejecuta el bloqueo: éste conserva contraseña, casilla de confirmación, titularidad e idempotencia en su endpoint.
+
+El listado mantiene número y vencimiento ocultos. Tras reautenticación, número, vencimiento y CVV se muestran como máximo 60 segundos; se ocultan también al perder foco, ocultar la pestaña o salir de la pantalla. El contador de ocultación es independiente del contador del CVV, que conserva su valor durante intervalos UTC de 900 segundos. Al cruzar un intervalo durante el minuto autorizado, `/api/cards/{id}/cvv` renueva sólo el CVV mediante un permiso firmado y acotado al mismo titular, tarjeta y vencimiento. La sesión y CSRF siguen siendo obligatorios; bloquear, cambiar contraseña o agotar el minuto invalida el acceso. No se guardan datos revelados en localStorage ni se envían al modelo.
+
+Se amplió el proveedor `local_fixture` a los perfiles locales ya configurados, incluidos los paquetes UX. Son números y códigos de prueba sin capacidad de pago externo; el CVV local se deriva mediante HMAC con separación de propósito y el hash privado del titular como clave local. El permiso de refresco está firmado con un propósito distinto. Esto no sustituye una integración con un emisor real; no se importan ni almacenan PAN/CVV reales. La tarjeta de prueba original conserva su número, las demás conservan su terminación y usan prefijo local sin emisor. No se cambian saldos, estados de bloqueo ni perfiles manuales al desplegar.
+
+Verificación: `npm run test:cards` usa un paquete de titulares separado, prueba contraseña incorrecta/correcta, preparación desde chat, ocultación por foco y minuto, refresco sin prolongar el permiso y bloqueo confirmado sólo en la tarjeta de verificación. El reloj del navegador y la respuesta del CVV se controlan para probar el cruce de intervalo; las pruebas API verifican el cambio real de ventana, permisos, token adulterado/caducado y revocación por bloqueo.

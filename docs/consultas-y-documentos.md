@@ -43,4 +43,10 @@ npm run test:banking
 npm run test:documents:context
 ```
 
-El segundo comando genera tres ejemplos ficticios en `.local/verification/query-pdfs/`. Las pruebas verifican tres idiomas, historial, reintentos, datos ajenos, permisos, periodos, límites y ausencia de escrituras financieras. Las capturas PDF se revisan con Poppler; la extracción de texto por sí sola no verifica el diseño.
+El segundo comando genera cuatro ejemplos ficticios en `.local/verification/query-pdfs/`. Las pruebas verifican tres idiomas, historial, reintentos, datos ajenos, permisos, periodos, límites y ausencia de escrituras financieras. Las capturas PDF se revisan con Poppler; la extracción de texto por sí sola no verifica el diseño.
+
+## Solicitudes y reclamos separados
+
+Desde el 3 de octubre de 2026 se generan con plantillas independientes: `requests_summary.json` incluye sólo trámites y `claims_summary.json` sólo reclamos. La clasificación reutiliza el catálogo y la regla histórica de la pantalla: los casos sin servicio de catálogo son reclamos. El filtro se aplica en servidor antes del límite de filas, también para una referencia seleccionada; elegir un registro del otro tipo devuelve no encontrado. El formulario muestra únicamente los registros del tipo elegido, en ES/EN/PT. Los PDF guardados anteriormente conservan su instantánea original; la separación se aplica a las nuevas generaciones.
+
+La tabla de Movimientos muestra producto con terminación, estado y fecha completa con hora en America/Mexico_City, también en móvil. Se conservan filtros y apertura del detalle.

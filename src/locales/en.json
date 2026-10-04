@@ -693,5 +693,11 @@
   "movements.invalidPeriod": "Check the dates: the start must be on or before the end.",
   "auditActions.tool_filtered_transactions": "Transactions viewed with filters",
   "auditActions.claim_previewed": "Complaint summary prepared",
-  "documents": "My documents"
+  "documents": "My documents",
+  "documents.claims_summary": "Complaint tracking",
+  "documents.allClaims": "All my complaints",
+  "cardCvvRenewal": "CVV changes in {{time}}",
+  "cardChooseAction": "Choose a card to continue",
+  "cardActionUnavailable": "No card is available for this action.",
+  "cardRevealTimer": "Details will be hidden in {{count}} s"
 }

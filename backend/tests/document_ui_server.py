@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from backend import workflow_chat as chat
 from backend.db import make_engine, make_sessions
 from backend.main import create_app
-from backend.models import Base, Product, Transaction, User
+from backend.models import Base, Product, Transaction, User, RequestCase
 from backend.security import hasher
 
 if os.getenv('NEXQORI_DOCUMENT_UI_CHECK') != '1':
@@ -48,7 +48,10 @@ with make_sessions(engine)() as db:
                         category='utilities', amount_minor=-13819, currency='MXN', status='completed',
                         occurred_at=datetime(2026, 10, 2, 18, tzinfo=timezone.utc)),
         ])
-        people.append({'email': email, 'password': password, 'locale': locale, 'accountId': account,
+        application='NQ-A'+uid[:10];claim='NQ-C'+uid[:10]
+        db.add_all([RequestCase(id=application,user_id=uid,request_key='application-'+uid,service='loans',catalog_service_id='personal-loan',reason='other',details='Verificación solicitud de préstamo',status='received'),
+                    RequestCase(id=claim,user_id=uid,request_key='claim-'+uid,service='cards',catalog_service_id='incorrect-charge',reason='amount',details='Verificación reclamo de importe',status='in_review')])
+        people.append({'applicationId':application,'claimId':claim,'email': email, 'password': password, 'locale': locale, 'accountId': account,
                        'transactionId': september, 'octoberTransactionId': october, 'septemberAmountMinor': 25743})
     db.commit()
 (folder/'credentials.private.json').write_text(json.dumps(people), encoding='utf-8')

@@ -18,6 +18,13 @@ def application_command(text, locale):
     value = re.sub(r'^(puedes|podrias|me puedes|me podrias|podes|voce pode|could you|can you) ', '', value)
     action = None
     navigation = None
+    value = re.sub(r'^(show|show me|view) (?:my |the )?card (details|number|cvv)(.*)$', r'\1 \2 of my card\3', value)
+    card = re.fullmatch(r'(?:(ver|mostrar|muestrame|quiero ver|show|show me|view|i want to see|mostre|quero ver) (?:el |o |los |os |the |my |mis |meu |meus )?(?:datos|detalles|details|dados|numero|number|cvv)(?: de | da | do | of | for | )(?:(?:mi|la|my|the|meu|minha|o|a) )?(?:tarjeta|card|cartao)|(?P<block>bloquea|bloquear|bloqueame|quiero bloquear|block|lock|bloquear|bloqueie) (?:(?:mi|la|my|the|meu|minha|o|a) )?(?:tarjeta|card|cartao))(?: (?:terminada en|ending in|final) (\d{4}))?', value)
+    if card:
+        operation = 'block' if card['block'] else 'reveal'
+        return {'text': ('Abro Tarjetas para que confirmes tu identidad.','I will open Cards so you can confirm your identity.','Vou abrir Cartões para você confirmar sua identidade.')[('es','en','pt').index(locale)],
+                'destination': 'cards', 'navigation': navigate_in_app('cards','customer'),
+                'appCommand': {'type':'prepare_card', 'action':operation, 'last4':card[3]}}
     if re.fullmatch(r'(cierra|cerrar|cierre|cerrame|quiero cerrar) (mi |la )?sesion|salir(?: de (?:mi |la )?cuenta)?|desconectame|log ?out|log me out|sign (me )?out|(encerrar|encerre|fechar|feche) (a |minha )?sessao|sair( da (minha )?conta)?', value):
         action = {'type': 'logout'}
         reply = ('Voy a cerrar tu sesión.', 'I will sign you out.', 'Vou encerrar sua sessão.')

@@ -693,5 +693,11 @@
   "movements.invalidPeriod": "Confira as datas: o início deve ser anterior ou igual ao final.",
   "auditActions.tool_filtered_transactions": "Movimentações consultadas com filtros",
   "auditActions.claim_previewed": "Resumo da reclamação preparado",
-  "documents": "Meus documentos"
+  "documents": "Meus documentos",
+  "documents.claims_summary": "Acompanhamento de reclamações",
+  "documents.allClaims": "Todas as minhas reclamações",
+  "cardCvvRenewal": "O CVV muda em {{time}}",
+  "cardChooseAction": "Escolha o cartão para continuar",
+  "cardActionUnavailable": "Nenhum cartão está disponível para esta ação.",
+  "cardRevealTimer": "Os dados serão ocultados em {{count}} s"
 }

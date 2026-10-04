@@ -1,0 +1,25 @@
+{
+  "version": "1.1.0",
+  "title": {
+    "es": "Seguimiento de reclamos",
+    "en": "Complaint tracking",
+    "pt": "Acompanhamento de reclamações"
+  },
+  "note": {
+    "es": "Resumen exclusivo de reclamos. El estado describe su seguimiento; no acredita resolución ni reembolso.",
+    "en": "Summary of complaints only. Status describes progress; it does not prove resolution or reimbursement.",
+    "pt": "Resumo exclusivo de reclamações. O estado descreve o acompanhamento; não comprova resolução nem reembolso."
+  },
+  "sections": [
+    {
+      "table": "claims",
+      "columns": [
+        "id",
+        "service",
+        "status",
+        "created_at",
+        "updated_at"
+      ]
+    }
+  ]
+}

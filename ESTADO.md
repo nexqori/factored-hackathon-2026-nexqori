@@ -567,3 +567,20 @@
 - Límites: reglas explícitas con variantes ES/EN/PT, no reconocimiento semántico ilimitado. No se configuraron proveedores ni se alteró el grafo maestro. Las órdenes nuevas no requieren claves; el resto de la atención mantiene su configuración previa.
 - Último avance: implementado, validado y desplegado localmente; pendiente publicación mediante PR. Otros frentes preservados.
 - Siguiente paso: recargar el banco y probar las órdenes; tramitar PR antes de integrar a main.
+
+## Frente: Nexqori — documentos separados y acciones de tarjetas desde el chat
+- Fecha: 2026-10-03, America/Lima. C:/Users/santi/Documents/Projects/nexqori; rama codex/documents-card-actions desde 11366b0.
+- Pedido vigente: separar PDF de solicitudes/reclamos, completar datos de Movimientos y habilitar consulta protegida y bloqueo de tarjetas desde el chat, conservando el flujo existente.
+- [x] Separar consultas, selección, filtros del servidor y plantillas de solicitudes y reclamos; rechazar referencias de otro tipo. Mantener aislamiento por titular y documentos históricos sin alterarlos.
+- [x] Mostrar producto, estado y fecha/hora en Movimientos, incluidos tamaños móviles; conservar traducciones ES/EN/PT.
+- [x] Habilitar datos de tarjetas locales mediante contraseña: número y vencimiento ocultos por defecto, visibilidad máxima de 60 segundos, CVV con ventanas de 15 minutos y contador. Renovar CVV sólo con autorización temporal del mismo titular y tarjeta, sin extender el minuto; ocultar al perder foco.
+- [x] Incorporar órdenes explícitas del chat para abrir los diálogos de consulta o bloqueo; seleccionar tarjeta cuando hay varias. Bloquear sólo tras contraseña y confirmación mediante la operación existente, con auditoría e idempotencia.
+- [x] Validar 445 pruebas backend, 30 frontend y compilación; tras los ajustes finales del intérprete, repetir 116 pruebas de comandos/contexto correctamente. Advertencias existentes de Alembic y tamaño de bundle, sin fallos.
+- [x] Validar tarjetas ES/EN/PT en escritorio/móvil, contraseña incorrecta, ocultación, renovación sin extensión y bloqueo confirmado: seis axe correctos. Evidencia privada .local/verification/cards-verificacion-ui-7790922617d8/report.json. Sólo perfiles de verificación.
+- [x] Validar documentos/contexto: nueve documentos en tres idiomas, selección disjunta y 18 axe correctos; informe .local/verification/document-context-QL0jAx/report.json. Revisar visualmente las ocho páginas de las plantillas de solicitudes/reclamos con datos ficticios, sin desbordes.
+- [x] Completar regresión de chat (nueve conversaciones/47 axe), navegación (56 vistas/nueve comandos), experiencia, servicios (17 vistas) y pagos (tres idiomas/15 axe). Informes privados bank-chat-f0ajqZ y payments/f6db1e1340b1 bajo .local/verification. Sin registros bancarios enviados a modelos.
+- [x] Reconstruir API e interfaz en Docker local :5180, conservar PostgreSQL y verificar tres servicios saludables y HTTP 200.
+- [ ] Publicar rama y abrir PR antes de integrar a main; GitHub CLI no disponible en este equipo.
+- Límites: números y CVV corresponden al proveedor local de prueba, no a una integración con emisor real. Los PDF históricos conservan su contenido original; la separación se aplica a nuevas generaciones. Órdenes explícitas ES/EN/PT, sin reconocimiento semántico ilimitado. Voz aplazada.
+- Último avance: implementado, validado y desplegado localmente; pendiente publicación mediante PR. Otros frentes y datos privados preservados.
+- Siguiente paso: recargar el banco para probar datos de tarjeta y bloqueo desde el chat; revisar el PR antes de fusionar.

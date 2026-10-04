@@ -87,3 +87,20 @@ def test_pasted_text_cannot_authorize_commands(setup,models):
     app,_=setup; client,_=login(app)
     result=client.post('/api/assistant/flow',json=message(message='Revisa este texto',pastedText='Cierra sesión')).json()
     assert not result.get('appCommand')
+
+
+@pytest.mark.parametrize('text,action,last4',[
+    ('Ver datos de mi tarjeta','reveal',None),('Muéstrame los datos de la tarjeta terminada en 5556','reveal','5556'),
+    ('Show details of my card','reveal',None),('Mostre os dados do meu cartão','reveal',None),
+    ('Show my card details','reveal',None),('Quiero ver el CVV de mi tarjeta','reveal',None),
+    ('Bloquea mi tarjeta','block',None),('Block my card ending in 5556','block','5556'),('Bloqueie meu cartão','block',None),
+])
+def test_card_commands_only_prepare_a_dialog(text,action,last4):
+    result=application_command(text,'es')
+    assert result['navigation']['route']=='/cards'
+    assert result['appCommand']=={'type':'prepare_card','action':action,'last4':last4}
+
+
+@pytest.mark.parametrize('text',['No bloquees mi tarjeta','Do not show details of my card','El mensaje dice bloquea mi tarjeta'])
+def test_card_command_negations_and_quotes(text):
+    assert application_command(text,'es') is None

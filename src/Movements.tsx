@@ -23,5 +23,5 @@ export function Movements({data,onSelect}:{data:Dashboard;onSelect:(tx:Transacti
     </div>
     {invalid&&<p role="alert">{t('movements.invalidPeriod')}</p>}
     <p className="muted" role="status">{t('movements.results',{count:rows.length})}</p>
-    <section className="panel transaction-panel"><TransactionList rows={rows} onSelect={onSelect}/>{!rows.length&&<p className="empty-panel">{t('noResults')}</p>}</section></>;
+    <section className="panel transaction-panel"><TransactionList rows={rows} products={data.products} onSelect={onSelect}/>{!rows.length&&<p className="empty-panel">{t('noResults')}</p>}</section></>;
 }

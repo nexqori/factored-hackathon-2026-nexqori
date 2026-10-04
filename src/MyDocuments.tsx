@@ -24,7 +24,7 @@ export function MyDocuments() {
     finally {if(!abort.signal.aborted)setBusy(false);}
   }
   useEffect(()=>{void load();return()=>controller.current?.abort();},[selected]);
-  function summary(d:DocumentMeta) {return d.details.accountLast4?t('ending')+' •••• '+d.details.accountLast4:d.details.requestId||t(d.kind==='requests_summary'?'documents.allRequests':'documents.allProducts');}
+  function summary(d:DocumentMeta) {return d.details.accountLast4?t('ending')+' •••• '+d.details.accountLast4:d.details.requestId||t(d.kind==='claims_summary'?'documents.allClaims':d.kind==='requests_summary'?'documents.allRequests':'documents.allProducts');}
   return <section className="requested-documents" aria-labelledby="requested-documents-title" aria-busy={busy}>
     <h2 id="requested-documents-title" ref={heading} tabIndex={-1}><FileText size={22} aria-hidden="true"/>{t('documents.requested')}</h2>
     <p className="muted">{t('documents.requestedHint')}</p>
