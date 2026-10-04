@@ -5,6 +5,7 @@ import { api } from './api';
 import { Badge, formatMoney } from './components';
 import { ChatFlow } from './ChatFlow';
 import { AdminCaseDocuments } from './AdminCaseDocuments';
+import { AttentionReview } from './AttentionReview';
 import { RequestStatus } from './RequestProgress';
 import type { Locale } from './i18n';
 import type { AuditEvent, Conversation, ConversationPage, RequestCase } from './types';
@@ -56,7 +57,7 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
   const showSummary = !admin || tab === 'detail';
   const showConversations = !admin || tab === 'conversations';
   const showActivity = !admin || tab === 'activity';
-  const visibleEvents = trace?.events.filter(event => admin || ['created','reviewed','handed_off','refund_requested','refund_approved','refund_rejected','card_blocked','conversation_linked'].includes(event.action)) || [];
+  const visibleEvents = trace?.events.filter(event => admin || ['created','reviewed','handed_off','refund_requested','refund_approved','refund_rejected','card_blocked','conversation_linked','attention_resolved','attention_closed_by_timer','attention_closure_stopped','attention_reopened','feedback_submitted','feedback_draft_saved'].includes(event.action)) || [];
   const eventTitle = (action: string) => action.startsWith('navigate_') ? t('navigationRecorded', { screen: t(action.slice(9)) }) : t('auditActions.' + action, { defaultValue: t('trace.recordedActivity') });
   function eventDescription(action: string) {
     const key = action.startsWith('navigate_') ? 'navigation' : action;
@@ -71,6 +72,7 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
     {trace && (admin && tab === 'json' ? <pre className="trace-json" tabIndex={0} aria-label={t('trace.json')}>{JSON.stringify(trace, null, 2)}</pre> : <>
       <div className="trace-current"><div><span className="eyebrow">{t('trace.now')}</span><h3>{t('trace.outcome.' + trace.outcome)}</h3><p>{t('trace.next.' + trace.outcome)}</p></div>{!compact && <RequestStatus request={trace.request} />}</div>
       {showSummary && <>
+      <AttentionReview source="requests" identity={request.id} admin={admin} onChange={() => void load()}/>
       <dl className="trace-facts"><div><dt>{t('reference')}</dt><dd><code>{request.id}</code></dd></div><div><dt>{t('customer')}</dt><dd>{trace.customer.name}</dd></div><div><dt>{t('trace.receivedAt')}</dt><dd>{timestamp(trace.request.createdAt)}</dd></div><div><dt>{t('trace.updatedAt')}</dt><dd>{timestamp(trace.request.updatedAt)}</dd></div></dl>
       {!compact && <section className="trace-section"><h3><FileText size={18} />{t('trace.report')}</h3><p className="trace-text">{trace.request.details}</p></section>}
       <section className="trace-section"><h3>{t('trace.evidence')}</h3><p className="muted">{t('trace.evidenceHint')}</p>{trace.transaction ? <dl className="trace-facts">

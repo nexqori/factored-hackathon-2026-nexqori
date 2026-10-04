@@ -12,6 +12,12 @@ El [enrutador compartido de consultas/problemas](enrutamiento-jev-herramientas.m
 
 Ejemplos: “Llévame a transferencias”, “Show my cards”, “Abrir empréstimos”, “¿Cuál es mi saldo?”. Un pedido de revisión abre el formulario de solicitud. Una petición desconocida pide precisión; la navegación no crea solicitudes ni mueve dinero.
 
+## Resolución y evaluación de la atención
+
+La contribución de Araceli se integra en el chat y expediente actuales. Una resolución confirmada y sin gestiones pendientes programa el cierre de atención para dentro de 15 minutos. El servidor conserva el plazo, revisa cambios y procesa respuestas parciales o ausentes sin inventar puntuaciones. No se cierra por inactividad ni se borra u oculta el chat. Los reclamos requieren confirmación administrativa; las consultas terminadas pueden ser confirmadas por el titular. El cierre de atención no ejecuta ni modifica operaciones financieras.
+
+El formulario vinculado al titular y caso o conversación contiene NPS 0–10, satisfacción CSAT 1–5, esfuerzo CES 1–7 opcional y comentario opcional. Permite guardar una respuesta parcial y terminarla después del cierre. Los envíos completos alimentan los agregados de Araceli sin duplicarse; los campos ausentes no son cero. Administración puede revisar respuestas individuales dentro del expediente autorizado. Los tiempos de formularios nuevos quedan sin medición; no se mezclan como ceros en las medias históricas. Véase [formularios y cierre](formularios-y-cierre.md).
+
 ## Herramienta
 
 `backend/navigation.py` expone `NAVIGATION_TOOL`, `NavigateInput` y `navigate_in_app`. La autorización parte de la sesión en `/api/assistant`, reservada al cliente. `src/navigation.ts` valida nuevamente herramienta, destino y ruta; no ejecuta una URL procedente del chat.

@@ -16,4 +16,6 @@ export type Conversation = { id: string; title: string | null; locale: Locale; t
 export type ConversationPage = { flow?: import('./ChatFlow').FlowResult | null; conversation: Conversation; messages: Message[]; before: string | null };
 export type ConversationList = { conversations: Conversation[]; nextOffset: number | null };
 export type Dashboard = { products: Product[]; transactions: Transaction[]; requests: RequestCase[]; audit: AuditEvent[] };
-export type AdminData = { users: User[]; requests: RequestCase[]; audit: AuditEvent[] };
+export type AdminData = { chatFeedback?: Record<'nps' | 'csat' | 'ces', ChatFeedbackMetric>; users: User[]; requests: RequestCase[]; audit: AuditEvent[] };
+
+export type ChatFeedbackMetric = { responses: number; averageScore: number | null; npsScore: number | null; csatPercent: number | null; averageFormDurationMs: number | null; averageConversationDurationMs: number | null };

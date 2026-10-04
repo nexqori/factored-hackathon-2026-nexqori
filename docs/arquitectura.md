@@ -36,6 +36,7 @@ Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Com
 | phone_bills / bill_payments | Recibos por servicio/referencia/período, pagos parciales y comprobantes inmutables. |
 | transfer_quotes / bank_transfers | Destinatario validado temporalmente y débito/crédito atómico con idempotencia. |
 | chat_documents | PDF persistente, resumen, titular y mensaje; lista propia en Mis solicitudes. |
+| chat_feedback | Métrica NPS/CSAT/CES, puntuación, idioma, tiempos de conversación/formulario y clave idempotente; acceso de lectura sólo agregado en administración. |
 
 Las transferencias conservan dinero con un débito y un crédito en una transacción de base de datos. No hay libro contable bancario completo, liquidación ni conciliación externa. Las devoluciones aprobadas sí generan un movimiento de abono y actualizan el saldo local atómicamente. El saldo inicial del seed es ilustrativo y no se calcula sumando el historial de ejemplo. Moneda y fecha de presentación pertenecen al escenario de México; elegir portugués o inglés no convierte MXN.
 
@@ -63,6 +64,7 @@ Contrato completo en `/api/openapi.json`. Los endpoints de [recibos y transferen
 | GET /api/admin/overview | Administrador: usuarios sin hashes, solicitudes y auditoría. |
 | GET /api/requests/{id}/trace | Cliente titular: detalle, registros actuales, conversación vinculada y actividad paginada; lectura auditada. |
 | GET /api/admin/users/{userId}/requests/{id}/trace | Administrador: mismo detalle comprobando la relación folio/titular; lectura auditada. |
+| POST /api/assistant/feedback | Cliente autenticado y CSRF; guarda una respuesta NPS/CSAT/CES con puntuación y tiempos validados, idempotente por envío y usuario. |
 | POST /api/admin/requests/{id}/review | Administrador y confirmación; recibida → en revisión. |
 | POST /api/cards/{id}/block | Titular, contraseña, confirmación e idempotencia; bloqueo persistente local y auditoría. |
 | GET /api/requests/{id}/refund | Titular: elegibilidad, importe, cuenta enmascarada y revisión de devolución. |

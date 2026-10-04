@@ -32,6 +32,8 @@ const empty: Dashboard = { products: [], transactions: [], requests: [], audit: 
 const navigation = [{ path: '/', label: 'home', Icon: Home }, { path: '/movements', label: 'movements', Icon: ArrowLeftRight }, { path: '/products', label: 'products', Icon: Wallet }, { path: '/cards', label: 'cards', Icon: CreditCard }, { path: '/services', label: 'services', Icon: LayoutGrid }, { path: '/requests', label: 'requests', Icon: FileText }, { path: '/documents', label: 'documents.title', Icon: FileText }, { path: '/complaints', label: 'myClaims', Icon: MessageCircle }];
 type Modal = { type: 'transaction'; transaction: Transaction } | { type: 'request'; id: string } | { type: 'create'; transactionId?: string; service?: Service } | { type: 'handoff'; id: string } | { type: 'review'; id: string };
 function errorText(error: unknown) { const key = error instanceof ApiError ? 'error.' + error.code : 'error.generic'; return i18n.t(i18n.exists(key) ? key : 'error.generic'); }
+function formatNumber(value: number, maximumFractionDigits = 2) { return new Intl.NumberFormat(i18n.language, { maximumFractionDigits }).format(value); }
+function formatDuration(milliseconds: number | null) { return milliseconds === null ? '—' : milliseconds < 60000 ? i18n.t('secondsValue', { value: Math.round(milliseconds / 1000) }) : i18n.t('minutesValue', { value: formatNumber(milliseconds / 60000, 1) }); }
 
 function Login({ onLogin }: { onLogin: (user: User) => void }) {
   const { t } = useTranslation(); const [register, setRegister] = useState(false); const [identifier, setIdentifier] = useState(''); const [loginWith, setLoginWith] = useState<'email' | 'identity'>('email'); const [showPassword, setShowPassword] = useState(false); const [password, setPassword] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
@@ -115,7 +117,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
         <Route path="/help" element={<><PageHeading title={t('helpTitle')} subtitle={t('helpBody')} /><div className="help-list">{[1, 2, 3].map(n => <details key={n}><summary>{t('help' + n)}<ChevronDown size={18} /></summary><p>{t('answer' + n)}</p></details>)}</div>{user.role === 'customer' && <button className="button primary" onClick={focusChat}><MessageCircle size={19} />{t('focusAssistant')}</button>}</>} />
         <Route path="/admin/providers" element={user.role === 'admin' ? <ProviderUpdates/> : <Navigate to="/" replace/>}/>
         <Route path="/admin/complaints" element={user.role === 'admin' ? <ClaimsPanel users={adminData.users} requests={adminData.requests} onRefresh={refresh} onRequest={id => open({ type: 'request', id })} /> : <Navigate to="/" replace />} />
-        <Route path="/admin" element={user.role !== 'admin' ? <Navigate to="/" replace /> : <><section className="admin-attention-hero"><div><p className="eyebrow">NEXQORI · {t('admin')}</p><h1>{t('adminTitle')}</h1><p>{t('caseAdmin.overviewHint')}</p><button className="button secondary" onClick={() => navigate('/admin/providers')}>{t('providerUpdates.title')}</button> <button className="button primary" onClick={() => navigate('/admin/complaints')}>{t('caseAdmin.openCases')}<ArrowRight size={16} /></button></div><div className="admin-attention-counts"><div><strong>{adminData.requests.filter(r => r.kind === 'claim' && r.status === 'received').length}</strong><span>{t('caseAdmin.received')}</span></div><div><strong>{adminData.requests.filter(r => r.refund?.status === 'pending').length}</strong><span>{t('caseAdmin.pending')}</span></div></div></section><details className="admin-other-requests"><summary>{t('caseAdmin.requests')}</summary><RequestCollection requests={adminData.requests.filter(r => r.kind !== 'claim')} renderCase={caseCard} /></details><section className="panel admin-users"><h2>{t('users')}</h2><div className="table-scroll"><table><thead><tr><th>{t('customer')}</th><th>{t('email')}</th><th>{t('status')}</th><th>{t('language')}</th><th>{t('ageGroup')}</th><th>{t('experienceTitle')}</th><th>{t('claims.title')}</th></tr></thead><tbody>{adminData.users.map(u => <tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td>{t(u.role === 'admin' ? 'agent' : 'customer')}</td><td>{languageLabels[u.locale]}</td><td>{u.experience ? t('ageBand.' + u.experience.ageBand) : '—'}</td><td>{u.experience ? t('digital.' + u.experience.digitalExperience) : '—'}</td><td>{u.role === 'customer' && <button className="text-link" onClick={() => navigate('/admin/complaints?user=' + encodeURIComponent(u.id))}>{t('claims.viewUser')}<ArrowRight size={15} /></button>}</td></tr>)}</tbody></table></div></section><details className="admin-audit-details"><summary>{t('caseAdmin.audit')}</summary><AuditPanel users={adminData.users} onRequest={id=>open({type:'request',id})}/></details></>} />
+        <Route path="/admin" element={user.role !== 'admin' ? <Navigate to="/" replace /> : <><section className="admin-attention-hero"><div><p className="eyebrow">NEXQORI · {t('admin')}</p><h1>{t('adminTitle')}</h1><p>{t('caseAdmin.overviewHint')}</p><button className="button secondary" onClick={() => navigate('/admin/providers')}>{t('providerUpdates.title')}</button> <button className="button primary" onClick={() => navigate('/admin/complaints')}>{t('caseAdmin.openCases')}<ArrowRight size={16} /></button></div><div className="admin-attention-counts"><div><strong>{adminData.requests.filter(r => r.kind === 'claim' && r.status === 'received').length}</strong><span>{t('caseAdmin.received')}</span></div><div><strong>{adminData.requests.filter(r => r.refund?.status === 'pending').length}</strong><span>{t('caseAdmin.pending')}</span></div></div></section><FeedbackMetrics metrics={adminData.chatFeedback} /><details className="admin-other-requests"><summary>{t('caseAdmin.requests')}</summary><RequestCollection requests={adminData.requests.filter(r => r.kind !== 'claim')} renderCase={caseCard} /></details><section className="panel admin-users"><h2>{t('users')}</h2><div className="table-scroll"><table><thead><tr><th>{t('customer')}</th><th>{t('email')}</th><th>{t('status')}</th><th>{t('language')}</th><th>{t('ageGroup')}</th><th>{t('experienceTitle')}</th><th>{t('claims.title')}</th></tr></thead><tbody>{adminData.users.map(u => <tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td>{t(u.role === 'admin' ? 'agent' : 'customer')}</td><td>{languageLabels[u.locale]}</td><td>{u.experience ? t('ageBand.' + u.experience.ageBand) : '—'}</td><td>{u.experience ? t('digital.' + u.experience.digitalExperience) : '—'}</td><td>{u.role === 'customer' && <button className="text-link" onClick={() => navigate('/admin/complaints?user=' + encodeURIComponent(u.id))}>{t('claims.viewUser')}<ArrowRight size={15} /></button>}</td></tr>)}</tbody></table></div></section><details className="admin-audit-details"><summary>{t('caseAdmin.audit')}</summary><AuditPanel users={adminData.users} onRequest={id=>open({type:'request',id})}/></details></>} />
         <Route path="*" element={<Navigate to={user.role === 'admin' ? '/admin' : '/'} replace />} />
       </Routes>}
       <footer className="main-footer"><ShieldCheck size={14} />{t('footerNote')}<span>ES / EN / PT</span></footer>
@@ -130,6 +132,31 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   </div>;
 }
 function PageHeading({ title, subtitle }: { title: string; subtitle: string }) { return <div className="page-heading"><h1>{title}</h1><p>{subtitle}</p></div>; }
+
+
+function FeedbackMetrics({ metrics }: { metrics: AdminData['chatFeedback'] }) {
+  const { t } = useTranslation();
+  if (!metrics) return null;
+  const cards = (['nps', 'csat', 'ces'] as const).map(metric => {
+    const result = metrics[metric];
+    return {
+      metric,
+      result,
+      value: metric === 'nps' ? result.npsScore === null ? '—' : formatNumber(result.npsScore, 1) : metric === 'csat' ? result.csatPercent === null ? '—' : formatNumber(result.csatPercent, 1) + '%' : result.averageScore === null ? '—' : formatNumber(result.averageScore, 2),
+      label: metric === 'nps' ? 'npsLabel' : metric === 'csat' ? 'csatLabel' : 'cesLabel',
+      formula: metric === 'nps' ? 'npsResult' : metric === 'csat' ? 'csatResult' : 'cesResult',
+    };
+  });
+  return <section className="feedback-dashboard" aria-labelledby="feedback-dashboard-title">
+    <div className="section-heading"><div><h2 id="feedback-dashboard-title">{t('surveyMetricsTitle')}</h2><p>{t('surveyMetricsNote')}</p></div></div>
+    <div className="feedback-metrics">{cards.map(({ metric, result, value, label, formula }) => <article className="feedback-metric panel" key={metric}>
+      <div className="feedback-metric-heading"><h3>{t(label)}</h3><span>{t('surveyResponses', { count: result.responses })}</span></div>
+      <strong className="feedback-value">{value}</strong>
+      <p>{t(formula)}</p>
+      <dl><div><dt>{t('surveyAverageScore')}</dt><dd>{result.averageScore === null ? '—' : formatNumber(result.averageScore)}</dd></div><div><dt>{t('averageFormTime')}</dt><dd>{formatDuration(result.averageFormDurationMs)}</dd></div><div><dt>{t('averageConversationTime')}</dt><dd>{formatDuration(result.averageConversationDurationMs)}</dd></div></dl>
+    </article>)}</div>
+  </section>;
+}
 
 function Root() {
   const [user, setUser] = useState<User | null>(null); const [ready, setReady] = useState(false); const [bootError, setBootError] = useState(''); const navigate = useNavigate(); const { t } = useTranslation();

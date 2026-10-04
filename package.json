@@ -12,6 +12,7 @@
     "test:ui": "node scripts/nexqori-smoke.mjs",
     "test:experience": "node scripts/nexqori-experience.mjs",
     "test:claims": "node scripts/nexqori-claims.mjs",
+    "test:attention": "npm run build && node scripts/nexqori-attention.mjs",
     "test:notifications": "npm run build && node scripts/nexqori-notifications.mjs",
     "test:spending": "npm run build && node scripts/nexqori-spending.mjs",
     "test:spending:prepare": "node scripts/prepare-spending-cases.mjs --confirm-local --pack=equipo-ux",

@@ -63,3 +63,11 @@ class ServiceRequestInput(ConfirmInput):
     amountMinor: int | None = Field(default=None, ge=1, le=100000000)
     transactionId: str | None = Field(default=None, max_length=64)
     notes: str = Field(default="", max_length=1000)
+
+class ChatFeedbackInput(StrictModel):
+    metric: Literal["nps","csat","ces"]
+    score: int = Field(ge=0, le=10)
+    locale: Locale
+    submissionId: str = Field(min_length=36, max_length=36, pattern=r"^[0-9a-fA-F-]{36}$")
+    formDurationMs: int = Field(ge=0, le=86400000)
+    conversationDurationMs: int = Field(ge=0, le=604800000)

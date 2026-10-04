@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog, formatDate, formatMoney } from './components';
 import { ChatFlow, type ClaimRegistration, type FlowResult } from './ChatFlow';
 import { ApiError } from './api';
+import { AttentionReview } from './AttentionReview';
 import type { Conversation, Dashboard } from './types';
 import type { Locale } from './i18n';
 
@@ -62,6 +63,7 @@ export function ChatDetails({ result, conversation, data, selectedTx, selectedRe
         {result && conversation ? <ChatFlow result={result} conversationId={conversation.id} onRegistered={onRegistered} readOnly={changed && !locked}/> : <p className="empty-copy">{t('chatDetails.empty')}</p>}
       </section>
     </div>
+    {conversation && <AttentionReview source={result?.requestId ? 'requests' : 'conversations'} identity={result?.requestId || conversation.id}/>}
     <div className="chat-details-footer">{!locked && <button className="button primary" disabled={!valid || busy || applying} onClick={() => { void apply(); }}>{t(applying ? 'loading' : useMovement || useCase ? 'chatSelection.apply' : 'chatSelection.none')}</button>}<button className="button secondary" disabled={busy || applying} onClick={onClose}>{t('chatDetails.back')}</button></div>
   </Dialog>;
 }

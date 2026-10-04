@@ -319,3 +319,50 @@ class ChatDocument(Base):
     content: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (ForeignKeyConstraint(["conversation_id", "user_id"], ["conversations.id", "conversations.user_id"]), UniqueConstraint("user_id", "request_key"))
+
+class ChatFeedback(Base):
+    __tablename__ = "chat_feedback"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    submission_id: Mapped[str] = mapped_column(String(36))
+    metric: Mapped[str] = mapped_column(String(8))
+    score: Mapped[int] = mapped_column(Integer)
+    locale: Mapped[str] = mapped_column(String(2))
+    form_duration_ms: Mapped[int | None] = mapped_column(Integer)
+    conversation_duration_ms: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        UniqueConstraint("user_id", "submission_id"),
+        CheckConstraint("metric IN ('nps','csat','ces')"),
+        CheckConstraint("(metric = 'nps' AND score BETWEEN 0 AND 10) OR (metric = 'csat' AND score BETWEEN 1 AND 5) OR (metric = 'ces' AND score BETWEEN 1 AND 7)"),
+        CheckConstraint("locale IN ('es','en','pt')"),
+        CheckConstraint("form_duration_ms BETWEEN 0 AND 86400000"),
+        CheckConstraint("conversation_duration_ms BETWEEN 0 AND 604800000")
+    )
+
+
+class AttentionReview(Base):
+    """Completion of an attention episode, separate from financial operations."""
+    __tablename__ = 'attention_reviews'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    conversation_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    resolved_by: Mapped[str] = mapped_column(ForeignKey('users.id'))
+    summary: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default='scheduled', index=True)
+    confirmed_at: Mapped[int] = mapped_column(BigInteger)
+    due_at: Mapped[int] = mapped_column(BigInteger, index=True)
+    closed_at: Mapped[int | None] = mapped_column(BigInteger)
+    checkpoint: Mapped[dict] = mapped_column(JSON, default=dict)
+    snapshots: Mapped[list] = mapped_column(JSON, default=list)
+    answers: Mapped[dict] = mapped_column(JSON, default=dict)
+    answer_revision: Mapped[int] = mapped_column(Integer, default=0)
+    submitted_at: Mapped[int | None] = mapped_column(BigInteger)
+    __table_args__ = (
+        ForeignKeyConstraint(['request_id', 'user_id'], ['requests.id', 'requests.user_id']),
+        ForeignKeyConstraint(['conversation_id', 'user_id'], ['conversations.id', 'conversations.user_id']),
+        CheckConstraint('(request_id IS NULL) <> (conversation_id IS NULL)'),
+        CheckConstraint("status IN ('scheduled','closed','reopened')"),
+        CheckConstraint('due_at = confirmed_at + 900'),
+    )

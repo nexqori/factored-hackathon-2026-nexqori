@@ -20,6 +20,7 @@ from .operations import operations_router
 from .notifications import notifications_router, email_required
 from .spending import spending_router
 from .provider_updates import ProviderUpdates, provider_updates_router
+from .attention import AttentionClock, attention_router
 from .agent_tools import agent_tools_router
 from .claim_trace import trace_router
 from .payments import payment_router
@@ -32,6 +33,8 @@ from .models import ConversationFlow
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
+from .models import ChatFeedback
+from .schemas import ChatFeedbackInput
 from .assistant import answer
 from .presentation import present_message
 from .transaction_context import transaction_evidence, transaction_reply
@@ -95,12 +98,15 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     async def lifespan(_):
         app.state.voice.recover()
         app.state.provider_updates.start()
+        app.state.attention_clock.start()
         yield
         app.state.provider_updates.shutdown()
+        app.state.attention_clock.shutdown()
         app.state.voice.shutdown()
         if owned_engine: engine.dispose()
     app=FastAPI(title="Nexqori API",version="0.2.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
     app.state.sessions=make_sessions(engine)
+    app.state.attention_clock=AttentionClock(app.state.sessions)
     app.state.provider_updates=ProviderUpdates.from_env()
     app.state.sessions.configure(info={'provider_updates':app.state.provider_updates})
     app.state.voice=VoiceRuntime(app.state.sessions,conversation_view,message_view)
@@ -403,12 +409,58 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         db.commit()
         return {**result,"conversation":conversation_view(conversation),"messages":[message_view(user_message),message_view(reply)]}
 
+    @app.post("/api/assistant/feedback", status_code=201)
+    def assistant_feedback(payload: ChatFeedbackInput,user=Depends(customer),db=Depends(db_session)):
+        bounds={"nps":(0,10),"csat":(1,5),"ces":(1,7)}
+        lower,upper=bounds[payload.metric]
+        if not lower<=payload.score<=upper:
+            raise HTTPException(422,"invalid_feedback")
+        existing=db.scalar(select(ChatFeedback).where(ChatFeedback.user_id==user.id,ChatFeedback.submission_id==payload.submissionId))
+        if existing:
+            return {"ok":True,"duplicate":True}
+        feedback=ChatFeedback(
+            id=str(uuid4()),user_id=user.id,submission_id=payload.submissionId,
+            metric=payload.metric,score=payload.score,locale=payload.locale,
+            form_duration_ms=payload.formDurationMs,
+            conversation_duration_ms=payload.conversationDurationMs,
+        )
+        db.add(feedback)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            existing=db.scalar(select(ChatFeedback).where(ChatFeedback.user_id==user.id,ChatFeedback.submission_id==payload.submissionId))
+            if existing:
+                return {"ok":True,"duplicate":True}
+            raise HTTPException(409,"conflict")
+        return {"ok":True,"duplicate":False}
     @app.get("/api/admin/overview")
     def admin_overview(_user=Depends(admin),db=Depends(db_session)):
         cases=db.execute(select(RequestCase,User.name).join(User,User.id==RequestCase.user_id).order_by(RequestCase.created_at.desc())).all()
         refunds={r.request_id:r for r in db.scalars(select(Refund))}
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
-        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name,refunds.get(r.id)) for r,name in cases],"audit":[audit_view(e,name) for e,name in events]}
+        feedback={}
+        for metric in ("nps","csat","ces"):
+            count,average,form_time,conversation_time=db.execute(
+                select(
+                    func.count(ChatFeedback.id),
+                    func.avg(ChatFeedback.score),
+                    func.avg(ChatFeedback.form_duration_ms),
+                    func.avg(ChatFeedback.conversation_duration_ms),
+                ).where(ChatFeedback.metric==metric)
+            ).one()
+            promoters= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="nps",ChatFeedback.score>=9)) if metric=="nps" else 0
+            detractors= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="nps",ChatFeedback.score<=6)) if metric=="nps" else 0
+            satisfied= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="csat",ChatFeedback.score>=4)) if metric=="csat" else 0
+            feedback[metric]={
+                "responses":count,
+                "averageScore":round(float(average),2) if average is not None else None,
+                "npsScore":round((promoters-detractors)*100/count,1) if metric=="nps" and count else None,
+                "csatPercent":round(satisfied*100/count,1) if metric=="csat" and count else None,
+                "averageFormDurationMs":round(float(form_time)) if form_time is not None else None,
+                "averageConversationDurationMs":round(float(conversation_time)) if conversation_time is not None else None,
+            }
+        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name,refunds.get(r.id)) for r,name in cases],"audit":[audit_view(e,name) for e,name in events],"chatFeedback":feedback}
 
     @app.get("/api/admin/audit")
     def audit_history(userId: str | None=None, action: str | None=Query(None,max_length=32), offset: int=Query(0,ge=0,le=100000), _user=Depends(admin),db=Depends(db_session)):
@@ -442,6 +494,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         elif case.status!="in_review": raise HTTPException(409,"invalid_transition")
         return {"ok":True}
     app.include_router(operations_router())
+    app.include_router(attention_router())
     app.include_router(notifications_router())
     app.include_router(spending_router())
     app.include_router(provider_updates_router())
