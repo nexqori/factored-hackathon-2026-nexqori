@@ -614,3 +614,15 @@
 - [x] Compilación y 33 pruebas frontend; navegación 56 vistas/nueve comandos/cinco axe y experiencia cinco axe. API completa: 417 pruebas correctas con dos advertencias previas Alembic/SQLite. Usuarios de verificación separados, sin reinicios manuales.
 - Último avance: implementado, desplegado y validado en Docker :5180. Guía docs/panel-admin-expedientes.md. Sin PR, push ni cambios en main/bryan. Borrador de ayuda conservado sin publicar.
 - Siguiente paso: ensayar cliente → reclamo confirmado → revisión administrativa; los PDFs existentes se abren desde Documentos. La asignación de especialistas, SLA y carga externa de archivos quedan fuera de esta entrega.
+
+## Frente: Nexqori — correo de notificaciones y bloqueo confirmado
+- Fecha: 2026-10-03 19:02 -0500, America/Lima. E:/factoredai; rama codex/admin-expedientes.
+- Pedido vigente: para cargo no reconocido o robo, confirmar el bloqueo con código por Gmail y permitir otro destinatario en Configuración. Bryan configurará el remitente y su contraseña de aplicación localmente.
+- [x] Añadir destinatario independiente del correo de acceso, validado por código y contraseña del titular. Sin activar una dirección no verificada.
+- [x] Exigir código ligado a titular, sesión, propósito y tarjeta; cinco minutos, cinco intentos, reenvío desde un minuto y diez envíos/hora. Argon2 para códigos, SMTP con TLS, confirmación, idempotencia y auditoría. Cambio de destinatario invalida códigos de bloqueo pendientes. Sin códigos enviados al modelo.
+- [x] Crear migración f5a306c829d1 aditiva, aplicada en PostgreSQL con respaldo .local/backups/before-admin-mail-20261003-185831.dump (987069 bytes, listado pg_restore verificado). API/web/db saludables; Compose exige correo para bloquear y conserva voz apagada.
+- [x] Validar suite completa de 417 API y seis pruebas finales de correo, incluidas dos nuevas sobre cambio de dirección, otra tarjeta y TLS. UI controlada ES/EN/PT: correo verificado, código erróneo rechazado, bloqueo único persistente y nueve axe sin infracciones; .local/verification/notifications-rVHuym/report.json, captura móvil revisada. Sin correo real ni cambios a tarjetas manuales.
+- [x] Documentar configuración y pruebas en docs/notificaciones-gmail.md; preparar .local/notifications.env excluido de Git. Proveedor Gmail elegido por Bryan; no se incluyeron credenciales.
+- [ ] Configurar MAIL_SMTP_USER y MAIL_SMTP_PASSWORD, recrear API/web y validar entrega real en la bandeja destinataria. Pendiente de credencial de Gmail; no se afirma entrega real ni funcionamiento con esa cuenta todavía.
+- Último avance: implementado y desplegado localmente; código verificado con transporte controlado. Sin Gmail configurado, la app informa indisponibilidad y no completa un bloqueo nuevo. Protección automática por anomalías y desbloqueo posterior siguen separados.
+- Siguiente paso: Bryan completa el archivo local, verifica el destinatario en Configuración y prueba Tarjetas → Bloquear. No usar estos códigos dentro del chat. Sin PR ni publicación remota.

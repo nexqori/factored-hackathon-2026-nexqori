@@ -17,6 +17,7 @@ from .customer_profile import adult_birth_date, experience_view
 from .workflows import workflow_view
 from .cards import reveal_local_card
 from .operations import operations_router
+from .notifications import notifications_router, email_required
 from .agent_tools import agent_tools_router
 from .claim_trace import trace_router
 from .payments import payment_router
@@ -207,7 +208,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         rows=db.execute(select(Product, CardProfile).outerjoin(CardProfile, and_(CardProfile.product_id==Product.id, CardProfile.user_id==Product.user_id)).where(Product.user_id==user.id, Product.type=="card")).all()
         return {"cards": [{"id": p.id, "last4": p.last4, "holder": user.name,
             "expiryMonth": c.expiry_month if c else None, "expiryYear": c.expiry_year if c else None,
-            "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"),
+            "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"), "blockRequiresEmail": email_required(),
             "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and c.provider_ref=="local-card-01")} for p,c in rows]}
 
     @app.post("/api/cards/{product_id}/reveal")
@@ -435,6 +436,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         elif case.status!="in_review": raise HTTPException(409,"invalid_transition")
         return {"ok":True}
     app.include_router(operations_router())
+    app.include_router(notifications_router())
     app.include_router(payment_router())
     app.include_router(transfer_router())
     app.include_router(document_router(message_view))

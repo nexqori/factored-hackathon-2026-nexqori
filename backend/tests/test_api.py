@@ -14,7 +14,9 @@ ORIGIN = "http://testserver"
 PASSWORDS = ["Test-only-customer-2026!", "Test-only-admin-2026!", "Test-only-second-2026!"]
 
 @pytest.fixture
-def setup(tmp_path):
+def setup(tmp_path, monkeypatch):
+    # Historical operation contracts; email confirmation has its own enabled-policy tests.
+    monkeypatch.setenv('BANK_CARD_BLOCK_EMAIL_REQUIRED', 'false')
     engine=make_engine("sqlite:///" + str(tmp_path/"test.sqlite"))
     Base.metadata.create_all(engine)
     with make_sessions(engine)() as db:

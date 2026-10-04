@@ -5,8 +5,9 @@ import { CreditCard, Eye, EyeOff, ShieldCheck, LockKeyhole } from 'lucide-react'
 import { api, ApiError } from './api';
 import { Dialog } from './components';
 import './cards.css';
+import { CardBlockDialog } from './CardBlockDialog';
 
-type Card = { id: string; last4: string; holder: string; expiryMonth: number | null; expiryYear: number | null; canReveal: boolean; canBlock: boolean; status: string };
+type Card = { blockRequiresEmail: boolean; id: string; last4: string; holder: string; expiryMonth: number | null; expiryYear: number | null; canReveal: boolean; canBlock: boolean; status: string };
 type Details = { number: string; cvv: string; expiresAt: number };
 
 function CardView({ card, onBlocked }: { card: Card; onBlocked: () => void }) {
@@ -15,8 +16,7 @@ function CardView({ card, onBlocked }: { card: Card; onBlocked: () => void }) {
   const [ask, setAsk] = useState(false); const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [remaining, setRemaining] = useState(0);
-  const [blockOpen, setBlockOpen] = useState(false); const [blockPassword, setBlockPassword] = useState('');
-  const [blockConfirmed, setBlockConfirmed] = useState(false); const [blockKey] = useState(() => crypto.randomUUID());
+  const [blockOpen, setBlockOpen] = useState(false);
   const generation = useRef(0);
   function hide() { generation.current++; setDetails(null); setPassword(''); setAsk(false); }
   useEffect(() => {
@@ -40,13 +40,6 @@ function CardView({ card, onBlocked }: { card: Card; onBlocked: () => void }) {
     } catch (e) { if (current === generation.current) setError(t(e instanceof ApiError && ['card_password','card_unavailable','card_expired','card_blocked','rate_limited'].includes(e.code) ? 'error.' + e.code : 'error.generic')); }
     finally { setBusy(false); }
   }
-  async function block(e: FormEvent) {
-    e.preventDefault(); if (busy || !blockConfirmed) return; setBusy(true); setError('');
-    const submitted = blockPassword; setBlockPassword('');
-    try { await api('/cards/' + encodeURIComponent(card.id) + '/block', 'POST', { confirmed: true, password: submitted, requestKey: blockKey }); hide(); setBlockOpen(false); onBlocked(); }
-    catch (e) { setError(t(e instanceof ApiError && ['card_password', 'rate_limited', 'idempotency_conflict'].includes(e.code) ? 'error.' + e.code : 'error.generic')); }
-    finally { setBusy(false); }
-  }
   return <article className="card-workspace">
     <div className="bank-card">
       <div className="card-top"><strong>nexqori.</strong><CreditCard size={28} aria-hidden="true" /></div>
@@ -59,12 +52,12 @@ function CardView({ card, onBlocked }: { card: Card; onBlocked: () => void }) {
       <div className="cvv-line"><div><span>{t('dynamicCvv')}</span><strong data-testid="card-cvv">{details?.cvv ?? '•••'}</strong></div>{details && <span>{t('cardSeconds', { count: remaining })}</span>}</div>
       <button className="button primary" disabled={!card.canReveal} onClick={() => { if (details) hide(); else { setError(''); setAsk(true); } }}>{details ? <EyeOff size={18} /> : <Eye size={18} />}{t(details ? 'hideCardDetails' : 'showCardDetails')}</button>
       {!card.canReveal && card.status !== 'blocked' && <p className="muted">{t('error.card_unavailable')}</p>}
-      {card.canBlock && <button className="button secondary" onClick={() => { hide(); setError(''); setBlockConfirmed(false); setBlockPassword(''); setBlockOpen(true); }}><LockKeyhole size={18}/>{t('blockCard')}</button>}
+      {card.canBlock && <button className="button secondary" onClick={() => { hide(); setError(''); setBlockOpen(true); }}><LockKeyhole size={18}/>{t('blockCard')}</button>}
       <Link className="text-link" to={'/movements?product=' + encodeURIComponent(card.id)}>{t('seeMovements')}</Link>
       <p className="card-security"><ShieldCheck size={18} />{t('cardSecretHint')}</p>
     </div>
     {ask && <Dialog title={t('confirmIdentity')} onClose={hide} busy={busy}><form onSubmit={reveal} className="form-stack"><p>{t('cardReauth')}</p><label>{t('password')}<input autoFocus type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={e => setPassword(e.target.value)} /></label>{error && <p role="alert" className="error-text">{error}</p>}<button className="button primary" disabled={busy}>{t(busy ? 'loading' : 'showCardDetails')}</button></form></Dialog>}
-    {blockOpen && <Dialog title={t('blockCard')} onClose={() => { setBlockOpen(false); setBlockPassword(''); }} busy={busy}><form onSubmit={block} className="form-stack"><p>{t('blockCardExplain', { last4: card.last4 })}</p><label>{t('password')}<input type="password" autoComplete="current-password" required maxLength={256} value={blockPassword} onChange={e => setBlockPassword(e.target.value)} /></label><label className="checkbox-label"><input type="checkbox" required checked={blockConfirmed} onChange={e => setBlockConfirmed(e.target.checked)}/>{t('blockCardConfirm')}</label>{error && <p className="error-text" role="alert">{error}</p>}<button className="button primary" disabled={busy || !blockConfirmed}>{t(busy ? 'loading' : 'confirmBlockCard')}</button></form></Dialog>}
+    {blockOpen && <CardBlockDialog card={card} onClose={()=>setBlockOpen(false)} onBlocked={()=>{hide();onBlocked();}}/>}
   </article>;
 }
 

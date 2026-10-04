@@ -20,6 +20,8 @@ services:
     env_file:
       - path: .local/intent-lab/providers.env
         required: false
+      - path: .local/notifications.env
+        required: false
     volumes:
       - ./.local/intent-lab:/app/flow-config:ro
     build:
@@ -35,6 +37,7 @@ services:
       CARD_PROVIDER: local_fixture
       BANK_ASSISTANT_FLOW: "true"
       BANK_VOICE_ENABLED: "false"
+      BANK_CARD_BLOCK_EMAIL_REQUIRED: "true"
       BANK_FLOW_CONFIG: /app/flow-config
       NEXQORI_LAB_DATA: /app/flow-config
     depends_on:

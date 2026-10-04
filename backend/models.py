@@ -12,6 +12,31 @@ def iso_utc(value):
 class Base(DeclarativeBase):
     pass
 
+class NotificationPreference(Base):
+    __tablename__ = 'notification_preferences'
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    email: Mapped[str] = mapped_column(String(254))
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EmailChallenge(Base):
+    __tablename__ = 'email_challenges'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    session_hash: Mapped[str] = mapped_column(String(64))
+    purpose: Mapped[str] = mapped_column(String(32))
+    product_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    email: Mapped[str] = mapped_column(String(254))
+    code_hash: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[int] = mapped_column(BigInteger)
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    consumed: Mapped[bool] = mapped_column(Boolean, default=False)
+    __table_args__ = (
+        ForeignKeyConstraint(['product_id', 'user_id'], ['products.id', 'products.user_id']),
+        CheckConstraint("purpose IN ('notification_email','card_block')"),
+    )
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
