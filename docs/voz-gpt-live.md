@@ -19,6 +19,8 @@ Durante la llamada, el panel muestra por separado «Lo que entendí de tu voz» 
 
 Marin es la voz inicial; el selector ofrece las voces permitidas por el servidor (Marin, Cedar, Coral, Bossa y Tempo). Se elige antes de iniciar: GPT-Live requiere una sesión nueva para cambiarla. El idioma sigue la selección ES/EN/PT y las instrucciones actuales piden un tono cálido y breve. No hay selector de acentos ni prueba de pronunciación regional. Los fragmentos recibidos se ordenan por sus tiempos del proveedor, conservando espacios y palabras repetidas; el panel mantiene hasta 400 fragmentos recientes en memoria y no los almacena en el navegador.
 
+En la interfaz, el selector se presenta como **Agente** y muestra una descripción breve: Marin (atención bancaria), Cedar (pagos y movimientos), Coral (reclamos y seguimiento), Bossa (servicios y recibos) y Tempo (ayuda con la app). Son perfiles de presentación del mismo agente virtual y flujo compartido; elegir un nombre configura la voz, no añade modelos especializados, permisos ni derivaciones nuevas. Jev y los contratos siguen determinando la ruta por el caso. La información de IA, envío de audio y duración está disponible en «Sobre la llamada».
+
 | Parte | Implementación |
 |---|---|
 | Inicio y configuración | `GET /api/voice/capabilities`, `POST /api/voice/sessions`; voz elegida al iniciar, ES/EN/PT |

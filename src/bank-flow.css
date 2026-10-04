@@ -44,6 +44,7 @@
 .voice-call-symbol.is-live{box-shadow:0 0 0 5px var(--nq-soft)}
 .voice-call-body{flex:1;min-height:0;overflow:auto;padding:18px;scrollbar-width:thin}
 .voice-call-setup{display:flex;flex-direction:column;gap:15px}.voice-call label{display:flex;flex-direction:column;gap:8px;font-size:.88rem}.voice-call select{width:100%}.voice-call audio{display:none}
+.voice-agent-description{color:var(--nq-text);line-height:1.7}.voice-call-info{font-size:.78rem;color:var(--nq-muted)}.voice-call-info summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px}.voice-call-info summary::before{content:'+';font-size:1rem}.voice-call-info[open] summary::before{content:'−'}.voice-call-info summary::-webkit-details-marker{display:none}.voice-call-info p{padding-bottom:10px}
 .voice-transcript-hint{color:var(--nq-muted);font-size:.74rem!important;margin-bottom:16px}
 .voice-transcript{display:flex;flex-direction:column;gap:14px}.voice-transcript-empty{color:var(--nq-muted);padding:22px 0}
 .voice-transcript-row{padding:12px 14px;background:var(--nq-soft);border-radius:14px;border-bottom-left-radius:4px;overflow-wrap:anywhere}

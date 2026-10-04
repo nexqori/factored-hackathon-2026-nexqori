@@ -9,6 +9,7 @@ import type {ChatReply} from './AssistantPanel';
 export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<VoiceSelection,'voice'>;onReply:(reply:ChatReply)=>void;onClose:()=>void;onSession:(id:string)=>void}){
   const {t}=useTranslation();const [capability,setCapability]=useState<VoiceCapabilities|null>(null);
   const voiceId=useId();
+  const agentDescriptionId=useId();
   const [state,setState]=useState('ready');const [error,setError]=useState('');const [voice,setVoice]=useState('marin');
   const [muted,setMuted]=useState(false);const [fragments,setFragments]=useState<VoiceFragment[]>([]);
   const [bankReply,setBankReply]=useState('');
@@ -50,9 +51,9 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
     </header>
     <div className="voice-call-body" ref={body} onScroll={()=>{const el=body.current;if(el)follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;}}>
       {!running&&<div className="voice-call-setup">
-        <div><label htmlFor={voiceId}>{t('voiceCall.voice')}</label><select id={voiceId} value={voice} onChange={e=>setVoice(e.target.value)}>{(capability?.voices||['marin']).map(v=><option key={v} value={v}>{v.charAt(0).toUpperCase()+v.slice(1)}</option>)}</select></div>
-        <p className="muted">{t('voiceCall.voiceHint')}</p>
-        <p className="muted">{t('voiceCall.intro')}</p>
+        <div><label htmlFor={voiceId}>{t('voiceCall.agent')}</label><select id={voiceId} aria-describedby={agentDescriptionId} value={voice} onChange={e=>setVoice(e.target.value)}>{(capability?.voices||['marin']).map(v=><option key={v} value={v}>{v.charAt(0).toUpperCase()+v.slice(1)}</option>)}</select></div>
+        <p id={agentDescriptionId} className="voice-agent-description">{t('voiceCall.agent.'+voice,{defaultValue:t('voiceCall.agent.marin')})}</p>
+        <details className="voice-call-info"><summary>{t('voiceCall.about')}</summary><p className="muted">{t('voiceCall.intro')}</p></details>
       </div>}
       {(running||transcript.length>0)&&<>
         <p className="voice-transcript-hint">{t('voiceCall.captionsHint')}</p>

@@ -37,7 +37,13 @@ try{
   await page.locator('.paste-composer textarea').fill('Borrador conservado');
   await page.getByRole('button',{name:copy.startVoice,exact:true}).click();const call=page.locator('.voice-call');
   await expect(call).toContainText(copy['voiceCall.unavailable']);await expect(call.getByRole('button',{name:copy['voiceCall.start'],exact:true})).toBeDisabled();
-  assert.equal(await page.evaluate(()=>window.__voiceCheck.microphones),0);await axe('disabled-'+locale);
+  assert.equal(await page.evaluate(()=>window.__voiceCheck.microphones),0);
+  await expect(call.getByLabel(copy['voiceCall.agent'],{exact:true})).toHaveValue('marin');
+  await expect(call.locator('.voice-agent-description')).toHaveText(copy['voiceCall.agent.marin']);
+  await expect(call.getByText(copy['voiceCall.intro'],{exact:true})).not.toBeVisible();
+  await call.locator('.voice-call-info summary').click();await expect(call.getByText(copy['voiceCall.intro'],{exact:true})).toBeVisible();
+  await call.locator('.voice-call-info summary').click();
+  await axe('disabled-'+locale);await page.locator('.assistant-panel').screenshot({path:path.join(folder,'agents-'+locale+'.png')});
   await call.getByRole('button',{name:copy.voiceContinue,exact:true}).click();
   await expect(page.locator('.paste-composer textarea')).toHaveValue('Borrador conservado');
   await expect(page.getByRole('button',{name:copy.startVoice,exact:true})).toBeFocused();
@@ -50,7 +56,8 @@ try{
   await expect(call.getByRole('button',{name:copy['voiceCall.start'],exact:true})).toBeDisabled();
   assert.equal(await page.evaluate(()=>window.__voiceCheck.microphones),0);
   await call.getByRole('button',{name:copy['voiceCall.closePrevious'],exact:true}).click();
-  await call.getByLabel(copy['voiceCall.voice'],{exact:true}).selectOption('cedar');
+  await call.getByLabel(copy['voiceCall.agent'],{exact:true}).selectOption('cedar');
+  await expect(call.locator('.voice-agent-description')).toHaveText(copy['voiceCall.agent.cedar']);
   await call.getByRole('button',{name:copy['voiceCall.start'],exact:true}).click();
   await expect(call).toContainText(copy['voiceCall.active']);assert.equal(chosenVoice,'cedar');
   await expect(page.locator('.assistant-panel > .voice-call')).toHaveCount(1);
