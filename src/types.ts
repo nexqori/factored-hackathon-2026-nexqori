@@ -12,8 +12,10 @@ export type RequestCase = { kind?: "claim" | "application"; id: string; userId: 
 export type AuditEvent = { transactionId?: string | null; productId?: string | null; conversationId: string | null; id: string; userId: string; requestId: string | null; action: string; actorId: string; actorName: string; at: string };
 export type DocumentMeta = {id:string;filename:string;kind:string;locale:Locale;title:string;createdAt:string;conversationId:string;details:{scope:'all'|'selected';accountLast4:string|null;requestId:string|null;startDate:string|null;endDate:string|null;allHistory:boolean;recordCount:number}};
 export type Message = { document?: DocumentMeta | null; id: string; role: 'assistant' | 'user'; text: string; locale: Locale; at: string };
-export type Conversation = { id: string; title: string | null; locale: Locale; transactionId?: string | null; createdAt: string; updatedAt: string };
+export type Conversation = { closed?: boolean; id: string; title: string | null; locale: Locale; transactionId?: string | null; createdAt: string; updatedAt: string };
 export type ConversationPage = { flow?: import('./ChatFlow').FlowResult | null; conversation: Conversation; messages: Message[]; before: string | null };
 export type ConversationList = { conversations: Conversation[]; nextOffset: number | null };
 export type Dashboard = { products: Product[]; transactions: Transaction[]; requests: RequestCase[]; audit: AuditEvent[] };
-export type AdminData = { users: User[]; requests: RequestCase[]; audit: AuditEvent[] };
+export type AdminData = { chatFeedback?: Record<'nps' | 'csat' | 'ces', ChatFeedbackMetric>; users: User[]; requests: RequestCase[]; audit: AuditEvent[] };
+
+export type ChatFeedbackMetric = { responses: number; averageScore: number | null; npsScore: number | null; csatPercent: number | null; averageFormDurationMs: number | null; averageConversationDurationMs: number | null };

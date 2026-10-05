@@ -12,6 +12,57 @@ def iso_utc(value):
 class Base(DeclarativeBase):
     pass
 
+
+class ServiceAgreement(Base):
+    """Versioned conditions for one owner's service reference; never a payment command."""
+    __tablename__ = 'service_agreements'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    service_id: Mapped[str] = mapped_column(String(64))
+    reference: Mapped[str] = mapped_column(String(64))
+    provider_id: Mapped[str] = mapped_column(String(64))
+    plan_id: Mapped[str] = mapped_column(String(64))
+    plan_name: Mapped[str] = mapped_column(String(100))
+    version: Mapped[int] = mapped_column(Integer)
+    valid_from: Mapped[date] = mapped_column(Date)
+    valid_until: Mapped[date] = mapped_column(Date)
+    monthly_minor: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(String(3))
+    taxes_included: Mapped[bool] = mapped_column(Boolean)
+    extras_require_approval: Mapped[bool] = mapped_column(Boolean)
+    source: Mapped[str] = mapped_column(String(32))
+    __table_args__ = (
+        UniqueConstraint('user_id','service_id','reference','version'),
+        CheckConstraint('monthly_minor > 0'),
+        CheckConstraint('version > 0'),
+        CheckConstraint('valid_until >= valid_from'),
+    )
+
+class NotificationPreference(Base):
+    __tablename__ = 'notification_preferences'
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    email: Mapped[str] = mapped_column(String(254))
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EmailChallenge(Base):
+    __tablename__ = 'email_challenges'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    session_hash: Mapped[str] = mapped_column(String(64))
+    purpose: Mapped[str] = mapped_column(String(32))
+    product_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    email: Mapped[str] = mapped_column(String(254))
+    code_hash: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[int] = mapped_column(BigInteger)
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    consumed: Mapped[bool] = mapped_column(Boolean, default=False)
+    __table_args__ = (
+        ForeignKeyConstraint(['product_id', 'user_id'], ['products.id', 'products.user_id']),
+        CheckConstraint("purpose IN ('notification_email','card_block')"),
+    )
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -228,6 +279,24 @@ class AssistantTurn(Base):
     response: Mapped[dict] = mapped_column(JSON)
 
 
+class VoiceSession(Base):
+    __tablename__ = 'voice_sessions'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), index=True)
+    auth_hash: Mapped[str] = mapped_column(String(64))
+    request_key: Mapped[str] = mapped_column(String(64))
+    provider_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default='connecting')
+    locale: Mapped[str] = mapped_column(String(2))
+    created_at: Mapped[int] = mapped_column(BigInteger)
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    heartbeat_at: Mapped[int] = mapped_column(BigInteger)
+    state: Mapped[dict] = mapped_column(JSON, default=dict)
+    __table_args__ = (ForeignKeyConstraint(['conversation_id','user_id'], ['conversations.id','conversations.user_id']),
+        UniqueConstraint('user_id','request_key'), CheckConstraint("status IN ('connecting','active','closing','closed','failed')"))
+
+
 class TransferQuote(Base):
     __tablename__ = "transfer_quotes"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -276,3 +345,50 @@ class ChatDocument(Base):
     content: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (ForeignKeyConstraint(["conversation_id", "user_id"], ["conversations.id", "conversations.user_id"]), UniqueConstraint("user_id", "request_key"))
+
+class ChatFeedback(Base):
+    __tablename__ = "chat_feedback"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    submission_id: Mapped[str] = mapped_column(String(36))
+    metric: Mapped[str] = mapped_column(String(8))
+    score: Mapped[int] = mapped_column(Integer)
+    locale: Mapped[str] = mapped_column(String(2))
+    form_duration_ms: Mapped[int | None] = mapped_column(Integer)
+    conversation_duration_ms: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        UniqueConstraint("user_id", "submission_id"),
+        CheckConstraint("metric IN ('nps','csat','ces')"),
+        CheckConstraint("(metric = 'nps' AND score BETWEEN 0 AND 10) OR (metric = 'csat' AND score BETWEEN 1 AND 5) OR (metric = 'ces' AND score BETWEEN 1 AND 7)"),
+        CheckConstraint("locale IN ('es','en','pt')"),
+        CheckConstraint("form_duration_ms BETWEEN 0 AND 86400000"),
+        CheckConstraint("conversation_duration_ms BETWEEN 0 AND 604800000")
+    )
+
+
+class AttentionReview(Base):
+    """Completion of an attention episode, separate from financial operations."""
+    __tablename__ = 'attention_reviews'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    conversation_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    resolved_by: Mapped[str] = mapped_column(ForeignKey('users.id'))
+    summary: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default='scheduled', index=True)
+    confirmed_at: Mapped[int] = mapped_column(BigInteger)
+    due_at: Mapped[int] = mapped_column(BigInteger, index=True)
+    closed_at: Mapped[int | None] = mapped_column(BigInteger)
+    checkpoint: Mapped[dict] = mapped_column(JSON, default=dict)
+    snapshots: Mapped[list] = mapped_column(JSON, default=list)
+    answers: Mapped[dict] = mapped_column(JSON, default=dict)
+    answer_revision: Mapped[int] = mapped_column(Integer, default=0)
+    submitted_at: Mapped[int | None] = mapped_column(BigInteger)
+    __table_args__ = (
+        ForeignKeyConstraint(['request_id', 'user_id'], ['requests.id', 'requests.user_id']),
+        ForeignKeyConstraint(['conversation_id', 'user_id'], ['conversations.id', 'conversations.user_id']),
+        CheckConstraint('(request_id IS NULL) <> (conversation_id IS NULL)'),
+        CheckConstraint("status IN ('scheduled','closed','reopened')"),
+        CheckConstraint('due_at = confirmed_at + 900'),
+    )

@@ -1,12 +1,32 @@
 """Read-only case dossier. Links come from stored owner/reference IDs, never text."""
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import and_, func, or_, select
 
-from .models import AuditEvent, CardProfile, Conversation, Message, Product, Refund, RequestCase, Transaction, User, now
+from .models import AuditEvent, CardProfile, ChatDocument, Conversation, Message, Product, Refund, RequestCase, Transaction, User, now
 from .operations import iso_utc, refund_view
+from .query_documents import document_view
+from .payment_history import compare_payments, comparison_text
 from .security import admin, customer_read, db_session
+
+
+def case_conversations(case):
+    """Stored references only; matching text is never a link or an authorization."""
+    direct = select(AuditEvent.conversation_id).where(
+        AuditEvent.user_id == case.user_id, AuditEvent.request_id == case.id,
+        AuditEvent.action.not_in(['case_document_opened', 'case_document_downloaded']),
+        AuditEvent.conversation_id.is_not(None))
+    match = Conversation.id.in_(direct)
+    if case.transaction_id:
+        match = or_(match, Conversation.transaction_id == case.transaction_id)
+    return select(Conversation.id).where(Conversation.user_id == case.user_id, match)
+
+
+def case_documents(case):
+    return and_(ChatDocument.user_id == case.user_id, or_(
+        ChatDocument.details['requestId'].as_string() == case.id,
+        ChatDocument.conversation_id.in_(case_conversations(case))))
 
 
 def trace_router(request_view, audit_view, conversation_view):
@@ -22,12 +42,7 @@ def trace_router(request_view, audit_view, conversation_view):
 
         # A conversation with the same movement is related context, not proof that
         # the customer discussed this specific claim in every message.
-        direct_conversations = select(AuditEvent.conversation_id).where(
-            AuditEvent.user_id == owner, AuditEvent.request_id == case.id, AuditEvent.conversation_id.is_not(None))
-        conversation_match = Conversation.id.in_(direct_conversations)
-        if transaction:
-            conversation_match = or_(conversation_match, Conversation.transaction_id == transaction.id)
-        conversation_ids = select(Conversation.id).where(Conversation.user_id == owner, conversation_match)
+        conversation_ids = case_conversations(case)
         references = [AuditEvent.request_id == case.id,
                       and_(AuditEvent.request_id.is_(None), AuditEvent.conversation_id.in_(conversation_ids))]
         if transaction:
@@ -60,6 +75,18 @@ def trace_router(request_view, audit_view, conversation_view):
                          for c in conv_rows[:20]]
         decision_actor = db.get(User, refund.decided_by) if refund and refund.decided_by else None
         outcome = "refund_" + refund.status if refund else case.status
+        financial_case = case.reason in {'unknown', 'amount', 'payment'} or case.catalog_service_id in {
+            'unrecognized-charge', 'incorrect-charge', 'payment-status'}
+        comparison = compare_payments(db, transaction) if transaction and financial_case else None
+        missing = []
+        if financial_case and not transaction:
+            missing.append('movement')
+        elif financial_case and transaction and transaction.status == 'pending':
+            missing.append('payment_confirmation')
+        if comparison and comparison.get('status') != 'sufficient':
+            missing.append('comparable_history')
+        if comparison and not comparison.get('serviceAgreement'):
+            missing.append('contract_if_applicable')
         result = {
             "request": request_view(case, customer.name, refund),
             "customer": {"id": customer.id, "name": customer.name},
@@ -76,6 +103,14 @@ def trace_router(request_view, audit_view, conversation_view):
             "conversations": conversations,
             "conversationCount": db.scalar(select(func.count()).select_from(Conversation).where(Conversation.id.in_(conversation_ids))),
             "nextConversationOffset": conversation_offset + 20 if len(conv_rows) > 20 else None,
+            "documentCount": db.scalar(select(func.count()).select_from(ChatDocument).where(case_documents(case))) if reader.role == 'admin' else None,
+            "reviewContext": {
+                "summary": {locale: comparison_text(comparison, locale) for locale in ('es', 'en', 'pt')},
+                "missingEvidence": missing,
+                "canStartReview": reader.role == 'admin' and case.status == 'received',
+                "canDecideRefund": reader.role == 'admin' and bool(refund and refund.status == 'pending'),
+                "financialEffect": ('credited' if refund and refund.status == 'approved' else 'none'),
+            },
             "source": "nexqori_records", "externalProcessorLogs": False,
         }
         # Viewing a dossier is itself auditable, without persisting its contents.
@@ -98,5 +133,44 @@ def trace_router(request_view, audit_view, conversation_view):
         if not case:
             raise HTTPException(404, "not_found")
         return dossier(db, case, user, before, conversationOffset)
+
+    def authorized_case(db, user_id, request_id):
+        case = db.scalar(select(RequestCase).where(RequestCase.id == request_id, RequestCase.user_id == user_id))
+        if not case:
+            raise HTTPException(404, 'not_found')
+        return case
+
+    @router.get('/admin/users/{user_id}/requests/{request_id}/documents')
+    def documents(user_id: str, request_id: str, offset: int = Query(0, ge=0, le=100000),
+                  user=Depends(admin), db=Depends(db_session)):
+        case = authorized_case(db, user_id, request_id)
+        rows = db.scalars(select(ChatDocument).where(case_documents(case)).order_by(
+            ChatDocument.created_at.desc(), ChatDocument.id.desc()).offset(offset).limit(21)).all()
+        result = {'documents': [{**document_view(doc), 'relation': 'request' if doc.details.get('requestId') == case.id
+                                else 'conversation'} for doc in rows[:20]],
+                  'nextOffset': offset + 20 if len(rows) > 20 else None}
+        db.add(AuditEvent(id=str(uuid4()), user_id=user_id, actor_id=user.id, request_id=case.id,
+                          action='case_documents_viewed'))
+        db.commit()
+        return result
+
+    @router.get('/admin/users/{user_id}/requests/{request_id}/documents/{document_id}')
+    def document(user_id: str, request_id: str, document_id: str, download: bool = False,
+                 user=Depends(admin), db=Depends(db_session)):
+        case = authorized_case(db, user_id, request_id)
+        doc = db.scalar(select(ChatDocument).where(ChatDocument.id == document_id, case_documents(case)))
+        if not doc:
+            raise HTTPException(404, 'not_found')
+        db.add(AuditEvent(id=str(uuid4()), user_id=user_id, actor_id=user.id, request_id=case.id,
+                          conversation_id=doc.conversation_id,
+                          action='case_document_downloaded' if download else 'case_document_opened'))
+        content = doc.content
+        # Fixed safe filename: never copy user-supplied names into response headers.
+        filename = 'nexqori-document.pdf'
+        db.commit()
+        return Response(content, media_type='application/pdf', headers={
+            'Content-Disposition': f'{"attachment" if download else "inline"}; filename="{filename}"',
+            'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+            'Referrer-Policy': 'no-referrer'})
 
     return router

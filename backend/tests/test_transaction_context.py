@@ -9,7 +9,7 @@ from backend.tests.test_operations import make_refund, approve_payload
 
 
 def chat(**extra):
-    return {'message':'Verificación: explica este movimiento sin realizar operaciones.', 'locale':'es', 'currentPage':'movements', **extra}
+    return {'message':{'es':'Verificación: explica este movimiento sin realizar operaciones.','en':'Explain this transaction without performing operations.','pt':'Explique esta movimentação sem realizar operações.'}[extra.get('locale','es')], 'locale':'es', 'currentPage':'movements', **extra}
 
 
 @pytest.mark.parametrize('locale', ['es','en','pt'])

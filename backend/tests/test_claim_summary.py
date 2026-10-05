@@ -59,6 +59,13 @@ def test_query_then_problem_summary_excludes_chat_and_registration_persists_once
     count = len(calls)
     before = client.get('/api/bootstrap').json()
     value = preview(client, cid, locale)
+    findings = third.json()['text']
+    assert findings.startswith({'es':'Esto es lo que encontré:', 'en':'Here is what I found:', 'pt':'Veja o que encontrei:'}[locale])
+    assert 'TX-1002' in findings and 'Stream Plus' in findings
+    assert value['summary'].split('\n\n')[1] in findings
+    assert question not in findings and assent not in findings
+    assert not third.json()['flow']['requestId']
+    assert 'Stream Plus' not in json.dumps(calls)
     assert question not in value['summary'] and assent not in value['summary']
     assert 'TX-1002' in value['summary'] and 'Stream Plus' in value['summary']
     assert value['summary'].startswith(TITLES['unrecognized-charge'][('es','en','pt').index(locale)])

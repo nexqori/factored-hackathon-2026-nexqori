@@ -20,8 +20,9 @@ for i in range(45):
         'amount_display':'MXN -1,250.50','status':'completed'}})
     facts.append({'source_ref':f'requests:verification-{i}','values':{'id':f'NQ-VERIFICATION-{i:03d}',
         'service':'payments','status':'in_review','created_at':'2026-09-28T18:30:00+00:00','updated_at':'2026-09-29T18:30:00+00:00'}})
+facts += [{'source_ref':f['source_ref'].replace('requests:','claims:'),'values':{**f['values'],'id':f['values']['id'].replace('NQ-','CL-')}} for f in list(facts) if f['source_ref'].startswith('requests:')]
 report=[]
-for kind,lang in [('statement','es'),('products_summary','en'),('requests_summary','pt')]:
+for kind,lang in [('statement','es'),('products_summary','en'),('requests_summary','pt'),('claims_summary','es')]:
     packet={'type':kind,'generated_at':'2026-10-02T15:00:00+00:00','fields':{'all_history':True},'facts':facts}
     raw=generar_pdf(packet,customer_name='María José Fernández — Verificación',language=lang)
     name=f'{kind}-{lang}.pdf';(folder/name).write_bytes(raw)
@@ -31,6 +32,7 @@ for kind,lang in [('statement','es'),('products_summary','en'),('requests_summar
     compact=''.join(text.split())
     if kind=='statement':assert '<textoliteral>' in compact and 'TX-VERIFICATION-044' in compact
     if kind=='requests_summary':assert 'NQ-VERIFICATION-044' in compact
+    if kind=='claims_summary':assert 'CL-VERIFICATION-044' in compact and 'NQ-VERIFICATION' not in compact
     report.append({'file':name,'pages':len(pages),'bytes':len(raw),'textChecked':True})
 (folder/'report.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
 print(json.dumps({'folder':str(folder),'documents':report},ensure_ascii=True))

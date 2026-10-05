@@ -12,6 +12,7 @@ from backend.models import Base, User, Product, Transaction, now
 from backend.security import hasher
 from backend.main import create_app
 from backend import workflow_chat as chat
+chat.inspect_prompt=lambda *a,**k: {'status':'allowed'}
 
 if os.getenv('NEXQORI_CHAT_UI_CHECK') != '1': raise RuntimeError('Explicit isolated UI test required')
 folder=Path(os.environ['NEXQORI_CHAT_UI_DATA']).resolve()
@@ -30,6 +31,11 @@ with make_sessions(engine)() as db:
             db.add(Product(id=account,user_id=uid,type='account',last4='9001',balance_minor=150000));db.flush()
             db.add(Transaction(id=tx,user_id=uid,product_id=account,merchant='Empresa Telefónica' if intent=='unrecognized-charge' else 'Registro privado del banco',category='utilities',amount_minor=-18500,currency='MXN',occurred_at=now(),status='pending' if intent=='payment-status' else 'completed'))
             alternate='alternate-'+uid
+            if intent == 'incorrect-charge':
+                for month in range(1,4):
+                    db.add(Transaction(id=f'history-{month}-{uid}',user_id=uid,product_id=account,
+                        merchant='Registro privado del banco',category='utilities',amount_minor=-10000,
+                        currency='MXN',occurred_at=now()-timedelta(days=30*month),status='completed'))
             db.add(Transaction(id=alternate,user_id=uid,product_id=account,merchant='Comercio alternativo privado',category='shopping',amount_minor=-9900,currency='MXN',occurred_at=now()-timedelta(days=1),status='pending' if intent=='payment-status' else 'completed'))
             people.append({'email':email,'password':password,'locale':locale,'intent':intent,'transactionId':tx,'alternateTransactionId':alternate})
     db.commit()
@@ -39,7 +45,7 @@ def triage(messages,language,*args,**kw):
     calls.append({'model':'triage','messages':messages.copy()});return {'status':'ok','family':'problem'},{}
 def classify(messages,language,*args,**kw):
     calls.append({'model':'jev','messages':messages.copy()})
-    intent=next(intent for intent in ('unrecognized-charge','incorrect-charge','payment-status') if intent in messages[0]['content'])
+    intent=next(intent for index,intent in enumerate(('unrecognized-charge','incorrect-charge','payment-status'),1) if f'[CASE-{index}]' in messages[0]['content'])
     return {'status':'ok','intent':intent},{}
 def extract(messages,language,fields,*args,**kw):
     calls.append({'model':'llm','messages':messages.copy()})

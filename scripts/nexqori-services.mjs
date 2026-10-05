@@ -89,6 +89,7 @@ try {
   result.checks.push('specific service navigation from assistant; ES/EN/PT and responsive forms');
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
   await login('admin@nexqori.com', credentials.ADMIN_PASSWORD);
+  await page.locator('.admin-other-requests > summary').click();
   await page.locator('.case-card').filter({ hasText: id }).click();
   await page.locator('dialog').waitFor(); assert.ok((await page.locator('dialog').textContent()).includes(note));
   result.checks.push('admin receives the selected service and structured details');

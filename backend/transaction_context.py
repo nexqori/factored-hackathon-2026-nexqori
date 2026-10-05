@@ -3,6 +3,7 @@ from decimal import Decimal
 from fastapi import HTTPException
 from sqlalchemy import select
 from .models import Transaction, RequestCase, Refund, AuditEvent
+from .payment_history import compare_payments, comparison_text
 
 COPY = {
     "es": {
@@ -48,6 +49,7 @@ def transaction_evidence(db, owner_id, transaction_id):
     events = db.scalars(select(AuditEvent).where(AuditEvent.user_id == owner_id, AuditEvent.request_id == case.id, AuditEvent.action.in_(actions)).order_by(AuditEvent.created_at.desc()).limit(20)).all() if case else []
     return {
         "source": "nexqori_records", "externalProcessorLogs": False,
+        "historyComparison": compare_payments(db, tx),
         "transaction": {"id":tx.id,"productId":tx.product_id,"merchant":tx.merchant,"amountMinor":tx.amount_minor,"currency":tx.currency,"status":tx.status,"date":tx.occurred_at.isoformat()},
         "request": {"id":case.id,"status":case.status} if case else None,
         "refund": {"id":refund.id,"status":refund.status,"creditTransactionId":refund.credit_transaction_id} if refund else None,
@@ -63,6 +65,8 @@ def transaction_reply(evidence, locale):
     if locale == 'pt':
         amount = amount.translate(str.maketrans({',':'.','.':','}))
     lines = [copy['record'].format(**(tx | {'amount':amount,'status':copy[tx['status']]}))]
+    history = comparison_text(evidence.get('historyComparison'), locale)
+    if history: lines.append(history)
     lines.append(copy['case'].format(id=case['id']) if case else copy['no_case'])
     if refund:
         lines.append(copy['refund'].format(id=refund['id'],status=copy['refund_'+refund['status']]))

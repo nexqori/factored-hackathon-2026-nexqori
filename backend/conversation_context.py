@@ -80,9 +80,9 @@ def safe_query_reply(intent, locale, *, reference_needed=False):
     """Static descriptions only; never interpolate evidence, IDs or amounts."""
     i = ('es', 'en', 'pt').index(locale)
     if reference_needed:
-        return ('Elige el caso en Detalles → Datos del caso para consultar su seguimiento.',
-                'Choose the case in Details → Case details to check its progress.',
-                'Escolha o caso em Detalhes → Dados do caso para consultar seu andamento.')[i]
+        return ('Abre Detalles, activa Un caso, elige el registro y pulsa Usar selección para consultar su seguimiento.',
+                'Open Details, select A case, choose the record and press Use selection to check its progress.',
+                'Abra Detalhes, marque Um caso, escolha o registro e pressione Usar seleção para consultar seu andamento.')[i]
     extra = {
         'documents': ('documentos informativos en PDF', 'informational PDF documents', 'documentos informativos em PDF'),
         'request-status': ('seguimiento del caso seleccionado', 'tracking the selected case', 'acompanhamento do caso selecionado'),
@@ -108,3 +108,15 @@ def safe_suggestion_reply(locale):
 def remember_safe_reply(state, text):
     if text and state['messages'] and state['messages'][-1]['role'] == 'assistant':
         state['messages'][-1] = {'role': 'assistant', 'content': text}
+
+
+def refines_problem_type(message, intent):
+    """A new specific symptom can reopen classification, never select a contract itself."""
+    if intent not in ('payment-status','incorrect-charge','unrecognized-charge'):return False
+    text=normalize(message)
+    amount=r'\b(?:me cobraron de mas|importe (?:es )?incorrecto|monto (?:es )?incorrecto|cobro excesivo|charged (?:me )?too much|overcharged|wrong amount|cobraram a mais|valor (?:esta )?incorreto)\b'
+    unknown=r'\b(?:no reconozco (?:este |el |ese )?(?:cargo|pago)|do not recognize (?:this |the )?(?:charge|payment)|nao reconheco (?:essa |esta |a )?(?:cobranca|pagamento))\b'
+    # These cues only request Jev's re-evaluation with the full safe conversation.
+    # Negated/quoted cases are still adjudicated by Jev, not by these patterns.
+    return bool((intent!='incorrect-charge' and re.search(amount,text)) or
+                (intent!='unrecognized-charge' and re.search(unknown,text)))

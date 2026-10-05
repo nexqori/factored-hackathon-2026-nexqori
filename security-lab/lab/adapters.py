@@ -18,7 +18,7 @@ ORIGIN = "http://localhost:5191"
 CUSTOMER_ROUTES = {
     "home": "/", "products": "/products", "movements": "/movements",
     "requests": "/requests", "complaints": "/complaints", "documents": "/documents", "services": "/services",
-    "help": "/help", "accounts": "/products?kind=accounts", "cards": "/products?kind=cards",
+    "help": "/help", "accounts": "/products?kind=accounts", "cards": "/cards",
     "transfers": "/services/transfers", "payments": "/services/payments",
     "loans": "/services/loans", "investments": "/services/investments",
     "insurance": "/services/insurance", "cash": "/services/cash", "settings": "/settings",

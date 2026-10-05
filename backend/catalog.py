@@ -41,3 +41,9 @@ def search_services(query="", category=None, locale="es"):
 def service_view(item, locale):
     return {**{key: item[key] for key in ("id", "category", "kind", "icon", "provider", "referenceKind", "target", "reason")},
             "title": item["copy"][locale]["title"], "summary": item["copy"][locale]["summary"], "workflow": workflow_view(item["id"], locale)}
+
+
+def request_kind(record):
+    """Use the same historical/catalog boundary in screens and documents."""
+    reference = record.catalog_service_id
+    return "claim" if not reference or SERVICES.get(reference, {}).get("kind") == "claim" else "application"

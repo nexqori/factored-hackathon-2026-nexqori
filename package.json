@@ -12,11 +12,16 @@
     "test:ui": "node scripts/nexqori-smoke.mjs",
     "test:experience": "node scripts/nexqori-experience.mjs",
     "test:claims": "node scripts/nexqori-claims.mjs",
+    "test:attention": "npm run build && node scripts/nexqori-attention.mjs",
+    "test:notifications": "npm run build && node scripts/nexqori-notifications.mjs",
+    "test:spending": "npm run build && node scripts/nexqori-spending.mjs",
+    "test:spending:prepare": "node scripts/prepare-spending-cases.mjs --confirm-local --pack=equipo-ux",
     "test:services": "node scripts/nexqori-services.mjs",
     "setup": "node scripts/setup-local.mjs",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "test:api": "python -m pytest backend/tests -q",
+    "test:chat:profile": "npm run build && node scripts/nexqori-chat-profile.mjs",
     "test:cards": "node scripts/nexqori-cards.mjs",
     "test:cases": "node scripts/nexqori-cases.mjs",
     "test:cases:prepare": "node scripts/nexqori-cases.mjs --prepare",
@@ -33,7 +38,8 @@
     "test:banking": "node scripts/nexqori-banking-integrated.mjs",
     "test:documents:context": "npm run build && node scripts/nexqori-document-context.mjs",
     "test:ux:prepare": "node scripts/prepare-ux-users.mjs --confirm-local --pack=equipo-ux",
-    "test:pdf": "python scripts/verify-query-pdfs.py"
+    "test:pdf": "python scripts/verify-query-pdfs.py",
+    "test:voice:ui": "npm run build && node scripts/nexqori-voice-ui.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

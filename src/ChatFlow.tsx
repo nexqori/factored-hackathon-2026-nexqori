@@ -9,6 +9,8 @@ import type { Message } from './types';
 
 export type FlowResult = { canDocument?: boolean; execution: {phase: string}; workflow_id: string; workflow_revision: number; state: string; reply: string;
   suggestedTransaction?: {id:string} | null;
+  transactionSearch?: {kind:'browse'|'suggestion'|'no_match';count:number;hasMore:boolean} | null;
+  selectedRequestId?: string | null;
   jev: {intent?: string; status: string}; triage: {family?: string}; canRegister: boolean; requestId: string | null; latency_ms: number;
   missing_fields: string[]; verified_facts: {field: string; value: string; reference_id: string}[];
   trace: {node_id: string; label: Record<string,string>; kind: string; status: string; latency_ms: number}[] };
@@ -16,7 +18,7 @@ export type FlowResult = { canDocument?: boolean; execution: {phase: string}; wo
 export type ClaimRegistration = { id: string; message: Message; summary: string; nextStep: string; flow: FlowResult };
 type ClaimPreview = { summary: string; previewToken: string; intent: string; transactionId: string | null; operationLabel: string; nextStep: string };
 
-export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; onRegistered: (claim: ClaimRegistration) => void }) {
+export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; onRegistered: (claim: ClaimRegistration) => void }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const summaryLabelId = useId();
   const [review, setReview] = useState(false); const [details, setDetails] = useState(''); const [confirmed, setConfirmed] = useState(false);
@@ -42,13 +44,14 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
       setError('error.' + (e instanceof ApiError ? e.code : 'generic'));
     } finally { setBusy(false); }
   }
-  return <section className="chat-flow" aria-label={t('chatFlow.title')}><h3>{t('chatFlow.title')}</h3>
+  return <section className="chat-flow" aria-label={t('chatFlow.title')}>{!actionsOnly && <><h3>{t('chatFlow.title')}</h3>
     <div className="flow-result"><strong>{result.jev.intent && catalogIds.has(result.jev.intent) ? serviceTitle(result.jev.intent, locale) : t(i18n.exists('chatFlow.intent.' + result.jev.intent) ? 'chatFlow.intent.' + result.jev.intent : 'chatFlow.classifying')}</strong><p>{t('chatFlow.state.' + result.state)}</p></div>
     {!!result.verified_facts.length && <details><summary>{t('chatFlow.evidence', {count: result.verified_facts.length})}</summary><ul className="chat-flow-facts">{result.verified_facts.map(f => <li key={f.field}>{f.value}{technical && <small>· {f.reference_id}</small>}</li>)}</ul></details>}
     {technical && <details><summary>{t('chatFlow.steps', {count: result.trace.length})} · {(result.latency_ms / 1000).toFixed(1)} s</summary><ol>{result.trace.map((step, index) => <li key={index}>{step.label[locale]}<small>{t(step.status === 'ok' ? 'chatFlow.checked' : 'chatFlow.failed')} · {step.latency_ms.toFixed(0)} ms</small></li>)}</ol><details><summary>{t('chatFlow.json')}</summary><pre>{JSON.stringify(result,null,2)}</pre></details></details>}
+    </>}
     {!readOnly && result.canRegister && <button className="button primary wide" onClick={() => { void loadPreview(); }}>{t('chatFlow.prepareClaim')}</button>}
     {!readOnly && result.requestId && <Link className="button secondary wide" to={'/complaints?case=' + encodeURIComponent(result.requestId)}>{t('chatFlow.follow')} · {result.requestId}</Link>}
-    {!readOnly && result.jev.intent === 'unrecognized-charge' && <p><Link to="/cards">{t('chatFlow.cards')}</Link></p>}
+    {!actionsOnly && !readOnly && result.jev.intent === 'unrecognized-charge' && <p><Link to="/cards">{t('chatFlow.cards')}</Link></p>}
     {review && <Dialog title={t('chatFlow.prepareClaim')} onClose={() => setReview(false)} busy={busy} className="chat-claim-review"><form className="form-stack" onSubmit={e => { e.preventDefault(); void register(); }}>
       <p>{t('chatClaim.reviewHint')}</p>
       {busy && !preview && <p role="status">{t('loading')}</p>}

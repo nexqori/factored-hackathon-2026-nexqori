@@ -1,0 +1,14 @@
+.attention-review { margin-block: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--nq-border); min-width: 0; }
+.attention-review h3 { margin: 0 0 .75rem; }
+.attention-status { display: grid; gap: .4rem; }
+.attention-status strong { color: var(--nq-primary); }
+.attention-status span { color: var(--nq-muted); font-size: .85rem; }
+.attention-review textarea { min-height: 90px; width: 100%; resize: vertical; }
+.attention-review .survey-actions { margin-block: .8rem; }
+.attention-review .confirmation { display: flex; align-items: flex-start; gap: .65rem; }
+.attention-review .confirmation input { flex: 0 0 auto; width: auto; margin-top: .3rem; }
+.attention-review dd { overflow-wrap: anywhere; }
+.attention-review .survey-scale-csat { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.attention-review .survey-scale-csat .survey-score { min-width: 0; min-height: 90px; padding: .3rem .15rem; }
+.attention-review .survey-scale-nps small, .attention-review .survey-scale-ces small { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.attention-review .survey-score:has(input:checked) small { color: var(--nq-text); }

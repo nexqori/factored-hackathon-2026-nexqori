@@ -1,0 +1,7 @@
+{
+	admin off
+}
+
+{$PUBLIC_DOMAIN} {
+	reverse_proxy web:8080
+}

@@ -97,13 +97,21 @@ def test_duplicate_last_four_invalid_saved_selection_and_explicit_all():
 
 
 def test_request_refs_are_unique_own_and_separate_from_product_refs():
-    cases=[SimpleNamespace(id='NQ-1001'),SimpleNamespace(id='NQ-1002')]
+    cases=[SimpleNamespace(id='NQ-1001',catalog_service_id='personal-loan'),SimpleNamespace(id='NQ-1002',catalog_service_id='personal-loan')]
     def result(text):return query.resolve_defaults([{'role':'user','content':text}],PRODUCTS,cases,today=TODAY)
     value=result('Seguimiento NQ-1001')
     assert value['draft']=={'kind':'requests_summary','scope':'selected','requestId':'NQ-1001'}
     assert 'selection' in result('NQ-1001 y NQ-1002')['missing']
     assert 'selection' in result('NQ-9999')['missing']
     assert 'selection' in result('NQ-')['missing']
+
+
+def test_explicit_document_type_does_not_switch_for_opposite_case_reference():
+    cases=[SimpleNamespace(id='NQ-1001',catalog_service_id='personal-loan'),SimpleNamespace(id='NQ-1002',catalog_service_id='incorrect-charge')]
+    for text,kind in [('PDF solicitudes NQ-1002','requests_summary'),('PDF reclamos NQ-1001','claims_summary')]:
+        value=query.resolve_defaults([{'role':'user','content':text}],PRODUCTS,cases,today=TODAY)
+        assert value['draft']['kind']==kind and 'requestId' not in value['draft']
+        assert value['missing']==['selection']
 
 
 @pytest.mark.parametrize('locale,text,pdf',[

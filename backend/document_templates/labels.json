@@ -41,7 +41,8 @@
     "investments": "Inversiones",
     "insurance": "Seguros",
     "cash": "Efectivo",
-    "support": "Soporte"
+    "support": "Soporte",
+    "claims": "Reclamos"
   },
   "en": {
     "unavailable": "Unavailable",
@@ -85,7 +86,8 @@
     "investments": "Investments",
     "insurance": "Insurance",
     "cash": "Cash",
-    "support": "Support"
+    "support": "Support",
+    "claims": "Complaints"
   },
   "pt": {
     "unavailable": "Indisponível",
@@ -129,6 +131,7 @@
     "investments": "Investimentos",
     "insurance": "Seguros",
     "cash": "Dinheiro",
-    "support": "Suporte"
+    "support": "Suporte",
+    "claims": "Reclamações"
   }
 }

@@ -2,6 +2,7 @@ import os
 import secrets
 import time
 import re
+from datetime import timedelta, timezone
 from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import FastAPI, Request, Depends, HTTPException, Query
@@ -11,12 +12,17 @@ from sqlalchemy import select, delete, func, or_, and_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
 from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, Refund, now
-from .schemas import CardRevealInput, RegisterInput, ExperienceInput
+from .schemas import CardRevealInput, CardCvvInput, RegisterInput, ExperienceInput, ProfileFieldInput
 from .models import CustomerProfile
 from .customer_profile import adult_birth_date, experience_view
 from .workflows import workflow_view
-from .cards import reveal_local_card
+from .catalog import request_kind
+from .cards import reveal_local_card, local_card_available, refresh_local_cvv
 from .operations import operations_router
+from .notifications import notifications_router, email_required
+from .spending import spending_router
+from .provider_updates import ProviderUpdates, provider_updates_router
+from .attention import AttentionClock, attention_router
 from .agent_tools import agent_tools_router
 from .claim_trace import trace_router
 from .payments import payment_router
@@ -24,11 +30,18 @@ from .transfers import transfer_router
 from .query_documents import document_router, document_view
 from .models import BillPayment, BankTransfer, iso_utc
 from .workflow_chat import chat_router, flow_view
+from .voice import VoiceRuntime, voice_router
 from .models import ConversationFlow
 from .schemas import Login, LocaleInput, PreferencesInput, RequestInput, ConfirmInput, ChatInput, ServiceRequestInput, Locale
 from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
+from .models import ChatFeedback
+from .schemas import ChatFeedbackInput
 from .assistant import answer
+from .chat_commands import application_command
+from .chat_language import wrong_language, language_reply
+from .conversation_closed import require_open, document_closed
+from sqlalchemy.orm import object_session
 from .presentation import present_message
 from .transaction_context import transaction_evidence, transaction_reply
 
@@ -36,7 +49,7 @@ def user_view(user):
     return {"id":user.id,"email":user.email,"name":user.name,"role":user.role,"locale":user.locale,"textSize":user.text_size,"experience":experience_view(user.profile)}
 
 def conversation_view(c):
-    return {"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
+    return {"closed":document_closed(object_session(c),c),"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
 
 def message_view(m):
     document = m.document if m.document and m.document.user_id == m.user_id and m.document.conversation_id == m.conversation_id else None
@@ -48,7 +61,7 @@ def request_view(r, name=None, refund=None):
         operation = {"id":refund.id,"status":refund.status,"amountMinor":refund.amount_minor,"currency":refund.currency,
                      "createdAt":refund.created_at.isoformat(),"decidedAt":refund.decided_at.isoformat() if refund.decided_at else None,
                      "creditTransactionId":refund.credit_transaction_id}
-    kind = 'claim' if not r.catalog_service_id or SERVICES.get(r.catalog_service_id, {}).get('kind') == 'claim' else 'application'
+    kind = request_kind(r)
     return {"id":r.id,"kind":kind,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation}
 
 def audit_view(e, name):
@@ -68,7 +81,8 @@ class BodyLimit:
             message=await receive()
             if message["type"]=="http.disconnect": return
             chunk=message.get("body",b""); total+=len(chunk)
-            if total>self.maximum:
+            maximum=65536 if scope['path']=='/api/voice/sessions' else self.maximum
+            if total>maximum:
                 return await JSONResponse({"error":"payload_too_large"},413)(scope,receive,send)
             chunks.append(chunk)
             if not message.get("more_body"): break
@@ -88,10 +102,20 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     secure=secure_cookies if secure_cookies is not None else os.getenv("COOKIE_SECURE","true")=="true"
     @asynccontextmanager
     async def lifespan(_):
+        app.state.voice.recover()
+        app.state.provider_updates.start()
+        app.state.attention_clock.start()
         yield
+        app.state.provider_updates.shutdown()
+        app.state.attention_clock.shutdown()
+        app.state.voice.shutdown()
         if owned_engine: engine.dispose()
     app=FastAPI(title="Nexqori API",version="0.2.0",docs_url=None,openapi_url="/api/openapi.json",redoc_url=None,lifespan=lifespan)
     app.state.sessions=make_sessions(engine)
+    app.state.attention_clock=AttentionClock(app.state.sessions)
+    app.state.provider_updates=ProviderUpdates.from_env()
+    app.state.sessions.configure(info={'provider_updates':app.state.provider_updates})
+    app.state.voice=VoiceRuntime(app.state.sessions,conversation_view,message_view)
     limiter=LoginLimiter(login_limit)
     card_limiter=LoginLimiter(5)
     registration_limiter=LoginLimiter(10)
@@ -158,6 +182,22 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def get_experience(user=Depends(customer_read)):
         return {"birthDate":user.profile.birth_date.isoformat() if user.profile else "", "experience":experience_view(user.profile)}
 
+    @app.patch('/api/profile/field')
+    def set_profile_field(payload: ProfileFieldInput, user=Depends(customer), db=Depends(db_session)):
+        db.scalar(select(User).where(User.id==user.id).with_for_update())
+        allowed = {'textSize': ('small','medium','large'), 'bankingExperience': ('new','occasional','frequent'),
+                   'digitalExperience': ('new','learning','confident'), 'assistance': ('auto','guided','standard')}
+        value = adult_birth_date(payload.value) if payload.field=='birthDate' else payload.value
+        if payload.field in allowed and value not in allowed[payload.field]: raise HTTPException(422,'validation')
+        if payload.field=='textSize': user.text_size=value
+        else:
+            if not user.profile: raise HTTPException(409,'profile_required')
+            setattr(user.profile, {'birthDate':'birth_date','bankingExperience':'banking_experience','digitalExperience':'digital_experience','assistance':'assistance'}[payload.field], value)
+            user.profile.updated_at=now()
+        add_audit(db,user.id,'preferences_updated' if payload.field=='textSize' else 'experience_updated',user.id)
+        db.commit()
+        return {'user':user_view(user)}
+
     @app.patch("/api/profile/experience")
     def set_experience(payload: ExperienceInput, user=Depends(customer), db=Depends(db_session)):
         birth=adult_birth_date(payload.birthDate)
@@ -201,9 +241,9 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def cards(user=Depends(customer_read), db=Depends(db_session)):
         rows=db.execute(select(Product, CardProfile).outerjoin(CardProfile, and_(CardProfile.product_id==Product.id, CardProfile.user_id==Product.user_id)).where(Product.user_id==user.id, Product.type=="card")).all()
         return {"cards": [{"id": p.id, "last4": p.last4, "holder": user.name,
-            "expiryMonth": c.expiry_month if c else None, "expiryYear": c.expiry_year if c else None,
-            "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"),
-            "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and c.provider_ref=="local-card-01")} for p,c in rows]}
+            "expiryMonth": None, "expiryYear": None,
+            "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"), "blockRequiresEmail": email_required(),
+            "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and local_card_available(c))} for p,c in rows]}
 
     @app.post("/api/cards/{product_id}/reveal")
     def reveal_card(product_id: str, payload: CardRevealInput, request: Request, user=Depends(customer), db=Depends(db_session)):
@@ -213,8 +253,19 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         if not verify(payload.password, user.password_hash): raise HTTPException(403, "card_password")
         if profile.status=="blocked": raise HTTPException(409, "card_blocked")
         if os.getenv("CARD_PROVIDER")!="local_fixture": raise HTTPException(503, "card_unavailable")
-        result=reveal_local_card(profile)
+        result=reveal_local_card(profile, db.get(Product, product_id).last4, user.password_hash)
         add_audit(db, user.id, "card_details_viewed", user.id)
+        db.commit()
+        return result
+
+    @app.post('/api/cards/{product_id}/cvv')
+    def refresh_cvv(product_id: str, payload: CardCvvInput, user=Depends(customer), db=Depends(db_session)):
+        profile=db.scalar(select(CardProfile).where(CardProfile.product_id==product_id, CardProfile.user_id==user.id).with_for_update())
+        if not profile: raise HTTPException(404, 'not_found')
+        if profile.status=='blocked': raise HTTPException(409, 'card_blocked')
+        if os.getenv('CARD_PROVIDER')!='local_fixture': raise HTTPException(503, 'card_unavailable')
+        result=refresh_local_cvv(profile, user.password_hash, payload.revealToken)
+        add_audit(db, user.id, 'card_cvv_refreshed', user.id)
         db.commit()
         return result
 
@@ -372,7 +423,13 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             conversation=Conversation(id=str(uuid4()),user_id=user.id,title=message[:100],locale=payload.locale,transaction_id=payload.transactionId)
             db.add(conversation); db.flush()
             add_audit(db,user.id,"conversation_started",user.id,conversation_id=conversation.id)
-        if conversation.transaction_id:
+        require_open(db,conversation)
+        command=application_command(instruction,payload.locale) if not payload.pastedText.strip() else None
+        if not command and wrong_language(instruction,payload.locale): command=language_reply(payload.locale)
+        if command:
+            result=command
+            add_audit(db,user.id,"chat_app_command",user.id,conversation_id=conversation.id)
+        elif conversation.transaction_id:
             evidence=transaction_evidence(db,user.id,conversation.transaction_id)
             result=transaction_reply(evidence,payload.locale)
             db.add(AuditEvent(id=str(uuid4()),user_id=user.id,actor_id=user.id,action="transaction_context_viewed",transaction_id=conversation.transaction_id,product_id=evidence['transaction']['productId'],request_id=evidence['request']['id'] if evidence['request'] else None,conversation_id=conversation.id))
@@ -380,10 +437,12 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             balance=db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id==user.id,Product.type.in_(["account","savings"]),Product.currency=="MXN"))
             result=answer(instruction or payload.pastedText,payload.locale,balance,payload.currentPage)
         if result["navigation"]: add_audit(db,user.id,"navigate_"+result["navigation"]["destination"],user.id,conversation_id=conversation.id)
-        user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale)
+        latest=db.scalar(select(func.max(Message.created_at)).where(Message.conversation_id==conversation.id,Message.user_id==user.id))
+        sent_at=max(now(),latest.replace(tzinfo=latest.tzinfo or timezone.utc)+timedelta(microseconds=1)) if latest else now()
+        user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale,created_at=sent_at)
         db.add(user_message)
         db.flush()
-        reply=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="assistant",content=result["text"],locale=payload.locale)
+        reply=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="assistant",content=result["text"],locale=payload.locale,created_at=max(now(),sent_at+timedelta(microseconds=1)))
         db.add(reply)
         add_audit(db,user.id,"message_sent",user.id,conversation_id=conversation.id)
         add_audit(db,user.id,"assistant_replied",user.id,conversation_id=conversation.id)
@@ -391,12 +450,58 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         db.commit()
         return {**result,"conversation":conversation_view(conversation),"messages":[message_view(user_message),message_view(reply)]}
 
+    @app.post("/api/assistant/feedback", status_code=201)
+    def assistant_feedback(payload: ChatFeedbackInput,user=Depends(customer),db=Depends(db_session)):
+        bounds={"nps":(0,10),"csat":(1,5),"ces":(1,7)}
+        lower,upper=bounds[payload.metric]
+        if not lower<=payload.score<=upper:
+            raise HTTPException(422,"invalid_feedback")
+        existing=db.scalar(select(ChatFeedback).where(ChatFeedback.user_id==user.id,ChatFeedback.submission_id==payload.submissionId))
+        if existing:
+            return {"ok":True,"duplicate":True}
+        feedback=ChatFeedback(
+            id=str(uuid4()),user_id=user.id,submission_id=payload.submissionId,
+            metric=payload.metric,score=payload.score,locale=payload.locale,
+            form_duration_ms=payload.formDurationMs,
+            conversation_duration_ms=payload.conversationDurationMs,
+        )
+        db.add(feedback)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            existing=db.scalar(select(ChatFeedback).where(ChatFeedback.user_id==user.id,ChatFeedback.submission_id==payload.submissionId))
+            if existing:
+                return {"ok":True,"duplicate":True}
+            raise HTTPException(409,"conflict")
+        return {"ok":True,"duplicate":False}
     @app.get("/api/admin/overview")
     def admin_overview(_user=Depends(admin),db=Depends(db_session)):
         cases=db.execute(select(RequestCase,User.name).join(User,User.id==RequestCase.user_id).order_by(RequestCase.created_at.desc())).all()
         refunds={r.request_id:r for r in db.scalars(select(Refund))}
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
-        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name,refunds.get(r.id)) for r,name in cases],"audit":[audit_view(e,name) for e,name in events]}
+        feedback={}
+        for metric in ("nps","csat","ces"):
+            count,average,form_time,conversation_time=db.execute(
+                select(
+                    func.count(ChatFeedback.id),
+                    func.avg(ChatFeedback.score),
+                    func.avg(ChatFeedback.form_duration_ms),
+                    func.avg(ChatFeedback.conversation_duration_ms),
+                ).where(ChatFeedback.metric==metric)
+            ).one()
+            promoters= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="nps",ChatFeedback.score>=9)) if metric=="nps" else 0
+            detractors= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="nps",ChatFeedback.score<=6)) if metric=="nps" else 0
+            satisfied= db.scalar(select(func.count(ChatFeedback.id)).where(ChatFeedback.metric=="csat",ChatFeedback.score>=4)) if metric=="csat" else 0
+            feedback[metric]={
+                "responses":count,
+                "averageScore":round(float(average),2) if average is not None else None,
+                "npsScore":round((promoters-detractors)*100/count,1) if metric=="nps" and count else None,
+                "csatPercent":round(satisfied*100/count,1) if metric=="csat" and count else None,
+                "averageFormDurationMs":round(float(form_time)) if form_time is not None else None,
+                "averageConversationDurationMs":round(float(conversation_time)) if conversation_time is not None else None,
+            }
+        return {"users":[user_view(u) for u in db.scalars(select(User).order_by(User.name)).all()],"requests":[request_view(r,name,refunds.get(r.id)) for r,name in cases],"audit":[audit_view(e,name) for e,name in events],"chatFeedback":feedback}
 
     @app.get("/api/admin/audit")
     def audit_history(userId: str | None=None, action: str | None=Query(None,max_length=32), offset: int=Query(0,ge=0,le=100000), _user=Depends(admin),db=Depends(db_session)):
@@ -430,10 +535,15 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         elif case.status!="in_review": raise HTTPException(409,"invalid_transition")
         return {"ok":True}
     app.include_router(operations_router())
+    app.include_router(attention_router())
+    app.include_router(notifications_router())
+    app.include_router(spending_router())
+    app.include_router(provider_updates_router())
     app.include_router(payment_router())
     app.include_router(transfer_router())
     app.include_router(document_router(message_view))
     app.include_router(chat_router(conversation_view, message_view))
+    app.include_router(voice_router())
     app.include_router(agent_tools_router())
     app.include_router(trace_router(request_view, audit_view, conversation_view))
     return app

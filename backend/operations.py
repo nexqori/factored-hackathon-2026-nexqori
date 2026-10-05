@@ -8,10 +8,11 @@ from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from .models import AuditEvent, CardProfile, Product, Refund, RequestCase, Transaction, now
+from .models import AuditEvent, CardProfile, Product, Refund, RequestCase, Transaction, User, NotificationPreference, now
 from .schemas import ConfirmInput
 from .workflows import WORKFLOWS
-from .security import admin, admin_write, customer, customer_read, db_session, LoginLimiter, verify
+from .security import admin, admin_write, customer, customer_read, current_session, db_session, LoginLimiter, verify
+from .notifications import email_required, consume_code
 
 
 class OperationInput(ConfirmInput):
@@ -20,6 +21,11 @@ class OperationInput(ConfirmInput):
 
 class BlockInput(OperationInput):
     password: str = Field(min_length=1, max_length=256)
+
+
+class CardBlockInput(BlockInput):
+    challengeId: str | None = Field(default=None, max_length=64)
+    code: str | None = Field(default=None, pattern=r'^\d{6}$')
 
 
 class DecisionInput(BlockInput):
@@ -91,7 +97,8 @@ def operations_router():
             raise HTTPException(403, "card_password")
 
     @router.post("/cards/{product_id}/block")
-    def block(product_id: str, payload: BlockInput, request: Request, user=Depends(customer), db=Depends(db_session)):
+    def block(product_id: str, payload: CardBlockInput, request: Request, user=Depends(customer), auth=Depends(current_session), db=Depends(db_session)):
+        db.scalar(select(User).where(User.id == user.id).with_for_update())
         card = db.scalar(select(CardProfile).where(CardProfile.product_id == product_id, CardProfile.user_id == user.id).with_for_update())
         if not card:
             raise HTTPException(404, "not_found")
@@ -100,6 +107,13 @@ def operations_router():
         if used and used.product_id != card.product_id:
             raise HTTPException(409, "idempotency_conflict")
         if card.status != "blocked":
+            if email_required():
+                setting = db.get(NotificationPreference, user.id)
+                if not setting:
+                    raise HTTPException(409, 'notification_email_required')
+                code = consume_code(db, user, auth[0], payload.challengeId, payload.code, 'card_block', card.product_id)
+                if code.email != setting.email:
+                    raise HTTPException(403, 'email_code_invalid')
             card.status = "blocked"
             card.blocked_at = now()
             card.block_request_key = payload.requestKey

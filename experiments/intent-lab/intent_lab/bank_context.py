@@ -94,6 +94,13 @@ class BankReader:
             tx=transaction['data']['transaction']
             values={'movement':tx['merchant']+' · '+tx['id'],'date':tx['date'],
                     'amount':str(Decimal(tx['amountMinor'])/100)+' '+tx['currency'],'status':tx['status']}
+            # Applicable recorded conditions establish the difference without
+            # asking the customer to repeat data already held by the bank.
+            # This is not proof that extras were unauthorized or permission to refund.
+            agreement=(transaction['data'].get('historyComparison') or {}).get('serviceAgreement') or {}
+            if intent=='incorrect-charge' and agreement.get('status') in ('above-base','within-base'):
+                label=('base del plan registrada','recorded plan base','base do plano registrada')[('es','en','pt').index(language)]
+                values['difference']=f"{Decimal(agreement['differenceMinor'])/100} {tx['currency']} ({label})"
             facts=[{'field':field,'value':value,'status':'verified','source':'nexqori_records','reference_id':tx['id'],
                     'audit_event_id':transaction['auditEventId'],'observed_at':transaction['observed_at']}
                    for field,value in values.items() if field in fields]

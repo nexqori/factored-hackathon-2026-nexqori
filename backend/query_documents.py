@@ -8,24 +8,27 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from pydantic import Field, model_validator
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from .models import User, Product, Transaction, RequestCase, Conversation, ConversationFlow, Message, ChatDocument, AuditEvent, now, iso_utc
+from .conversation_closed import require_open
 from .schemas import StrictModel, Locale
 from .security import customer, customer_read, db_session
 from .document_renderer import generar_pdf
 from .query_context import conversation_defaults
+from .catalog import SERVICES
 
 DOCUMENT_INTENTS = {'documents','account-balance','account-activity','my-cards','request-status'}
 MAX_ROWS = 250
 TITLES = {
     'statement': ('Estado de cuenta informativo','Informational account statement','Extrato informativo'),
     'products_summary': ('Resumen de productos','Product summary','Resumo de produtos'),
+    'claims_summary': ('Seguimiento de reclamos','Complaint tracking','Acompanhamento de reclamações'),
     'requests_summary': ('Seguimiento de solicitudes','Request tracking','Acompanhamento de solicitações'),
 }
 
 
 class DocumentInput(StrictModel):
-    kind: Literal['statement','products_summary','requests_summary']
+    kind: Literal['statement','products_summary','requests_summary','claims_summary']
     scope: Literal['all','selected']
     productId: str | None = Field(default=None, min_length=1, max_length=64)
     requestId: str | None = Field(default=None, min_length=1, max_length=64)
@@ -38,8 +41,8 @@ class DocumentInput(StrictModel):
     @model_validator(mode='after')
     def selection(self):
         if self.scope == 'all' and (self.productId or self.requestId): raise ValueError('Unexpected selected reference')
-        if self.scope == 'selected' and not (self.requestId if self.kind == 'requests_summary' else self.productId): raise ValueError('Select a reference')
-        if self.kind == 'requests_summary' and self.productId or self.kind != 'requests_summary' and self.requestId: raise ValueError('Wrong reference kind')
+        if self.scope == 'selected' and not (self.requestId if self.kind in ('requests_summary','claims_summary') else self.productId): raise ValueError('Select a reference')
+        if self.kind in ('requests_summary','claims_summary') and self.productId or self.kind not in ('requests_summary','claims_summary') and self.requestId: raise ValueError('Wrong reference kind')
         if self.kind != 'statement' and (self.startDate or self.endDate or self.allHistory): raise ValueError('Unexpected period')
         if self.kind == 'statement':
             if self.allHistory:
@@ -71,7 +74,7 @@ def document_packet(db, owner, body):
     def add(table,row,values): facts.append({'source_ref':table+':'+row.id,'values':{'id':row.id,**values}})
     def money(minor,currency): return None if minor is None else f'{currency} {Decimal(minor)/100:,.2f}'
     def iso(value): return (value if value.tzinfo else value.replace(tzinfo=timezone.utc)).isoformat()
-    if body.kind != 'requests_summary':
+    if body.kind not in ('requests_summary','claims_summary'):
         q=select(Product).where(Product.user_id==owner).order_by(Product.id)
         if body.productId:q=q.where(Product.id==body.productId)
         rows=bounded(q)
@@ -88,12 +91,13 @@ def document_packet(db, owner, body):
             q=q.where(Transaction.occurred_at>=start,Transaction.occurred_at<end)
             fields.update(start=start.isoformat(),end=end.isoformat())
         for r in bounded(q):add('transactions',r,{'product_id':r.product_id,'occurred_at':iso(r.occurred_at),'merchant':r.merchant,'amount_display':money(r.amount_minor,r.currency),'status':r.status})
-    if body.kind == 'requests_summary':
-        q=select(RequestCase).where(RequestCase.user_id==owner).order_by(RequestCase.created_at.desc(),RequestCase.id)
+    if body.kind in ('requests_summary','claims_summary'):
+        claims = or_(RequestCase.catalog_service_id.is_(None), RequestCase.catalog_service_id == '', RequestCase.catalog_service_id.in_([key for key,item in SERVICES.items() if item['kind']=='claim']))
+        q=select(RequestCase).where(RequestCase.user_id==owner, claims if body.kind == 'claims_summary' else ~claims).order_by(RequestCase.created_at.desc(),RequestCase.id)
         if body.requestId:q=q.where(RequestCase.id==body.requestId)
         rows=bounded(q)
         if body.requestId and not rows:raise HTTPException(404,'not_found')
-        for r in rows:add('requests',r,{'service':r.service,'status':r.status,'created_at':iso(r.created_at),'updated_at':iso(r.updated_at)})
+        for r in rows:add('claims' if body.kind == 'claims_summary' else 'requests',r,{'service':r.service,'status':r.status,'created_at':iso(r.created_at),'updated_at':iso(r.updated_at)})
     return {'type':body.kind,'fields':fields,'generated_at':stamp,'facts':facts}
 
 
@@ -104,6 +108,7 @@ def document_router(message_view):
     def context(conversation_id:str,user=Depends(customer_read),db=Depends(db_session)):
         conv=db.scalar(select(Conversation).where(Conversation.id==conversation_id,Conversation.user_id==user.id))
         if not conv:raise HTTPException(404,'not_found')
+        require_open(db,conv)
         row=db.get(ConversationFlow,conv.id)
         if not can_document(row):raise HTTPException(409,'document_query_required')
         return conversation_defaults(db,user.id,row.state)
@@ -118,6 +123,7 @@ def document_router(message_view):
         if previous:
             if previous.fingerprint!=fingerprint:raise HTTPException(409,'conflict')
             return {'document':document_view(previous),'message':message_view(db.get(Message,previous.message_id))}
+        require_open(db,conv)
         if not can_document(db.get(ConversationFlow,conv.id)):raise HTTPException(409,'document_query_required')
         if db.scalar(select(func.count()).select_from(ChatDocument).where(ChatDocument.conversation_id==conv.id))>=20:raise HTTPException(409,'document_limit')
         packet=document_packet(db,user.id,body)

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from backend.db import make_engine, make_sessions
-from backend.models import Base, Session, User, AuditEvent, RequestCase, Transaction
+from backend.models import Base, Session, User, AuditEvent, RequestCase, Transaction, ChatFeedback
 from backend.seed import seed
 from backend.main import create_app
 from backend.security import digest
@@ -14,7 +14,9 @@ ORIGIN = "http://testserver"
 PASSWORDS = ["Test-only-customer-2026!", "Test-only-admin-2026!", "Test-only-second-2026!"]
 
 @pytest.fixture
-def setup(tmp_path):
+def setup(tmp_path, monkeypatch):
+    # Historical operation contracts; email confirmation has its own enabled-policy tests.
+    monkeypatch.setenv('BANK_CARD_BLOCK_EMAIL_REQUIRED', 'false')
     engine=make_engine("sqlite:///" + str(tmp_path/"test.sqlite"))
     Base.metadata.create_all(engine)
     with make_sessions(engine)() as db:
@@ -120,6 +122,47 @@ def test_general_request_retry_is_idempotent(setup):
     first=client.post("/api/requests",json=request).json()
     second=client.post("/api/requests",json=request).json()
     assert first["id"]==second["id"]
+
+def test_chat_feedback_validation_idempotency_and_admin_aggregates(setup):
+    app,engine=setup
+    anonymous=TestClient(app)
+    survey={"metric":"nps","score":10,"locale":"es","submissionId":str(uuid4()),"formDurationMs":12000,"conversationDurationMs":312000}
+    assert anonymous.post("/api/assistant/feedback",json=survey,headers={"Origin":ORIGIN}).status_code==401
+    client,_=login(app)
+    for metric,score in [("nps",11),("csat",0),("ces",8)]:
+        response=client.post("/api/assistant/feedback",json={**survey,"metric":metric,"score":score})
+        assert response.status_code==422
+    nps_scores=[10,9,6,7]
+    nps_responses=[]
+    for score in nps_scores:
+        item={**survey,"score":score,"submissionId":str(uuid4())}
+        nps_responses.append(client.post("/api/assistant/feedback",json=item))
+    csat_responses=[
+        client.post("/api/assistant/feedback",json={**survey,"metric":"csat","score":score,"submissionId":str(uuid4())})
+        for score in [4,5,3,1]
+    ]
+    ces_responses=[
+        client.post("/api/assistant/feedback",json={**survey,"metric":"ces","score":score,"submissionId":str(uuid4())})
+        for score in [2,5,7]
+    ]
+    assert all(response.status_code==201 for response in nps_responses+csat_responses+ces_responses)
+    retry_payload={**survey,"submissionId":str(uuid4())}
+    first=client.post("/api/assistant/feedback",json=retry_payload)
+    duplicate=client.post("/api/assistant/feedback",json=retry_payload)
+    assert first.json()=={"ok":True,"duplicate":False}
+    assert duplicate.json()=={"ok":True,"duplicate":True}
+    with make_sessions(engine)() as db:
+        assert db.scalar(select(func.count()).select_from(ChatFeedback))==12
+    admin,_=login(app,"nora")
+    metrics=admin.get("/api/admin/overview").json()["chatFeedback"]
+    assert metrics["nps"]["responses"]==5
+    assert metrics["nps"]["npsScore"]==40.0
+    assert metrics["csat"]["responses"]==4
+    assert metrics["csat"]["csatPercent"]==50.0
+    assert metrics["ces"]["responses"]==3
+    assert metrics["ces"]["averageScore"]==4.67
+    assert metrics["nps"]["averageFormDurationMs"]==12000
+    assert metrics["nps"]["averageConversationDurationMs"]==312000
 
 def test_admin_review_then_customer_handoff(setup):
     app,_=setup

@@ -16,7 +16,7 @@ const page = await context.newPage();
 await page.route('**/api/assistant/capabilities',route=>route.fulfill({json:{connected:false,providers:{}}}));
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
-const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], securityHeaders: false };
+const results = { pages: [], accessibility: [], screenshots: [], createdRequest: null, agentNavigation: [], chatFeedback: null, securityHeaders: false };
 const snapshot = async name => { const path = output + '/' + name + '.png'; await page.screenshot({ path, fullPage: true }); results.screenshots.push(path); };
 async function chooseLanguage(locale) { await page.locator('.language-trigger').click(); await page.locator('[data-locale="'+locale+'"]').click(); }
 async function noOverflow() { assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Horizontal overflow: ' + page.url()); }
@@ -59,7 +59,7 @@ try {
     }
   }
   const commands = {
-    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/products?kind=cards'],['Ver mis movimientos','/movements'],['Ver mis solicitudes','/requests']],
+    es: [['Llévame a transferencias','/services/transfers'],['Ver tarjetas','/cards'],['Ver mis movimientos','/movements'],['Ver mis solicitudes','/requests']],
     en: [['Open bill payments','/services/payments'],['Show my accounts','/products?kind=accounts']],
     pt: [['Abrir empréstimos','/services/loans'],['Abrir seguros','/services/insurance']]
   };
@@ -127,7 +127,7 @@ try {
   const currentData=await(await context.request.get(origin+'/api/bootstrap')).json();
   const currentBalance=currentData.products.filter(p=>['account','savings'].includes(p.type)).reduce((sum,p)=>sum+(p.balanceMinor||0),0);
   const expectedBalance=new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(currentBalance/100);
-  await page.getByRole('textbox', {name:'Mensaje para Nexqori'}).fill('¿Cuál es mi saldo?');
+  await page.getByRole('textbox', {name:'Mensaje para Nexi'}).fill('¿Cuál es mi saldo?');
   await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
   await page.getByRole('heading',{name:'Mis productos',exact:true}).waitFor();
   await page.locator('.chat-bubble.assistant').last().waitFor();
@@ -151,6 +151,8 @@ try {
   await page.getByLabel('Contraseña',{exact:true}).fill(credentials.ADMIN_PASSWORD);
   await page.getByRole('button',{name:'Entrar a mi espacio'}).click();
   await page.getByRole('heading',{name:'Solicitudes y trazabilidad'}).waitFor();
+  await page.getByRole('heading',{name:'Satisfacción con el asistente'}).waitFor();
+  assert.equal(await page.locator('.feedback-metric').count(),3,'Admin shows aggregate NPS, CSAT, and CES metrics');
   await snapshot('admin-desktop');
   await axe('admin');
   await noOverflow();
@@ -158,7 +160,7 @@ try {
   writeFileSync(output+'/ui-results.json',JSON.stringify({...results,pageErrors},null,2));
   const violations=results.accessibility.flatMap(r=>r.violations);
   assert.equal(violations.length,0,JSON.stringify(violations));
-  console.log(JSON.stringify({pages:results.pages.length,accessibility:results.accessibility.length,pageErrors:pageErrors.length,createdRequest:results.createdRequest,agentNavigation:results.agentNavigation.length,securityHeaders:results.securityHeaders}));
+  console.log(JSON.stringify({pages:results.pages.length,accessibility:results.accessibility.length,pageErrors:pageErrors.length,createdRequest:results.createdRequest,agentNavigation:results.agentNavigation.length,chatFeedback:results.chatFeedback,securityHeaders:results.securityHeaders}));
 } finally {
   writeFileSync(output+'/ui-results.json',JSON.stringify({...results,pageErrors},null,2));
   await browser.close();

@@ -20,8 +20,11 @@ services:
     env_file:
       - path: .local/intent-lab/providers.env
         required: false
+      - path: .local/notifications.env
+        required: false
     volumes:
       - ./.local/intent-lab:/app/flow-config:ro
+      - ./.local/provider-updates:/app/provider-updates
     build:
       context: .
       dockerfile: docker/Dockerfile.api
@@ -30,11 +33,16 @@ services:
       CUSTOMER_PASSWORD: ${CUSTOMER_PASSWORD:?Run npm run setup}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run npm run setup}
       SECOND_CUSTOMER_PASSWORD: ${SECOND_CUSTOMER_PASSWORD:?Run npm run setup}
-      APP_ORIGINS: http://localhost:5180,http://127.0.0.1:5180
-      COOKIE_SECURE: "false"
+      APP_ORIGINS: ${APP_ORIGINS:-http://localhost:5180,http://127.0.0.1:5180}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       CARD_PROVIDER: local_fixture
       BANK_ASSISTANT_FLOW: "true"
+      BANK_VOICE_ENABLED: "false"
+      BANK_CARD_BLOCK_EMAIL_REQUIRED: "true"
       BANK_FLOW_CONFIG: /app/flow-config
+      PROVIDER_EXAMPLES_ENABLED: "true"
+      PROVIDER_EXAMPLES_CACHE: /app/provider-updates/state.json
+      PROVIDER_EXAMPLES_WATCH_SECONDS: "30"
       NEXQORI_LAB_DATA: /app/flow-config
     depends_on:
       db:

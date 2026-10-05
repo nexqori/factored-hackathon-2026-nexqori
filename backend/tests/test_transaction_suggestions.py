@@ -5,8 +5,8 @@ from sqlalchemy import select, func
 from backend.tests.test_api import setup, login
 from backend.tests.test_workflow_chat import models, message
 from backend.db import make_sessions
-from backend.models import Transaction, Conversation, AuditEvent
-from backend.transaction_suggestions import choose, confirmation, local_date
+from backend.models import Transaction, Conversation, ConversationFlow, AuditEvent
+from backend.transaction_suggestions import choose, confirmation, local_date, search_clues
 
 
 @pytest.fixture
@@ -104,3 +104,86 @@ def test_reference_and_date_must_match_without_unrelated_fallback():
 def test_date_uses_the_same_bank_timezone_as_the_transactions_screen():
     assert local_date('2026-10-03T02:54:00+00:00')=='2026-10-02'
     assert local_date('2026-10-03T02:54:00')=='2026-10-02'
+
+
+def test_combines_partial_clues_and_does_not_use_plan_price_or_unrelated_completed_charge():
+    rows=[{'id':'TX-INTERNET','merchant':'Internet Plus','amountMinor':-45900,'date':'2026-10-03T18:00:00','status':'completed'},
+          {'id':'TX-PHONE','merchant':'Empresa Telefónica','amountMinor':-45900,'date':'2026-10-02T18:00:00','status':'declined'},
+          {'id':'TX-OLD','merchant':'Empresa Telefónica','amountMinor':-29900,'date':'2026-10-01T18:00:00','status':'completed'}]
+    history=[{'role':'user','content':'Quiero revisar una transacción fallida'},
+             {'role':'user','content':'Es la última del teléfono, me cobraron 459 MXN y mi plan es 299 MXN'}]
+    assert choose(rows,history,[])['id']=='TX-PHONE'
+    assert choose(rows[:1],history,[]) is None
+    assert search_clues([{'role':'user','content':'Me cobraron 2,700 MXN'}])['amountMinor']==270000
+    assert search_clues([{'role':'user','content':'Me cobraron 2.700,50 MXN'}])['amountMinor']==270050
+    assert search_clues([{'role':'user','content':'Esperaba 299 MXN'}]).get('amountMinor') is None
+    assert choose(rows,history+[{'role':'user','content':'Es TX-OLD'}],[])['id']=='TX-OLD'
+
+
+@pytest.mark.parametrize('locale,browse',[
+    ('es','Puedes mostrarme las últimas transacciones para mostrarte cuál es'),
+    ('en','Show my latest transactions so I can identify it'),
+    ('pt','Pode mostrar minhas últimas movimentações para identificar qual é'),
+])
+def test_real_call_sequence_opens_movements_without_restarting_contract_or_using_a_question(phone,models,locale,browse):
+    app,engine=phone;client,_=login(app);calls,control=models;control['intent']='payment-status'
+    initial=client.post('/api/assistant/flow',json=message(message={'es':'Quiero revisar una transacción fallida','en':'I want to review a failed transaction','pt':'Quero revisar uma transação falha'}[locale],locale=locale)).json()
+    cid=initial['conversation']['id']
+    corrected=client.post('/api/assistant/flow',json=message(conversationId=cid,message={'es':'Es la última del cobro de teléfono','en':'It is my latest phone payment','pt':'É meu último pagamento de telefone'}[locale],locale=locale)).json()
+    assert corrected['flow']['suggestedTransaction'] is None  # Fixture phone payments are completed.
+    assert corrected['flow']['transactionSearch']['kind']=='no_match'
+    assert corrected['navigation']['filters']['status']=='declined'
+    with make_sessions(engine)() as db: old=db.get(ConversationFlow,cid).state
+    count=len(calls);body=message(conversationId=cid,message=browse,locale=locale)
+    shown=client.post('/api/assistant/flow',json=body).json()
+    assert shown['navigation']['route']=='/movements' and shown['flow']['transactionSearch']['kind']=='browse'
+    assert len(calls)==count
+    assert shown['flow']['contract']==corrected['flow']['contract']
+    assert shown['conversation']['transactionId'] is None
+    assert client.post('/api/assistant/flow',json=body).json()==shown
+    with make_sessions(engine)() as db:
+        current=db.get(ConversationFlow,cid).state
+        assert current['turn']==old['turn'] and current['next_node_id']==old['next_node_id']
+        assert current['messages']==old['messages']
+    # A reference read aloud after opening the list proposes a record; it does
+    # not silently select it or authorize any banking action.
+    proposed=client.post('/api/assistant/flow',json=message(conversationId=cid,message={'es':'Es TX-PHONE-NEW','en':'It is TX-PHONE-NEW','pt':'É TX-PHONE-NEW'}[locale],locale=locale)).json()
+    assert proposed['flow']['suggestedTransaction']['id']=='TX-PHONE-NEW'
+    assert proposed['navigation']['route']=='/movements?transaction=TX-PHONE-NEW'
+    assert proposed['conversation']['transactionId'] is None
+
+
+def test_repeated_browsing_preserves_evidence_indices_and_can_filter_without_spending_questions(phone,models):
+    app,engine=phone;client,_=login(app);calls,control=models;control['intent']='payment-status'
+    initial=client.post('/api/assistant/flow',json=message(message='Quiero revisar una transacción fallida')).json()
+    cid=initial['conversation']['id']
+    with make_sessions(engine)() as db: old=db.get(ConversationFlow,cid).state
+    count=len(calls)
+    for _ in range(16):
+        result=client.post('/api/assistant/flow',json=message(conversationId=cid,message='Muéstrame los pagos de teléfono')).json()
+        assert result['navigation']['filters']=={'q':'Empresa Telefónica'}
+        assert result['flow']['transactionSearch']['count']==2
+    assert len(calls)==count
+    with make_sessions(engine)() as db:
+        current=db.get(ConversationFlow,cid).state
+        assert current['messages']==old['messages']
+        assert current['context']['observations']==old['context']['observations']
+        assert current['turn']==old['turn']
+    resumed=client.post('/api/assistant/flow',json=message(conversationId=cid,message='Es TX-PHONE-NEW')).json()
+    assert resumed['flow']['suggestedTransaction']['id']=='TX-PHONE-NEW'
+
+
+def test_search_filters_before_limit_and_keeps_owner_and_audit(phone,models):
+    app,engine=phone;client,_=login(app);_,control=models;control['intent']='unrecognized-charge'
+    with make_sessions(engine)() as db:
+        for i in range(25):
+            db.add(Transaction(id=f'TX-NOISE-{i}',user_id='andrea',product_id='account-01',merchant='Comercio reciente',category='shopping',amount_minor=-99900,currency='MXN',occurred_at=datetime(2026,10,3,18,tzinfo=timezone.utc),status='completed'))
+        db.commit()
+    result=client.post('/api/assistant/flow',json=message(message='No reconozco el cobro de teléfono de 299 MXN')).json()
+    assert result['flow']['suggestedTransaction']['id']=='TX-PHONE-NEW'
+    assert 'TX-OTHER-OWNER' not in json.dumps(result)
+    for extra in ({'owner':'mateo'},{'q':'Empresa','amountMinor':-1}):
+        assert client.post('/api/assistant/tools/read',json={'intent':'account-activity','tool':'read-transactions','transactionSearch':extra}).status_code==422
+    value=client.post('/api/assistant/tools/read',json={'intent':'account-activity','tool':'read-transactions','transactionSearch':{'q':'TX-OTHER-OWNER'}}).json()
+    assert value['data']['transactions']==[] and value['executed_operations']==[]
+    assert client.post('/api/assistant/tools/read',json={'intent':'account-activity','tool':'read-transactions','transactionSearch':{'q':'%'}}).json()['data']['transactions']==[]
