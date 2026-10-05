@@ -40,6 +40,24 @@ def registered_summary(db, owner, identity, locale):
 
 
 def presentation(db, owner, reply, locale):
+    if 'appCommand' in reply:
+        # Local commands preserve the case, but must not repeat its old findings.
+        command=reply.get('appCommand') or {}; kind=command.get('type')
+        choices={
+            'logout':('Voy a cerrar tu sesión y la llamada.', 'I will sign you out and end the call.', 'Vou encerrar sua sessão e a chamada.'),
+            'set_locale':('He solicitado cambiar el idioma de la pantalla. La llamada conserva su idioma inicial.', 'I requested the screen language change. This call keeps its starting language.', 'Solicitei a alteração do idioma da tela. Esta chamada mantém o idioma inicial.'),
+            'prepare_card':('Abro Tarjetas para que revises la selección y confirmes tu identidad. No compartas contraseñas ni códigos por voz.', 'I am opening Cards so you can review the selection and confirm your identity. Do not share passwords or codes by voice.', 'Abro Cartões para você revisar a seleção e confirmar sua identidade. Não compartilhe senhas nem códigos por voz.'),
+        }
+        if kind in choices:summary=pick(locale,*choices[kind])
+        elif reply.get('navigation'):
+            from .assistant import NAV_LABELS
+            screen=NAV_LABELS[locale].get(reply['navigation'].get('destination'))
+            if not screen:screen=pick(locale,'Mis documentos','My documents','Meus documentos')
+            summary=pick(locale,f'Te muestro {screen}. Tu caso sigue guardado.',f'I am showing {screen}. Your case is preserved.',f'Mostro {screen}. Seu caso continua salvo.')
+        else:
+            from .chat_language import language_reply
+            summary=language_reply(locale)['text']
+        return {'summary':summary,'comparison':None}
     flow=reply.get('flow') or {}
     if reply.get('guard',{}).get('status') in ('blocked','uncertain','unavailable'):
         from .prompt_guard import guard_message

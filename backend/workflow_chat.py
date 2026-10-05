@@ -4,6 +4,7 @@ Graph snapshots and turns live in PostgreSQL. Neither cookies nor bank evidence
 are passed to providers. This adapter offers reads and proposals, never payments.
 """
 import copy
+from datetime import timedelta, timezone
 import hashlib
 import json
 import os
@@ -20,6 +21,9 @@ from .security import customer, customer_read, db_session
 from .agent_tools import read_tool, ReadToolInput
 from .catalog import SERVICES
 from .assistant import answer
+from .chat_commands import application_command
+from .chat_language import wrong_language, language_reply
+from .conversation_closed import require_open
 from .navigation import navigate_in_app
 from .transaction_context import transaction_evidence, transaction_reply
 from .transaction_suggestions import (FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply,
@@ -52,6 +56,12 @@ class RegisterClaim(ConfirmInput):
     requestKey: str = Field(min_length=16, max_length=64, pattern=r'^[a-zA-Z0-9-]+$')
     locale: Locale | None = None
     previewToken: str | None = Field(default=None, pattern=r'^[a-f0-9]{64}$')
+
+
+def next_message_time(db, conversation, user):
+    latest = db.scalar(select(func.max(Message.created_at)).where(
+        Message.conversation_id == conversation.id, Message.user_id == user.id))
+    return max(now(), latest.replace(tzinfo=latest.tzinfo or timezone.utc) + timedelta(microseconds=1)) if latest else now()
 
 
 def enabled():
@@ -235,7 +245,24 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
         conv = Conversation(id=str(uuid4()), user_id=user.id, title=message[:100], locale=body.locale, transaction_id=body.transactionId)
         db.add(conv); db.flush()
         db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action='conversation_started'))
+    require_open(db, conv)
     row = db.get(ConversationFlow, conv.id)
+    command = application_command(body.message, body.locale) if not body.pastedText.strip() and not body.replaceTransaction and not body.updateSelection else None
+    if not command and not body.updateSelection and wrong_language(body.message, body.locale):
+        command = language_reply(body.locale)
+    if command:
+        # Exact application commands only prepare UI or navigate. They preserve
+        # the selected case and never authorize or perform banking operations.
+        user_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='user', content=message, locale=body.locale, created_at=next_message_time(db, conv, user))
+        reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='assistant', content=command['text'], locale=body.locale, created_at=max(now(), user_message.created_at + timedelta(microseconds=1)))
+        db.add_all([user_message, reply])
+        for action in ('message_sent', 'chat_app_command', 'assistant_replied'):
+            db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action=action))
+        conv.updated_at = now(); db.flush()
+        response = {**command, 'conversation': conversation_view(conv), 'messages': [message_view(user_message), message_view(reply)], 'flow': flow_view(row)}
+        db.add(AssistantTurn(user_id=user.id, request_key=body.requestKey, fingerprint=fingerprint, response=response))
+        db.commit()
+        return response
     guard = inspect_prompt(message, body.locale)
     db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id,
                      conversation_id=conv.id, action='prompt_guard_' + guard['status']))
@@ -243,9 +270,9 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
         # Refused text stays out of the checkpoint and subsequent model history.
         refused = guard_message(guard['status'], body.locale)
         user_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id,
-                               role='user', content=message, locale=body.locale)
+                               role='user', content=message, locale=body.locale, created_at=next_message_time(db, conv, user))
         reply_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id,
-                                role='assistant', content=refused, locale=body.locale)
+                                role='assistant', content=refused, locale=body.locale, created_at=max(now(), user_message.created_at + timedelta(microseconds=1)))
         db.add_all([user_message, reply_message]); conv.updated_at = now(); db.flush()
         response = {'text':refused, 'destination':None, 'navigation':None, 'guard':guard,
                     'conversation':conversation_view(conv),
@@ -423,9 +450,9 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     # Read tools can autoflush the row before query evidence/reply is attached.
     # Explicitly mark the JSON snapshot so the restored result matches this turn.
     flag_modified(row, 'state')
-    user_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='user', content=message, locale=body.locale)
+    user_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='user', content=message, locale=body.locale, created_at=next_message_time(db, conv, user))
     db.add(user_message); db.flush()
-    reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='assistant', content=ctx['reply'], locale=body.locale)
+    reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id, role='assistant', content=ctx['reply'], locale=body.locale, created_at=max(now(), user_message.created_at + timedelta(microseconds=1)))
     db.add(reply)
     for action in ('message_sent','flow_evaluated','assistant_replied'):
         db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, transaction_id=conv.transaction_id, action=action))

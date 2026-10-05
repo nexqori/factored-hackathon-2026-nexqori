@@ -20,6 +20,8 @@ from .schemas import StrictModel, Locale
 from .transaction_context import transaction_evidence
 from .workflow_chat import FlowMessage, run_chat_turn, flow_view, enabled as flow_enabled
 from .voice_summary import presentation
+from .conversation_closed import require_open
+from .navigation import navigate_in_app
 from .voice_provider import LiveProvider, VOICES, enabled, api_key, send, opening_instructions
 
 ACTIVE = ('connecting','active','closing')
@@ -162,6 +164,8 @@ class VoiceRuntime:
             reply=run_chat_turn(FlowMessage(message=text,locale=row.locale,conversationId=conv.id,
                 transactionId=conv.transaction_id,requestId=selected_request,requestKey=key),
                 user,db,self.conversation_view,self.message_view)
+            if (reply.get('appCommand') or {}).get('type')=='prepare_profile':
+                reply={**reply,'appCommand':None,'destination':'settings','navigation':navigate_in_app('settings','customer')}
             summary=presentation(db,user.id,reply,row.locale)
             reply={**reply,'voiceSummary':summary}
             # The shared service committed the turn. Its key prevents duplicate
@@ -342,6 +346,7 @@ def voice_router():
         if body.conversationId:
             conv=db.scalar(select(Conversation).where(Conversation.id==body.conversationId,Conversation.user_id==user.id))
             if not conv:raise HTTPException(404,'not_found')
+            require_open(db,conv)
             if body.transactionId and body.transactionId!=conv.transaction_id:raise HTTPException(409,'conversation_context_conflict')
             flow=db.get(ConversationFlow,conv.id)
             selected=flow.state.get('bank_binding',{}).get('request_id') if flow else None

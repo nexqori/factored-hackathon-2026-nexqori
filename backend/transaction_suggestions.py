@@ -77,7 +77,7 @@ def search_clues(messages, locale='es'):
                     break
         if 'status' not in clues:
             if re.search(r'\b(?:pendiente|pending|pendente)\b', text): clues['status'] = 'pending'
-            elif re.search(r'\b(?:fallid[oa]|fallo|rechazad[oa]|failed|declined|rejected|falhou|recusad[oa])\b', text): clues['status'] = 'declined'
+            elif re.search(r'\b(?:fallid[oa]|fallo|rechazad[oa]|failed|declined|rejected|falh[oa]|falhou|recusad[oa])\b', text): clues['status'] = 'declined'
         if 'date' not in clues:
             found = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', text)
             parts = found.groups() if found else None

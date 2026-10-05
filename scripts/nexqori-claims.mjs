@@ -60,7 +60,7 @@ try {
       const refund = await mutate(customer, '/requests/' + request.id + '/refund', { confirmed: true, requestKey: randomUUID() });
       if (index === 1) await mutate(admin, '/admin/refunds/' + refund.id + '/decision', { confirmed: true, requestKey: randomUUID(), decision: 'approve', note: 'Verificación: revisión de importe, titular y cuenta de abono en el panel de reclamos.', password: pack.admin.password });
     } else await mutate(customer, '/requests/' + request.id + '/handoff', { confirmed: true });
-    const document = (await mutate(customer, '/conversations/' + record.conversationId + '/documents', { kind: 'requests_summary', scope: 'selected', requestId: request.id, locale: 'es', requestKey: randomUUID() })).document;
+    const document = (await mutate(customer, '/conversations/' + record.conversationId + '/documents', { kind: 'claims_summary', scope: 'selected', requestId: request.id, locale: 'es', requestKey: randomUUID() })).document;
     report.cases.push({ documentId: document.id, id: record.id, userId: record.userId, requestId: request.id, conversationId: chat.conversation.id, url: origin + '/admin/complaints?user=' + record.userId + '&case=' + request.id });
   }
   const baselines = await Promise.all(customerContexts.map(c => bankData(c.context)));

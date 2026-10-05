@@ -38,6 +38,10 @@ try{
   await expect(page.locator('.movement-filters').getByLabel(copy['documents.to'],{exact:true})).toHaveValue('2026-09-30');
   await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveCount(1);
   await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveAttribute('data-transaction-id',person.transactionId);
+  await expect(page.locator('.transaction-panel .movement-meta')).toContainText('9101');
+  await expect(page.locator('.transaction-panel time')).toContainText('2026');
+  await expect(page.locator('.transaction-panel .badge')).toBeVisible();
+  await page.setViewportSize({width:390,height:844});await expect(page.locator('.transaction-panel .badge')).toBeVisible();await page.screenshot({path:path.join(folder,'movements-'+person.locale+'.png'),fullPage:true});await page.setViewportSize({width:1512,height:1050});
   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText('2026-09-01');
   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText('2026-09-30');await axe('filtered-movements-'+person.locale);
   const draftBefore=await json(await context.request.get(origin+'/api/conversations/'+cid+'/document-context'));
@@ -73,9 +77,9 @@ try{
   const downloadPromise=page.waitForEvent('download');await card.getByRole('button',{name:new RegExp('^'+copy['documents.download'])}).click();
   const downloaded=await downloadPromise;const pdfPath=path.join(folder,person.locale+'-september.pdf');await downloaded.saveAs(pdfPath);
   const bytes=await fs.readFile(pdfPath);assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
-  const stored=await json(await context.request.get(origin+'/api/conversations/'+cid));assert.equal(stored.messages.filter(m=>m.document).length,1);
+  const stored=await json(await context.request.get(origin+'/api/conversations/'+cid));assert.equal(stored.messages.filter(m=>m.document).length,1);assert.equal(stored.conversation.closed,true);await expect(panel.locator('textarea')).toHaveCount(0);await expect(panel).toContainText(copy['error.conversation_closed']);
   await page.reload();await panel.getByRole('button',{name:copy.conversations,exact:true}).click();await page.locator('.conversation-list button').first().click();
-  await expect(panel.locator('[data-document-id="'+doc.id+'"]')).toHaveCount(1);await expect(panel.locator('pre')).toHaveCount(0);
+  await expect(panel.locator('[data-document-id="'+doc.id+'"]')).toHaveCount(1);await expect(panel.locator('textarea')).toHaveCount(0);await expect(panel.locator('pre')).toHaveCount(0);
   const historical=page.waitForEvent('download');await panel.locator('[data-document-id="'+doc.id+'"] button').click();
   const historicalPath=path.join(folder,person.locale+'-history.pdf');await(await historical).saveAs(historicalPath);assert.equal(hash(await fs.readFile(historicalPath)),hash(bytes));
   await axe('documents-history-'+person.locale);
@@ -90,9 +94,28 @@ try{
   await dialog.getByRole('combobox',{name:copy['documents.type'],exact:true}).selectOption('statement');
   await expect(dialog.getByLabel(copy['documents.from'],{exact:true})).toHaveValue('');await expect(dialog.getByLabel(copy['documents.to'],{exact:true})).toHaveValue('');
   await expect(dialog.getByRole('button',{name:copy['documents.generate'],exact:true})).toBeDisabled();await page.keyboard.press('Escape');
+  for(const [kind,reference,excluded,text] of [
+   ['requests_summary',person.applicationId,person.claimId,{es:'Quiero un PDF de mis solicitudes',en:'I want a PDF of my requests',pt:'Quero um PDF das minhas solicitações'}[person.locale]],
+   ['claims_summary',person.claimId,person.applicationId,{es:'Quiero un PDF de mis reclamos',en:'I want a PDF of my complaints',pt:'Quero um PDF das minhas reclamações'}[person.locale]],
+  ]){
+   await panel.getByRole('button',{name:copy.newConversationShort,exact:true}).click();await send(text);
+   await panel.getByRole('button',{name:copy['documents.prepare'],exact:true}).click();
+   await expect(dialog.getByRole('combobox',{name:copy['documents.type'],exact:true})).toHaveValue(kind);
+   assert.deepEqual(await dialog.getByRole('combobox',{name:copy['documents.scope'],exact:true}).locator('option').allTextContents(),[copy[kind==='claims_summary'?'documents.allClaims':'documents.allRequests'],copy['documents.selected']]);await dialog.getByRole('combobox',{name:copy['documents.scope'],exact:true}).selectOption('selected');
+   const selection=dialog.getByRole('combobox',{name:copy['chatFlow.case'],exact:true});
+   assert((await selection.locator('option').allTextContents()).some(t=>t.includes(reference)));
+   assert(!(await selection.locator('option').allTextContents()).some(t=>t.includes(excluded)));
+   await selection.selectOption(reference);await axe(kind+'-'+person.locale);
+   const generated=page.waitForResponse(r=>r.url().endsWith('/documents')&&r.request().method()==='POST');
+   await dialog.getByRole('button',{name:copy['documents.generate'],exact:true}).click();const result=await json(await generated);
+   assert.equal(result.document.kind,kind);assert.equal(result.document.details.recordCount,1);
+   const pdf=await context.request.get(origin+'/api/documents/'+result.document.id);assert.equal(pdf.status(),200);
+   await fs.writeFile(path.join(folder,kind+'-'+person.locale+'.pdf'),await pdf.body());
+   await expect(dialog).not.toBeVisible();
+  }
   const after=await json(await context.request.get(origin+'/api/bootstrap'));
   assert.deepEqual(after.products,before.products);assert.deepEqual(after.transactions,before.transactions);assert.deepEqual(after.requests,before.requests);
-  assert.equal((await json(await context.request.get(origin+'/api/documents'))).documents.length,1);
+  assert.equal((await json(await context.request.get(origin+'/api/documents'))).documents.length,3);
   report.cases.push({locale:person.locale,conversationId:cid,documentId:doc.id,sha256:hash(bytes),unchangedFinancialData:true});await context.close();
  }
  const summary=await(await fetch(origin+'/api/verification/summary')).json();assert.equal(summary.bankRecordsSentToModels,false);assert.deepEqual(report.errors,[]);

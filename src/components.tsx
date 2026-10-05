@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X, ArrowUpRight, ShoppingBag, Coffee, ArrowDownLeft, Zap, Play, CircleHelp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { localeTags, type Locale } from './i18n';
-import type { Transaction } from './types';
+import type { Transaction, Product } from './types';
 export const formatMoney = (minor: number, locale: Locale, currency = 'MXN') => new Intl.NumberFormat(localeTags[locale], { style: 'currency', currency, currencyDisplay: 'code' }).format(minor / 100);
 export const formatDate = (date: string, locale: Locale) => new Intl.DateTimeFormat(localeTags[locale], { day: 'numeric', month: 'short', timeZone: 'America/Mexico_City' }).format(new Date(date));
 export function Brand({ light = false }: { light?: boolean }) { return <span className={'brand ' + (light ? 'light' : '')}><img src="/nexqori.svg" width="38" height="38" alt="" /><span>nexqori<span className="brand-dot">.</span></span></span>; }
@@ -11,10 +11,11 @@ export function TransactionIcon({ category }: { category: string }) {
   const Icon = ({ shopping: ShoppingBag, food: Coffee, transfer: ArrowDownLeft, utilities: Zap, subscription: Play } as Record<string, typeof ShoppingBag>)[category] || CircleHelp;
   return <span className={'transaction-icon category-' + category}><Icon size={19} aria-hidden="true" /></span>;
 }
-export function TransactionList({ rows, onSelect, compact = false }: { rows: Transaction[]; onSelect: (tx: Transaction) => void; compact?: boolean }) {
+export function TransactionList({ rows, onSelect, compact = false, products }: { rows: Transaction[]; onSelect: (tx: Transaction) => void; compact?: boolean; products?: Product[] }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
-  return <div className={'transaction-list ' + (compact ? 'compact' : '')}>{rows.map(tx => <button className="transaction-row" data-transaction-id={tx.id} key={tx.id} onClick={() => onSelect(tx)}>
+  return <div className={'transaction-list ' + (compact ? 'compact' : '') + (products ? ' movement-details' : '')}>{rows.map(tx => <button className="transaction-row" data-transaction-id={tx.id} key={tx.id} onClick={() => onSelect(tx)}>
     <TransactionIcon category={tx.category} /><span className="transaction-name"><strong>{tx.merchant}</strong><small>{t(tx.category)} · {formatDate(tx.date, locale)}</small></span>
+    {products && <span className="movement-meta"><span>{t('product')}: {(() => { const product = products.find(p => p.id === tx.productId); return product ? t(product.type) + ' · •••• ' + product.last4 : tx.productId; })()}</span><time dateTime={tx.date}>{new Intl.DateTimeFormat(localeTags[locale], {dateStyle:'medium', timeStyle:'short', timeZone:'America/Mexico_City'}).format(new Date(tx.date))}</time></span>}
     {!compact && <Badge status={tx.status} />}<span className={'transaction-amount ' + (tx.amountMinor > 0 ? 'positive' : '')}>{tx.amountMinor > 0 ? '+' : ''}{formatMoney(tx.amountMinor, locale, tx.currency)}{compact && tx.status !== 'completed' && <small>{t(tx.status)}</small>}</span><ArrowUpRight size={16} aria-hidden="true" />
   </button>)}</div>;
 }

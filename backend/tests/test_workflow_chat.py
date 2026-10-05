@@ -34,7 +34,7 @@ def models(monkeypatch,tmp_path):
 
 
 def message(**kw):
-    return {'message':'Quiero revisar un cobro incorrecto','locale':'es','requestKey':str(uuid4()),**kw}
+    return {'message':{'es':'Quiero revisar un cobro incorrecto','en':'I want to review an incorrect charge','pt':'Quero revisar uma cobrança incorreta'}[kw.get('locale','es')],'locale':'es','requestKey':str(uuid4()),**kw}
 
 
 @pytest.mark.parametrize('locale',['es','en','pt'])
@@ -50,7 +50,7 @@ def test_chat_asks_then_continues_same_contract_registers_trace_without_financia
     assert len(calls)==3
     assert client.get('/api/conversations/'+cid+'/flow').json()['flow']==value['flow']
     assert client.post('/api/conversations/'+cid+'/claim',json={'confirmed':True,'details':'Revisar importe diferente','requestKey':str(uuid4())}).status_code==409
-    result=client.post('/api/assistant/flow',json=message(locale=locale,conversationId=cid,message='Esperaba 100 MXN'))
+    result=client.post('/api/assistant/flow',json=message(locale=locale,conversationId=cid,message={'es':'Esperaba 100 MXN','en':'I expected 100 MXN','pt':'Eu esperava 100 MXN'}[locale]))
     assert result.status_code==200,result.text
     assert result.json()['flow']['canRegister']
     assert [c[0] for c in calls]==['triage','jev','llm','llm']

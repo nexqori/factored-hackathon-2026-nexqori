@@ -127,9 +127,9 @@ def test_combines_partial_clues_and_does_not_use_plan_price_or_unrelated_complet
 ])
 def test_real_call_sequence_opens_movements_without_restarting_contract_or_using_a_question(phone,models,locale,browse):
     app,engine=phone;client,_=login(app);calls,control=models;control['intent']='payment-status'
-    initial=client.post('/api/assistant/flow',json=message(message='Quiero revisar una transacción fallida',locale=locale)).json()
+    initial=client.post('/api/assistant/flow',json=message(message={'es':'Quiero revisar una transacción fallida','en':'I want to review a failed transaction','pt':'Quero revisar uma transação falha'}[locale],locale=locale)).json()
     cid=initial['conversation']['id']
-    corrected=client.post('/api/assistant/flow',json=message(conversationId=cid,message='Es la última del cobro de teléfono',locale=locale)).json()
+    corrected=client.post('/api/assistant/flow',json=message(conversationId=cid,message={'es':'Es la última del cobro de teléfono','en':'It is my latest phone payment','pt':'É meu último pagamento de telefone'}[locale],locale=locale)).json()
     assert corrected['flow']['suggestedTransaction'] is None  # Fixture phone payments are completed.
     assert corrected['flow']['transactionSearch']['kind']=='no_match'
     assert corrected['navigation']['filters']['status']=='declined'
@@ -147,7 +147,7 @@ def test_real_call_sequence_opens_movements_without_restarting_contract_or_using
         assert current['messages']==old['messages']
     # A reference read aloud after opening the list proposes a record; it does
     # not silently select it or authorize any banking action.
-    proposed=client.post('/api/assistant/flow',json=message(conversationId=cid,message='Es TX-PHONE-NEW',locale=locale)).json()
+    proposed=client.post('/api/assistant/flow',json=message(conversationId=cid,message={'es':'Es TX-PHONE-NEW','en':'It is TX-PHONE-NEW','pt':'É TX-PHONE-NEW'}[locale],locale=locale)).json()
     assert proposed['flow']['suggestedTransaction']['id']=='TX-PHONE-NEW'
     assert proposed['navigation']['route']=='/movements?transaction=TX-PHONE-NEW'
     assert proposed['conversation']['transactionId'] is None

@@ -15,6 +15,7 @@ from sqlalchemy import select, func
 from .models import Product, RequestCase, Transaction, AuditEvent
 from .navigation import navigate_in_app
 from .conversation_context import changes_topic
+from .catalog import request_kind
 
 ZONE = ZoneInfo('America/Mexico_City')
 MONTHS = {
@@ -80,12 +81,13 @@ def resolve_defaults(messages, products, requests=(), *, today=None, previous=No
         if changes_topic(message.get('content','')):draft={}
         text=plain(message.get('content',''))
         kind = ('statement' if re.search(r'\b(?:movimientos|movements|transactions|movimentacoes|estado de cuenta|statements?|extratos?)\b',text)
-                else 'requests_summary' if re.search(r'\b(?:solicitudes|requests|solicitacoes|reclamos|complaints|reclamacoes|pedidos)\b',text)
+                else 'claims_summary' if re.search(r'\b(?:reclamos|reclamaciones|complaints|reclamacoes)\b',text)
+                else 'requests_summary' if re.search(r'\b(?:solicitudes|requests|solicitacoes|pedidos)\b',text)
                 else 'products_summary' if re.search(r'\b(?:productos|products|produtos|tarjetas|cards|cartoes)\b',text) else None)
         if kind and kind != draft.get('kind'):
             # Account and period survive a clarification of the document type;
             # request references and product references are separate domains.
-            if kind=='requests_summary' or draft.get('kind')=='requests_summary':
+            if kind in ('requests_summary','claims_summary') or draft.get('kind') in ('requests_summary','claims_summary'):
                 draft={key:value for key,value in draft.items() if key not in ('scope','productId','requestId')}
             draft.update(kind=kind);draft.setdefault('scope','all')
         found=period(text,today)
@@ -126,23 +128,28 @@ def resolve_defaults(messages, products, requests=(), *, today=None, previous=No
             if len(ids)==1 and not ambiguous:draft['productId']=next(iter(ids))
         refs=re.findall(r'\bnq-[a-z0-9]+\b',text)
         if refs or re.search(r'\bnq-',text):
-            draft.update(kind='requests_summary',scope='selected');draft.pop('requestId',None)
+            selected_kind=kind if kind in ('requests_summary','claims_summary') else None
+            draft.update(kind=selected_kind or 'requests_summary',scope='selected');draft.pop('requestId',None)
             matches=[r for r in requests if r.id.lower() in set(refs)]
-            if len(set(refs))==1 and len(matches)==1:draft['requestId']=matches[0].id
+            if len(set(refs))==1 and len(matches)==1:
+                record_kind='claims_summary' if request_kind(matches[0])=='claim' else 'requests_summary'
+                if selected_kind is None or selected_kind==record_kind:
+                    draft['requestId']=matches[0].id
+                    draft['kind']=record_kind
     if draft.get('kind') != 'statement':
         for key in ('startDate','endDate','allHistory'):draft.pop(key,None)
-    if draft.get('kind')=='requests_summary':draft.pop('productId',None)
+    if draft.get('kind') in ('requests_summary','claims_summary'):draft.pop('productId',None)
     else:draft.pop('requestId',None)
     # Saved references are revalidated as well as new messages; never trust a
     # stale snapshot to turn an unavailable selection into an unfiltered query.
     if draft.get('productId') and draft['productId'] not in {p.id for p in products}:
         draft.pop('productId');draft['scope']='selected'
-    if draft.get('requestId') and draft['requestId'] not in {r.id for r in requests}:
+    if draft.get('requestId') and draft['requestId'] not in {r.id for r in requests if (request_kind(r)=='claim') == (draft.get('kind')=='claims_summary')}:
         draft.pop('requestId');draft['scope']='selected'
     missing=[]
     if not draft.get('kind'):missing.append('kind')
     if draft.get('kind')=='statement' and not (draft.get('allHistory') or draft.get('startDate') and draft.get('endDate')):missing.append('period')
-    if draft.get('scope')=='selected' and not draft.get('requestId' if draft.get('kind')=='requests_summary' else 'productId'):missing.append('selection')
+    if draft.get('scope')=='selected' and not draft.get('requestId' if draft.get('kind') in ('requests_summary','claims_summary') else 'productId'):missing.append('selection')
     return {'draft':draft,'missing':missing}
 
 
@@ -172,7 +179,7 @@ def apply_query_context(db, owner, conversation_id, state, locale):
         if signal is not None:state['queryPeriodUnclear']=not bool(signal)
     i=('es','en','pt').index(locale)
     if intent=='documents':
-        kinds={'statement':('estado de cuenta','account statement','extrato'),'products_summary':('resumen de productos','product summary','resumo de produtos'),'requests_summary':('seguimiento de solicitudes','request tracking','acompanhamento de solicitações')}
+        kinds={'statement':('estado de cuenta','account statement','extrato'),'products_summary':('resumen de productos','product summary','resumo de produtos'),'claims_summary':('seguimiento de reclamos','complaint tracking','acompanhamento de reclamações'),'requests_summary':('seguimiento de solicitudes','request tracking','acompanhamento de solicitações')}
         if draft.get('kind'):
             name=kinds[draft['kind']][i]
             span=f" {draft['startDate']} — {draft['endDate']}" if draft.get('startDate') else ''

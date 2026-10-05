@@ -238,7 +238,7 @@ def test_voice_suggests_then_browses_without_repeating_date_or_leaking_bank_valu
     app,engine,provider=voice;client,_=login(app);calls,control=models;control['intent']='payment-status'
     before=client.get('/api/bootstrap').json()
     started=client.post('/api/voice/sessions',json=start_body(locale=locale)).json();identity=started['id']
-    for n,text in enumerate(['Tengo un problema con un pago','Puedes mostrarme las últimas transacciones'],1):
+    for n,text in enumerate({'es':['Tengo un problema con un pago','Puedes mostrarme las últimas transacciones'],'en':['I have a problem with a payment','Show my latest transactions'],'pt':['Tenho um problema com um pagamento','Mostre minhas últimas movimentações']}[locale],1):
         provider.socket.events.put({'type':'session.input_transcript.delta','event_id':f't{n}','delta':text,'start_ms':n*100,'end_ms':n*100+80})
         provider.socket.events.put({'type':'session.delegation.created','delegation':{'id':f'd{n}','target':'client'},'offset_ms':n*100+80})
         result=wait_until(lambda:(v if (v:=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json()).get('revision')==n else None))

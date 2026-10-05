@@ -37,9 +37,9 @@ try{
   });
   const login=await context.request.post(origin+'/api/auth/login',{headers:{Origin:origin},data:{identifier:person.email,password:person.password}});assert.equal(login.status(),200);
   const auth=await login.json();
-  const result=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,transactionId:person.transactionId,message:'Verificación [incorrect-charge] me cobraron de más'}});
+  const result=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,transactionId:person.transactionId,message:{es:'Verificación [CASE-2] me cobraron de más',en:'Verification [CASE-2] I was charged too much',pt:'Verificação [CASE-2] cobraram a mais'}[locale]}});
   assert.equal(result.status(),200);const first=await result.json();
-  const next=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,conversationId:first.conversation.id,message:'Esperaba 100 MXN'}});
+  const next=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,conversationId:first.conversation.id,message:{es:'Esperaba 100 MXN',en:'I expected 100 MXN',pt:'Esperava 100 MXN'}[locale]}});
   assert.equal(next.status(),200);const reply=await next.json();assert(reply.flow.canRegister);
   reply.voiceSummary={summary:copy['voiceCall.verdict.unusual'],transactionId:person.transactionId,comparison:{basis:'history',baselineMinor:10000,currentMinor:18500,differenceMinor:8500,currency:'MXN',count:3,verdict:'unusual'}};
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();

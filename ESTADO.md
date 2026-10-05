@@ -1100,11 +1100,65 @@
 - Siguiente paso: probar desde una conversación nueva con Bryan; administrador revisa el expediente en otro perfil del navegador. Revisar las comprobaciones de GitHub y la llamada manual antes de fusionar o añadir los siguientes casos.
 
 ## Frente: Nexqori — integración final de Santiago para nube
-- Fecha: 2026-10-05 09:05 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado.
-- Pedido vigente: fusionar lo último de Santiago y dejar la integración preparada para desplegar la demo en la nube.
-- [x] Identificar PR #9 (santiago@009475e): preferencias, navegación, tarjetas y documentos. PR #8 en b524c22 tiene las tres comprobaciones GitHub aprobadas; #9 presenta conflictos.
-- [ ] Integrar ambos trabajos conservando atención, voz, evidencia, permisos, correo y formularios.
-- [ ] Validar contratos API, frontend y recorridos afectados; fusionar mediante PR hacia main.
-- [ ] Documentar preparación para nube según plataforma; todavía no se despliega infraestructura.
-- Último avance: inspección de ramas y alcance. Archivos locales ajenos preservados.
-- Siguiente paso: resolver conflictos y ejecutar pruebas; plataforma de nube consultada sin bloquear la integración.
+- Fecha: 2026-10-05 09:32 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado.
+- Pedido vigente: fusionar lo último de Santiago y preparar AWS con Docker Compose, subdominio y HTTPS.
+- [x] Integrar PR #9 (santiago@009475e) en la rama del PR #8, conservando autoría, voz, guard Jev, administración y bloqueo por correo. Resolver conflictos y añadir regresiones de navegación por voz, cierre tras PDF y orden del historial.
+- [x] Validar 630 pruebas API y 85 dirigidas tras el último ajuste; 41 frontend y build. Recorridos aislados: perfil 30 axe, documentos 18 axe, nueve conversaciones/59 axe, voz simulada 12 axe y notificaciones 9 axe, sin infracciones detectadas. Evidencia en .local/verification: chat-profile-iF2wxg, document-context-iWrMnI, bank-chat-0ptXF9, voice-ui-zEQNQo, notifications-FrTO1u.
+- [x] Reconstruir API/web local con compose.voice.yaml y cero llamadas activas. Pendiente terminar los recorridos PostgreSQL.
+- [x] Preparar compose.cloud.yaml, Caddy y docs/despliegue-aws-compose.md; validar origen HTTPS, cookie Secure, voz opcional, servicios internos y sintaxis Caddy sin solicitar un certificado.
+- [ ] Publicar integración, comprobar CI del nuevo commit y fusionar hacia main mediante PR.
+- [ ] Validar DNS, TLS, acceso y proveedores en AWS cuando exista el subdominio/servidor. No se ha desplegado infraestructura ni realizado una llamada facturada.
+- Último avance: implementado y desplegado localmente; pruebas de integración correctas. Configuración AWS preparada y validada sin publicar secretos ni datos.
+- Siguiente paso: finalizar pruebas PostgreSQL y comprobaciones GitHub; fusionar PR #8 que incluye todo el PR #9.
+
+## Antecedente de Santiago — cierre del PR #5
+- Último avance: implementado, desplegado en banco Docker :5180 versión 0.2.0 y validado localmente. CI inicial de aplicación y editor correcta; corrección de Security Lab lista para repetir CI antes del merge. Informes privados bank-chat-ShSCWm, document-context-nzsaaD y picker-mobile-SjyP9p bajo .local/verification. Interpretación de fechas acotada y local, sin registros bancarios enviados a modelos. Voz aplazada; otros frentes y archivos privados preservados.
+- Siguiente paso: terminar CI del PR #5, fusionar main, sincronizar bryan por avance rápido y publicar etiqueta v0.2.0. No reiniciar Andrea ni los cinco perfiles ya preparados.
+
+## Frente: Nexqori — navegación, idioma y sesión desde el chatbot
+- Fecha: 2026-10-03, America/Lima. C:/Users/santi/Documents/Projects/nexqori; rama codex/chat-navigation-commands desde santiago 45d2d06.
+- Pedido vigente: corregir solicitudes/reclamos y selección de tarjetas; incorporar Inicio, Centro de ayuda, cierre de sesión y cambio ES/EN/PT sin rehacer el flujo.
+- [x] Añadir órdenes explícitas del cliente en backend/chat_commands.py y conectarlas a las dos rutas del chat. Preservar checkpoint, contrato, referencias, pregunta pendiente y turnos idempotentes del flujo conectado; sin ejecución de proveedores ni operaciones financieras.
+- [x] Separar Mis solicitudes de Mis reclamos; dirigir tarjetas a /cards y normalizar la ruta antigua sólo para reintentos guardados. Aplicar idioma y cierre mediante los endpoints autenticados existentes; conservar mensajes en su idioma original.
+- [x] Validar 30 pruebas frontend y compilación. Suite API completa: 418 correctas y un fallo del nuevo test por enviar requestKey a la ruta antigua; corregido el test y repetidas 69 pruebas de comandos, flujo y navegación, todas correctas, incluidas 41 nuevas. Dependencias del backend completadas desde requirements.lock en .venv-app; temporales de pytest aislados por permisos del directorio temporal previo.
+- [x] Validar nueve conversaciones ES/EN/PT y 47 axe sin infracciones; órdenes durante pregunta pendiente, menú activo, idioma persistido tras recarga, sesión revocada e intérprete con el mismo número de llamadas. Informe privado .local/verification/bank-chat-ZY468X/report.json; captura chat-cards-es.png revisada.
+- [x] Validar navegación general (56 vistas/nueve comandos), experiencia y catálogo (17 vistas), 19 axe sin infracciones; pagos en tres idiomas, reintentos y concurrencia, 15 axe sin infracciones. Informe privado .local/verification/payments/b007e342183b/report.json. Sólo titulares de verificación; no se reiniciaron perfiles manuales ni Andrea.
+- [x] Actualizar guía docs/agente.md y desplegar los cambios en Docker local :5180, conservando PostgreSQL.
+- [ ] Publicar la rama y abrir PR; sin fusión en main. GitHub CLI no está disponible en este equipo.
+- Límites: reglas explícitas con variantes ES/EN/PT, no reconocimiento semántico ilimitado. No se configuraron proveedores ni se alteró el grafo maestro. Las órdenes nuevas no requieren claves; el resto de la atención mantiene su configuración previa.
+- Último avance: implementado, validado y desplegado localmente; pendiente publicación mediante PR. Otros frentes preservados.
+- Siguiente paso: recargar el banco y probar las órdenes; tramitar PR antes de integrar a main.
+
+## Frente: Nexqori — documentos separados y acciones de tarjetas desde el chat
+- Fecha: 2026-10-03, America/Lima. C:/Users/santi/Documents/Projects/nexqori; rama codex/documents-card-actions desde 11366b0.
+- Pedido vigente: separar PDF de solicitudes/reclamos, completar datos de Movimientos y habilitar consulta protegida y bloqueo de tarjetas desde el chat, conservando el flujo existente.
+- [x] Separar consultas, selección, filtros del servidor y plantillas de solicitudes y reclamos; rechazar referencias de otro tipo. Mantener aislamiento por titular y documentos históricos sin alterarlos.
+- [x] Mostrar producto, estado y fecha/hora en Movimientos, incluidos tamaños móviles; conservar traducciones ES/EN/PT.
+- [x] Habilitar datos de tarjetas locales mediante contraseña: número y vencimiento ocultos por defecto, visibilidad máxima de 60 segundos, CVV con ventanas de 15 minutos y contador. Renovar CVV sólo con autorización temporal del mismo titular y tarjeta, sin extender el minuto; ocultar al perder foco.
+- [x] Incorporar órdenes explícitas del chat para abrir los diálogos de consulta o bloqueo; seleccionar tarjeta cuando hay varias. Bloquear sólo tras contraseña y confirmación mediante la operación existente, con auditoría e idempotencia.
+- [x] Validar 445 pruebas backend, 30 frontend y compilación; tras los ajustes finales del intérprete, repetir 116 pruebas de comandos/contexto correctamente. Advertencias existentes de Alembic y tamaño de bundle, sin fallos.
+- [x] Validar tarjetas ES/EN/PT en escritorio/móvil, contraseña incorrecta, ocultación, renovación sin extensión y bloqueo confirmado: seis axe correctos. Evidencia privada .local/verification/cards-verificacion-ui-7790922617d8/report.json. Sólo perfiles de verificación.
+- [x] Validar documentos/contexto: nueve documentos en tres idiomas, selección disjunta y 18 axe correctos; informe .local/verification/document-context-QL0jAx/report.json. Revisar visualmente las ocho páginas de las plantillas de solicitudes/reclamos con datos ficticios, sin desbordes.
+- [x] Completar regresión de chat (nueve conversaciones/47 axe), navegación (56 vistas/nueve comandos), experiencia, servicios (17 vistas) y pagos (tres idiomas/15 axe). Informes privados bank-chat-f0ajqZ y payments/f6db1e1340b1 bajo .local/verification. Sin registros bancarios enviados a modelos.
+- [x] Reconstruir API e interfaz en Docker local :5180, conservar PostgreSQL y verificar tres servicios saludables y HTTP 200.
+- [ ] Publicar rama y abrir PR antes de integrar a main; GitHub CLI no disponible en este equipo.
+- Límites: números y CVV corresponden al proveedor local de prueba, no a una integración con emisor real. Los PDF históricos conservan su contenido original; la separación se aplica a nuevas generaciones. Órdenes explícitas ES/EN/PT, sin reconocimiento semántico ilimitado. Voz aplazada.
+- Último avance: implementado, validado y desplegado localmente; pendiente publicación mediante PR. Otros frentes y datos privados preservados.
+- Siguiente paso: recargar el banco para probar datos de tarjeta y bloqueo desde el chat; revisar el PR antes de fusionar.
+
+## Frente: Nexqori — preferencias, tarjetas y cierre del chat
+- Fecha: 2026-10-04, America/Lima. Rama santiago en la raíz principal; cambios recuperados de codex/chat-profile-and-followup.
+- Pedido vigente: extender el chat existente con selector de tarjeta, preferencias confirmadas, separación de textos de solicitudes/reclamos, filtro de estado, cierre tras PDF y comandos ES/EN/PT según el idioma activo.
+- [x] Implementar selector dentro del diálogo de contraseña; selección por terminación/nombre único o única tarjeta disponible. Mantener contraseña, ocultamiento de datos, CVV y bloqueo existentes.
+- [x] Retirar Documentos solicitados de Mis solicitudes, conservar servicios y añadir filtro de estado. Separar textos de seguimiento y alcance PDF; cerrar conversación al preparar PDF, conservando recuperación idempotente.
+- [x] Incorporar formularios confirmados para nacimiento, frecuencia bancaria, experiencia digital, acompañamiento y tres tamaños. Completar perfiles antiguos con el formulario existente; persistencia, CSRF, autorización del titular y auditoría en servidor.
+- [x] Verificar comandos ES/EN/PT y excepción transversal para cambiar idioma. Mantener flujo y registros fuera de modelos. Detección local por vocabulario revisado, no detector semántico general; tarjetas sin alias propios requieren terminación cuando el nombre es ambiguo.
+- [x] Desplegar API y web desde el checkout aislado en Docker localhost:5180; api/web/db saludables. Conservar PostgreSQL y perfiles manuales.
+- [x] Validar frontend: 30 pruebas y compilación; recorridos de perfil/tarjetas en tres idiomas (chat-profile-obThCJ, 30 axe), chat conectado (bank-chat-hC8Fj8, nueve conversaciones/47 axe), documentos (document-context-70aMIY, nueve PDF/18 axe), tarjetas/CVV/ocultamiento, pagos, navegación, experiencia y servicios. Informes privados en .local/verification; sin errores en los informes finales.
+- [x] Validar 503 pruebas backend, incluidas las regresiones de orden cronológico con reloj fijo. Evidencia: .local/verification/profile-complete2.txt. Dos avisos existentes de Alembic sobre CHECK sin nombre; sin fallos. Temporal aislado tras denegación de acceso al temporal habitual de Windows.
+- [ ] Publicar rama mediante PR y comprobar CI antes de fusionar.
+- [x] A pedido del usuario, resolver los conflictos de santiago y avanzar hasta bd85708 conservando los tres commits: 11366b0, 1d31042 y bd85708. Verificar las etapas de conflicto contra el respaldo original; no había trabajo independiente pendiente. Respaldo de archivos, índice y diferencias en .local/backups/santiago-integration-20261004-225801.
+- [x] Conservar el estado canónico y las entradas de los frentes anteriores; código idéntico a bd85708. Frontend y compilación repetidos en la raíz: correctos (Vitest descubre también la copia del worktree y reporta 60 ejecuciones). Evidencia: .local/verification/santiago-frontend.txt y santiago-build.txt. Sin entradas de conflicto en el índice. Guía: docs/chat-preferencias-y-cierre.md.
+- Límite de publicación: git ls-remote devuelve Repository not found para origin con las credenciales de terminal. No se realizó push ni se cambiaron credenciales/remotos; publicar desde una sesión autorizada de GitHub Desktop.
+- Último avance: implementado, desplegado localmente y validado; santiago contiene todos los cambios verificados y está preparada para publicación.
+- Siguiente paso: publicar santiago desde GitHub Desktop y crear PR; comprobar CI antes de integrar. main, bryan y santiagol conservados.

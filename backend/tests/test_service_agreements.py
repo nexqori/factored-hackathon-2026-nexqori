@@ -84,13 +84,13 @@ def test_conditions_reach_review_and_registered_claim_without_model_or_financial
         observations=[{'field':'difference','value':'299 MXN','quote':'299 MXN','message_index':len(messages)-1}] if '299 MXN' in messages[-1]['content'] else []
         return {'status':'ok','observations':observations,'assessment':'consistent','latency_ms':1}
     monkeypatch.setattr(chat.editor,'extract',extract)
-    response=client.post('/api/assistant/flow',json=message(transactionId=txid,locale=locale,message='Me cobraron de más en el teléfono, revisen el importe'))
+    response=client.post('/api/assistant/flow',json=message(transactionId=txid,locale=locale,message={'es':'Me cobraron de más en el teléfono, revisen el importe','en':'I was overcharged for my phone, please review the amount','pt':'Cobraram a mais no telefone, revisem o valor'}[locale]))
     assert response.status_code==200,response.text
     value=response.json();cid=value['conversation']['id']
     assert value['flow']['canRegister']
     assert 'difference' not in value['flow']['missing_fields']
     for amount in ('299','459','160'):assert amount in value['text']
-    clarified=client.post('/api/assistant/flow',json=message(conversationId=cid,locale=locale,message='Mi plan es de 299 MXN. No acepté cargos adicionales.'))
+    clarified=client.post('/api/assistant/flow',json=message(conversationId=cid,locale=locale,message={'es':'Mi plan es de 299 MXN. No acepté cargos adicionales.','en':'My plan costs 299 MXN. I did not accept extra charges.','pt':'Meu plano custa 299 MXN. Não aceitei cobranças adicionais.'}[locale]))
     assert clarified.status_code==200,clarified.text
     value=clarified.json()
     assert value['flow']['canRegister']

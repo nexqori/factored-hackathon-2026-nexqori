@@ -188,7 +188,7 @@ def test_pending_record_can_be_queried_and_reported_without_resolving_payment(se
     app, engine = setup; client, _ = login(app)
     receipt = client.post(URL, json=pending_body()).json(); before = snapshot(engine)
     conversation = client.post('/api/assistant', json={
-        'message': 'Verificación del movimiento de teléfono.', 'locale': locale,
+        'message': {'es':'Verificación del movimiento de teléfono.','en':'Review the phone transaction.','pt':'Verificar a movimentação de telefone.'}[locale], 'locale': locale,
         'currentPage': 'movements', 'transactionId': receipt['transactionId']})
     assert conversation.status_code == 200, conversation.text
     assert conversation.json()['evidence']['transaction']['status'] == 'pending'

@@ -59,7 +59,7 @@ def test_voice_confirmed_plan_case_announced_once_and_pending_not_refunded(voice
     before=client.get('/api/bootstrap').json()
     started=client.post('/api/voice/sessions',json=start_body(locale=locale,transactionId=txid)).json()
     identity=started['id'];cid=started['conversationId']
-    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'input','delta':'Me cobraron de más en el teléfono','start_ms':0,'end_ms':100})
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'input','delta':{'es':'Me cobraron de más en el teléfono','en':'I was overcharged for my phone','pt':'Cobraram a mais no telefone'}[locale],'start_ms':0,'end_ms':100})
     provider.socket.events.put({'type':'session.delegation.created','delegation':{'id':'find','target':'client'},'offset_ms':100})
     result=wait_until(lambda:(v if (v:=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json()).get('revision')==1 else None))
     assert result['reply']['flow']['canRegister'], result['reply']

@@ -2,6 +2,7 @@ import os
 import secrets
 import time
 import re
+from datetime import timedelta, timezone
 from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import FastAPI, Request, Depends, HTTPException, Query
@@ -11,11 +12,12 @@ from sqlalchemy import select, delete, func, or_, and_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
 from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, Refund, now
-from .schemas import CardRevealInput, RegisterInput, ExperienceInput
+from .schemas import CardRevealInput, CardCvvInput, RegisterInput, ExperienceInput, ProfileFieldInput
 from .models import CustomerProfile
 from .customer_profile import adult_birth_date, experience_view
 from .workflows import workflow_view
-from .cards import reveal_local_card
+from .catalog import request_kind
+from .cards import reveal_local_card, local_card_available, refresh_local_cvv
 from .operations import operations_router
 from .notifications import notifications_router, email_required
 from .spending import spending_router
@@ -36,6 +38,10 @@ from .security import db_session, current_session, current_user, csrf, customer,
 from .models import ChatFeedback
 from .schemas import ChatFeedbackInput
 from .assistant import answer
+from .chat_commands import application_command
+from .chat_language import wrong_language, language_reply
+from .conversation_closed import require_open, document_closed
+from sqlalchemy.orm import object_session
 from .presentation import present_message
 from .transaction_context import transaction_evidence, transaction_reply
 
@@ -43,7 +49,7 @@ def user_view(user):
     return {"id":user.id,"email":user.email,"name":user.name,"role":user.role,"locale":user.locale,"textSize":user.text_size,"experience":experience_view(user.profile)}
 
 def conversation_view(c):
-    return {"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
+    return {"closed":document_closed(object_session(c),c),"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
 
 def message_view(m):
     document = m.document if m.document and m.document.user_id == m.user_id and m.document.conversation_id == m.conversation_id else None
@@ -55,7 +61,7 @@ def request_view(r, name=None, refund=None):
         operation = {"id":refund.id,"status":refund.status,"amountMinor":refund.amount_minor,"currency":refund.currency,
                      "createdAt":refund.created_at.isoformat(),"decidedAt":refund.decided_at.isoformat() if refund.decided_at else None,
                      "creditTransactionId":refund.credit_transaction_id}
-    kind = 'claim' if not r.catalog_service_id or SERVICES.get(r.catalog_service_id, {}).get('kind') == 'claim' else 'application'
+    kind = request_kind(r)
     return {"id":r.id,"kind":kind,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation}
 
 def audit_view(e, name):
@@ -176,6 +182,22 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def get_experience(user=Depends(customer_read)):
         return {"birthDate":user.profile.birth_date.isoformat() if user.profile else "", "experience":experience_view(user.profile)}
 
+    @app.patch('/api/profile/field')
+    def set_profile_field(payload: ProfileFieldInput, user=Depends(customer), db=Depends(db_session)):
+        db.scalar(select(User).where(User.id==user.id).with_for_update())
+        allowed = {'textSize': ('small','medium','large'), 'bankingExperience': ('new','occasional','frequent'),
+                   'digitalExperience': ('new','learning','confident'), 'assistance': ('auto','guided','standard')}
+        value = adult_birth_date(payload.value) if payload.field=='birthDate' else payload.value
+        if payload.field in allowed and value not in allowed[payload.field]: raise HTTPException(422,'validation')
+        if payload.field=='textSize': user.text_size=value
+        else:
+            if not user.profile: raise HTTPException(409,'profile_required')
+            setattr(user.profile, {'birthDate':'birth_date','bankingExperience':'banking_experience','digitalExperience':'digital_experience','assistance':'assistance'}[payload.field], value)
+            user.profile.updated_at=now()
+        add_audit(db,user.id,'preferences_updated' if payload.field=='textSize' else 'experience_updated',user.id)
+        db.commit()
+        return {'user':user_view(user)}
+
     @app.patch("/api/profile/experience")
     def set_experience(payload: ExperienceInput, user=Depends(customer), db=Depends(db_session)):
         birth=adult_birth_date(payload.birthDate)
@@ -219,9 +241,9 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def cards(user=Depends(customer_read), db=Depends(db_session)):
         rows=db.execute(select(Product, CardProfile).outerjoin(CardProfile, and_(CardProfile.product_id==Product.id, CardProfile.user_id==Product.user_id)).where(Product.user_id==user.id, Product.type=="card")).all()
         return {"cards": [{"id": p.id, "last4": p.last4, "holder": user.name,
-            "expiryMonth": c.expiry_month if c else None, "expiryYear": c.expiry_year if c else None,
+            "expiryMonth": None, "expiryYear": None,
             "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"), "blockRequiresEmail": email_required(),
-            "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and c.provider_ref=="local-card-01")} for p,c in rows]}
+            "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and local_card_available(c))} for p,c in rows]}
 
     @app.post("/api/cards/{product_id}/reveal")
     def reveal_card(product_id: str, payload: CardRevealInput, request: Request, user=Depends(customer), db=Depends(db_session)):
@@ -231,8 +253,19 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         if not verify(payload.password, user.password_hash): raise HTTPException(403, "card_password")
         if profile.status=="blocked": raise HTTPException(409, "card_blocked")
         if os.getenv("CARD_PROVIDER")!="local_fixture": raise HTTPException(503, "card_unavailable")
-        result=reveal_local_card(profile)
+        result=reveal_local_card(profile, db.get(Product, product_id).last4, user.password_hash)
         add_audit(db, user.id, "card_details_viewed", user.id)
+        db.commit()
+        return result
+
+    @app.post('/api/cards/{product_id}/cvv')
+    def refresh_cvv(product_id: str, payload: CardCvvInput, user=Depends(customer), db=Depends(db_session)):
+        profile=db.scalar(select(CardProfile).where(CardProfile.product_id==product_id, CardProfile.user_id==user.id).with_for_update())
+        if not profile: raise HTTPException(404, 'not_found')
+        if profile.status=='blocked': raise HTTPException(409, 'card_blocked')
+        if os.getenv('CARD_PROVIDER')!='local_fixture': raise HTTPException(503, 'card_unavailable')
+        result=refresh_local_cvv(profile, user.password_hash, payload.revealToken)
+        add_audit(db, user.id, 'card_cvv_refreshed', user.id)
         db.commit()
         return result
 
@@ -390,7 +423,13 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             conversation=Conversation(id=str(uuid4()),user_id=user.id,title=message[:100],locale=payload.locale,transaction_id=payload.transactionId)
             db.add(conversation); db.flush()
             add_audit(db,user.id,"conversation_started",user.id,conversation_id=conversation.id)
-        if conversation.transaction_id:
+        require_open(db,conversation)
+        command=application_command(instruction,payload.locale) if not payload.pastedText.strip() else None
+        if not command and wrong_language(instruction,payload.locale): command=language_reply(payload.locale)
+        if command:
+            result=command
+            add_audit(db,user.id,"chat_app_command",user.id,conversation_id=conversation.id)
+        elif conversation.transaction_id:
             evidence=transaction_evidence(db,user.id,conversation.transaction_id)
             result=transaction_reply(evidence,payload.locale)
             db.add(AuditEvent(id=str(uuid4()),user_id=user.id,actor_id=user.id,action="transaction_context_viewed",transaction_id=conversation.transaction_id,product_id=evidence['transaction']['productId'],request_id=evidence['request']['id'] if evidence['request'] else None,conversation_id=conversation.id))
@@ -398,10 +437,12 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             balance=db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id==user.id,Product.type.in_(["account","savings"]),Product.currency=="MXN"))
             result=answer(instruction or payload.pastedText,payload.locale,balance,payload.currentPage)
         if result["navigation"]: add_audit(db,user.id,"navigate_"+result["navigation"]["destination"],user.id,conversation_id=conversation.id)
-        user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale)
+        latest=db.scalar(select(func.max(Message.created_at)).where(Message.conversation_id==conversation.id,Message.user_id==user.id))
+        sent_at=max(now(),latest.replace(tzinfo=latest.tzinfo or timezone.utc)+timedelta(microseconds=1)) if latest else now()
+        user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale,created_at=sent_at)
         db.add(user_message)
         db.flush()
-        reply=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="assistant",content=result["text"],locale=payload.locale)
+        reply=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="assistant",content=result["text"],locale=payload.locale,created_at=max(now(),sent_at+timedelta(microseconds=1)))
         db.add(reply)
         add_audit(db,user.id,"message_sent",user.id,conversation_id=conversation.id)
         add_audit(db,user.id,"assistant_replied",user.id,conversation_id=conversation.id)

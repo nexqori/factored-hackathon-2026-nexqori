@@ -11,7 +11,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 TEMPLATES = Path(__file__).with_name('document_templates')
-DOCUMENT_TYPES = {'statement', 'products_summary', 'requests_summary'}
+DOCUMENT_TYPES = {'statement', 'products_summary', 'requests_summary', 'claims_summary'}
 
 def require(condition, code, message):
     if not condition: raise ValueError(code)

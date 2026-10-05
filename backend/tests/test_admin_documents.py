@@ -19,8 +19,9 @@ def test_admin_document_access_requires_case_owner_relation_and_is_read_only(set
     case = customer.post('/api/requests', json=payload()).json()['id']
     cid = query(customer, control)
     doc = customer.post(f'/api/conversations/{cid}/documents', json=body(
-        'requests_summary', scope='selected', requestId=case)).json()['document']
-    unrelated = customer.post(f'/api/conversations/{cid}/documents', json=body('products_summary')).json()['document']
+        'claims_summary', scope='selected', requestId=case)).json()['document']
+    unrelated_cid = query(customer, control)
+    unrelated = customer.post(f'/api/conversations/{unrelated_cid}/documents', json=body('products_summary')).json()['document']
     base = f'/api/admin/users/andrea/requests/{case}/documents'
     assert TestClient(app).get(base).status_code == 401
     assert customer.get(base).status_code == other.get(base).status_code == 403
@@ -59,10 +60,9 @@ def test_documents_from_related_conversation_are_labeled_and_paginate(setup, mod
     _, control = models
     case = customer.post('/api/requests', json=payload()).json()['id']
     ids = []
-    for _ in range(2):
+    for _ in range(22):
         cid = query(customer, control)
-        for _ in range(11):
-            ids.append(customer.post(f'/api/conversations/{cid}/documents', json=body('products_summary')).json()['document']['id'])
+        ids.append(customer.post(f'/api/conversations/{cid}/documents', json=body('products_summary')).json()['document']['id'])
         with make_sessions(engine)() as db:
             db.add(AuditEvent(id=str(uuid4()), user_id='andrea', actor_id='andrea', request_id=case,
                               conversation_id=cid, action='conversation_linked'))

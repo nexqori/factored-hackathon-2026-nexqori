@@ -12,6 +12,12 @@
 .document-summary dd { margin:0; overflow-wrap:anywhere; }
 
 .document-fields{border:0;padding:0;margin:0;min-width:0;display:grid;gap:1rem}
+.movement-details .transaction-row{display:grid;grid-template-columns:40px minmax(110px,1fr) minmax(120px,1fr) auto auto;gap:12px;text-align:left}
+.movement-details .transaction-row>.badge{display:inline-flex}
+.movement-details .transaction-row>svg{display:none}
+.movement-meta{display:grid;gap:6px;font-size:.78rem;line-height:1.5;color:var(--nq-muted);overflow-wrap:anywhere}
+@media(max-width:1250px){.movement-details .transaction-row{grid-template-columns:40px minmax(0,1fr) auto}.movement-details .movement-meta{grid-column:2;grid-row:2}.movement-details .badge{grid-column:3;grid-row:2}.movement-details .transaction-amount{grid-column:3;grid-row:1}}
+@media(max-width:480px){.movement-details .transaction-row{grid-template-columns:minmax(0,1fr) auto}.movement-details .transaction-icon{display:none}.movement-details .movement-meta{grid-column:1}.movement-details .badge,.movement-details .transaction-amount{grid-column:2}}
 .movement-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;align-items:end;margin-bottom:1rem}
 .movement-filters label{display:grid;gap:.4rem;min-width:0}.movement-filters input,.movement-filters select{width:100%;min-height:44px}
 .movement-filters .search-field{display:flex;align-items:center}

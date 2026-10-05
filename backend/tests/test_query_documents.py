@@ -11,9 +11,35 @@ from backend.db import make_sessions
 from backend.models import ChatDocument, AuditEvent, Transaction, Product
 
 
+@pytest.mark.parametrize('locale',['es','en','pt'])
+def test_requests_and_complaints_have_disjoint_templates_and_selections(setup,models,locale):
+    from backend.models import RequestCase
+    app,engine=setup;client,_=login(app);_,control=models
+    with make_sessions(engine)() as db:
+        db.add(RequestCase(id='NQ-APPLICATION',user_id='andrea',catalog_service_id='personal-loan',request_key='verification-application',service='loans',reason='other',details='Verificación solicitud de préstamo',status='received'))
+        db.commit()
+    for kind,expected,excluded in [('requests_summary','NQ-APPLICATION','NQ-1021'),('claims_summary','NQ-1021','NQ-APPLICATION')]:
+        cid=query(client,control,locale);path=f'/api/conversations/{cid}/documents'
+        assert client.post(path,json=body(kind,locale=locale,scope='selected',requestId=excluded)).status_code==404
+        response=client.post(path,json=body(kind,locale=locale));assert response.status_code==200,response.text
+        value=response.json();raw=client.get('/api/documents/'+value['document']['id']).content
+        text=''.join(p.extract_text() for p in PdfReader(BytesIO(raw)).pages)
+        assert expected in text and excluded not in text
+        assert value['document']['details']['recordCount']==1
+
+
+@pytest.mark.parametrize('text,kind',[
+    ('PDF de mis solicitudes','requests_summary'),('PDF of my requests','requests_summary'),('PDF das minhas solicitações','requests_summary'),
+    ('PDF de mis reclamos','claims_summary'),('PDF of my complaints','claims_summary'),('PDF das minhas reclamações','claims_summary'),
+])
+def test_document_kind_from_conversation(text,kind):
+    from backend.query_context import resolve_defaults
+    assert resolve_defaults([{'role':'user','content':text}],[])['draft']['kind']==kind
+
+
 def query(client, control, locale='es', intent='documents'):
     control.update(family='query',intent=intent)
-    text='Muéstrame los movimientos de todas mis cuentas' if intent=='account-activity' else 'Quiero un PDF de mi cuenta'
+    text='Muéstrame los movimientos de todas mis cuentas' if intent=='account-activity' else {'es':'Quiero un PDF de mi cuenta','en':'I want a PDF of my account','pt':'Quero um PDF da minha conta'}[locale]
     r=client.post('/api/assistant/flow',json=message(message=text,locale=locale))
     assert r.status_code==200,r.text
     assert r.json()['flow']['canDocument']
@@ -25,7 +51,7 @@ def body(kind='statement', **kw):
 
 
 @pytest.mark.parametrize('locale',['es','en','pt'])
-@pytest.mark.parametrize('kind',['statement','products_summary','requests_summary'])
+@pytest.mark.parametrize('kind',['statement','products_summary','requests_summary','claims_summary'])
 def test_document_download_history_and_own_data_only(setup,models,locale,kind):
     app,engine=setup;client,_=login(app);calls,control=models
     before=client.get('/api/bootstrap').json();cid=query(client,control,locale)
@@ -42,7 +68,7 @@ def test_document_download_history_and_own_data_only(setup,models,locale,kind):
     text='\n'.join(p.extract_text() for p in PdfReader(BytesIO(download.content)).pages)
     assert 'Andrea Rivera' in text and 'Mateo Silva' not in text and 'TX-2001' not in text
     assert ('TX-1002' in text)==(kind=='statement')
-    assert ('NQ-1021' in text)==(kind=='requests_summary')
+    assert ('NQ-1021' in text)==(kind=='claims_summary')
     assert len(calls)==count  # Generation and downloading never send banking facts to models.
     history=client.get('/api/conversations/'+cid).json()
     assert history['messages'][-1]['document']==value['document']
@@ -100,6 +126,7 @@ def test_document_date_filter_and_no_silent_truncation(setup,models):
         sample=db.get(Transaction,'TX-1002')
         for i in range(251):db.add(Transaction(id=f'large-doc-{i}',user_id='andrea',product_id='card-01',merchant='<b>Not markup</b>',category='shopping',amount_minor=-100,currency='MXN',occurred_at=sample.occurred_at,status='completed'))
         db.commit()
+    cid=query(client,control)
     too_many=client.post('/api/conversations/'+cid+'/documents',json=body())
     assert too_many.status_code==422 and too_many.json()['error']=='document_too_many_rows'
 

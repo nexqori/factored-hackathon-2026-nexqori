@@ -25,7 +25,7 @@ import { Settings } from './Settings';
 import { AssistantPanel, type ChatReply } from './AssistantPanel';
 import { ServiceDirectory, ServicePage, ServiceRequestDetails } from './Services';
 import { serviceTitle } from './catalog';
-import { Cards } from './Cards';
+import { Cards, type CardAction } from './Cards';
 import { RefundPanel } from './RefundPanel';
 import { Registration } from './Registration';
 const empty: Dashboard = { products: [], transactions: [], requests: [], audit: [] };
@@ -60,6 +60,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale; const navigate = useNavigate(); const location = useLocation();
   const [data, setData] = useState<Dashboard>(empty); const [adminData, setAdminData] = useState<AdminData>({ users: [], requests: [], audit: [] }); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [notice, setNotice] = useState(''); const [actionError, setActionError] = useState(''); const [busy, setBusy] = useState(false);
   const [transactionQuestion, setTransactionQuestion] = useState<TransactionQuestion | null>(null);
+  const [cardAction, setCardAction] = useState<CardAction | null>(null);
   const [modal, setModal] = useState<Modal | null>(null); const [hidden, setHidden] = useState(false); const [menu, setMenu] = useState(false);
   async function refresh() { const next = await api<Dashboard>('/bootstrap'); setData(next); if (user.role === 'admin') setAdminData(await api<AdminData>('/admin/overview')); setLoadError(''); return next; }
   useEffect(() => { let active = true; void refresh().catch(e => { if (active) setLoadError(errorText(e)); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [user.id]);
@@ -76,6 +77,19 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   async function changeLocale(value: Locale) { try { await api('/profile/locale', 'PATCH', { locale: value }); await i18n.changeLanguage(value); setUser({ ...user, locale: value }); } catch (e) { setActionError(errorText(e)); } }
   function focusChat() { document.querySelector('.assistant-panel')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); document.querySelector<HTMLInputElement>('[data-assistant-input]')?.focus({ preventScroll: true }); }
   async function receiveReply(result: ChatReply) {
+    if (result.appCommand) {
+      try {
+        if (result.appCommand.type === 'logout') await signOut();
+        else if (result.appCommand.type === 'set_locale' && ['es', 'en', 'pt'].includes(result.appCommand.locale)) await changeLocale(result.appCommand.locale);
+        else if (result.appCommand.type === 'prepare_card' && ['reveal','block'].includes(result.appCommand.action)) {
+          const last4 = result.appCommand.last4;
+          if (last4 && !/^\d{4}$/.test(last4)) return;
+          setCardAction({ action: result.appCommand.action, last4, name:result.appCommand.name, nonce: crypto.randomUUID() });
+          navigate('/cards');
+        }
+      } catch (error) { setActionError(errorText(error)); }
+      return;
+    }
     if (result.destination === 'new-request') open({ type: 'create' });
     else if (await navigateWithCommand(result.navigation, navigate, error => setActionError(errorText(error)))) {
       setNotice(t('navigationDone', { screen: t(result.navigation!.destination) }));
@@ -106,12 +120,12 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
         </>} />
         <Route path="/movements" element={<Movements data={data} onSelect={transaction=>open({type:'transaction',transaction})}/>} />
         <Route path="/documents" element={user.role==='customer'?<><PageHeading title={t('documents.title')} subtitle={t('documents.centerHint')}/><MyDocuments/></>:<Navigate to="/admin" replace/>} />
-        <Route path="/cards" element={user.role === 'customer' ? <Cards onChanged={() => { void refresh().catch(e => setActionError(errorText(e))); }} /> : <Navigate to="/admin" replace />} />
-        <Route path="/products" element={productKind === 'cards' ? <Cards onChanged={() => { void refresh().catch(e => setActionError(errorText(e))); }} /> : <><PageHeading title={t(productKind === 'accounts' || productKind === 'cards' ? productKind : 'products')} subtitle={t('productHint')} /><div className="product-grid">{visibleProducts.map(p => <article className={'product-card product-kind-' + p.type} key={p.id}><div className="section-heading"><span className="round-icon small">{p.type === 'card' ? <CreditCard size={22} /> : <Wallet size={22} />}</span><Badge status={p.status || 'active'} /></div><h2>{t(p.type)}</h2>{p.type === 'card' && <button className="text-link" onClick={() => navigate('/cards')}>{t('cardDetails')}<ArrowRight size={17} /></button>}<p className="muted">{t('ending')} •••• {p.last4}</p>{p.transferReference&&<p className="account-reference"><small>{t('transfer.ownReference')}</small><span>{hidden?'••••••':p.transferReference}</span></p>}<strong className="product-amount">{p.balanceMinor === null ? '•••• •••• •••• ' + p.last4 : hidden ? '••••••' : formatMoney(p.balanceMinor, locale)}</strong><button className="text-link" onClick={() => { navigate('/movements?product=' + encodeURIComponent(p.id)); }}>{t('seeMovements')}<ArrowRight size={17} /></button></article>)}</div>{!visibleProducts.length && <p className="empty-panel">{t('noProducts')}</p>}</>} />
+        <Route path="/cards" element={user.role === 'customer' ? <Cards action={cardAction} onActionConsumed={() => setCardAction(null)} onChanged={() => { void refresh().catch(e => setActionError(errorText(e))); }} /> : <Navigate to="/admin" replace />} />
+        <Route path="/products" element={productKind === 'cards' ? <Cards action={cardAction} onActionConsumed={() => setCardAction(null)} onChanged={() => { void refresh().catch(e => setActionError(errorText(e))); }} /> : <><PageHeading title={t(productKind === 'accounts' || productKind === 'cards' ? productKind : 'products')} subtitle={t('productHint')} /><div className="product-grid">{visibleProducts.map(p => <article className={'product-card product-kind-' + p.type} key={p.id}><div className="section-heading"><span className="round-icon small">{p.type === 'card' ? <CreditCard size={22} /> : <Wallet size={22} />}</span><Badge status={p.status || 'active'} /></div><h2>{t(p.type)}</h2>{p.type === 'card' && <button className="text-link" onClick={() => navigate('/cards')}>{t('cardDetails')}<ArrowRight size={17} /></button>}<p className="muted">{t('ending')} •••• {p.last4}</p>{p.transferReference&&<p className="account-reference"><small>{t('transfer.ownReference')}</small><span>{hidden?'••••••':p.transferReference}</span></p>}<strong className="product-amount">{p.balanceMinor === null ? '•••• •••• •••• ' + p.last4 : hidden ? '••••••' : formatMoney(p.balanceMinor, locale)}</strong><button className="text-link" onClick={() => { navigate('/movements?product=' + encodeURIComponent(p.id)); }}>{t('seeMovements')}<ArrowRight size={17} /></button></article>)}</div>{!visibleProducts.length && <p className="empty-panel">{t('noProducts')}</p>}</>} />
         <Route path="/services" element={<ServiceDirectory />} />
         <Route path="/services/:category" element={<ServiceDirectory />} />
         <Route path="/services/catalog/:serviceId" element={<ServicePage data={data} saved={async () => { await refresh(); }} />} />
-        <Route path="/requests" element={<><PageHeading title={t('requests')} subtitle={t('applicationsHint')} /><MyDocuments/><button className="button primary new-request" onClick={() => navigate('/services')}>{t('allServices')}<ArrowRight size={18}/></button><RequestCollection requests={applications} renderCase={caseCard} />{!applications.length && <p className="empty-panel">{t('noRequests')}</p>}</>} />
+        <Route path="/requests" element={<><PageHeading title={t('requests')} subtitle={t('applicationsHint')} /><button className="button primary new-request" onClick={() => navigate('/services')}>{t('allServices')}<ArrowRight size={18}/></button><RequestCollection requests={applications} renderCase={caseCard} />{!applications.length && <p className="empty-panel">{t('noRequests')}</p>}</>} />
         <Route path="/complaints" element={<ClaimsPanel users={[]} requests={complaints} admin={false} onRefresh={refresh} onRequest={id => open({type:'request',id})} onCreate={() => open({type:'create'})} />} />
         <Route path="/payments/:paymentId" element={<PaymentReceipt />} /><Route path="/transfers/:transferId" element={<TransferReceipt />} />
         <Route path="/help" element={<><PageHeading title={t('helpTitle')} subtitle={t('helpBody')} /><div className="help-list">{[1, 2, 3].map(n => <details key={n}><summary>{t('help' + n)}<ChevronDown size={18} /></summary><p>{t('answer' + n)}</p></details>)}</div>{user.role === 'customer' && <button className="button primary" onClick={focusChat}><MessageCircle size={19} />{t('focusAssistant')}</button>}</>} />
@@ -122,7 +136,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
       </Routes>}
       <footer className="main-footer"><ShieldCheck size={14} />{t('footerNote')}<span>ES / EN / PT</span></footer>
     </main>
-    {user.role === 'customer' && <AssistantPanel data={data} onClaim={id => { void refresh().then(() => { navigate("/complaints?case=" + id); }); }} transactionQuestion={transactionQuestion} guided={user.experience?.effectiveAssistance === 'guided'} key={user.id} currentPage={currentDestination(location.pathname, location.search)} onReply={receiveReply} />}
+    {user.role === 'customer' && <AssistantPanel onProfile={setUser} data={data} onClaim={id => { void refresh().then(() => { navigate("/complaints?case=" + id); }); }} transactionQuestion={transactionQuestion} guided={user.experience?.effectiveAssistance === 'guided'} key={user.id} currentPage={currentDestination(location.pathname, location.search)} onReply={receiveReply} />}
     </div></div>
     {notice && <div className="toast" role="status"><Check size={18} />{notice}</div>}
     {modal?.type === 'create' && <CreateRequest key={modal.transactionId || modal.service || 'new'} modal={modal} data={data} close={() => setModal(null)} saved={async (id, duplicate) => { await refresh(); setNotice(t(duplicate ? 'duplicate' : 'saved')); navigate('/complaints?case=' + id); open({ type: 'request', id }); }} />}

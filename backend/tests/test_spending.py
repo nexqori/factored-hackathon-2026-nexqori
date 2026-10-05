@@ -89,7 +89,7 @@ def test_published_rate_is_context_not_a_decision_or_model_payload(setup,models,
     assert detail['providerNotice']['customerContractVerified'] is False
     assert detail['providerNotice']['observation']['priceMinor']==45900
     before=client.get('/api/bootstrap').json();calls,control=models;control['intent']='payment-status'
-    response=client.post('/api/assistant/flow',json=message(transactionId=txid,locale=locale,message='Pagué mi teléfono y sigue pendiente'))
+    response=client.post('/api/assistant/flow',json=message(transactionId=txid,locale=locale,message={'es':'Pagué mi teléfono y sigue pendiente','en':'I paid my phone bill and it is still pending','pt':'Paguei meu telefone e continua pendente'}[locale]))
     assert response.status_code==200,response.text
     value=response.json();assert value['flow']['canRegister']
     assert 'Teléfono Esencial' in value['text'] and '2026-10-01' in value['text']

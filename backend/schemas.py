@@ -14,6 +14,10 @@ class Login(StrictModel):
 class LocaleInput(StrictModel):
     locale: Locale
 
+class CardCvvInput(StrictModel):
+    revealToken: str = Field(min_length=66, max_length=90, pattern=r'^\d{1,12}\.[a-f0-9]{64}$')
+
+
 class CardRevealInput(StrictModel):
     password: str = Field(min_length=1, max_length=256)
 
@@ -34,6 +38,12 @@ class RegisterInput(ExperienceInput):
 
 class PreferencesInput(StrictModel):
     textSize: Literal["small", "medium", "large"]
+
+
+class ProfileFieldInput(StrictModel):
+    field: Literal['birthDate', 'bankingExperience', 'digitalExperience', 'assistance', 'textSize']
+    value: str = Field(min_length=1, max_length=32)
+    confirmed: Literal[True]
 
 
 class ConfirmInput(StrictModel):
