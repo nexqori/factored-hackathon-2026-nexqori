@@ -268,3 +268,27 @@ def test_voice_suggests_then_browses_without_repeating_date_or_leaking_bank_valu
     after=client.get('/api/bootstrap').json()
     for key in ('products','transactions','requests'):assert after[key]==before[key]
     assert client.post(f'/api/voice/sessions/{identity}/close',json={}).json()['remoteClosed']
+
+
+def test_spoken_close_reaches_remote_provider_after_farewell(voice, monkeypatch):
+    monkeypatch.setattr('backend.voice.classify_action',lambda *a:'end-call')
+    app,engine,provider=voice;client,_=login(app)
+    identity=client.post('/api/voice/sessions',json=start_body(locale='pt')).json()['id']
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'end','delta':'Encerre a chamada','start_ms':0,'end_ms':100})
+    provider.socket.events.put({'type':'session.delegation.created','delegation':{'id':'end','target':'client'},'offset_ms':100})
+    wait_until(lambda:any('Obrigado por ligar' in e.get('content','') for e in provider.socket.sent))
+    provider.socket.events.put({'type':'session.output_transcript.delta','delta':'Obrigado por ligar. Tenha um bom dia.'})
+    wait_until(lambda:any(e['type']=='session.close' for e in provider.socket.sent))
+    result=wait_until(lambda:(s if (s:=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json())['status']=='closed' else None))
+    assert result['remoteClosed'] and result['reason']=='requested_by_customer'
+
+
+def test_late_previous_utterance_does_not_prefix_next_confirmation():
+    buffer=TranscriptBuffer()
+    for identity,start,end,text in [('first',1600,4200,'There is a charge I do not recognize'),
+                                   ('tail',5000,7000,'Can you help me request a refund'),
+                                   ('next',15000,16600,'Yes, that is the charge')]:
+        buffer.add({'event_id':identity,'start_ms':start,'end_ms':end,'delta':text})
+    assert buffer.take(4000)=='There is a charge I do not recognize'
+    assert buffer.take(16400)=='Yes, that is the charge'
+    assert buffer.take(20000)==''

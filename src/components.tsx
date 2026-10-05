@@ -20,9 +20,22 @@ export function TransactionList({ rows, onSelect, compact = false, products, hig
     {!compact && <Badge status={tx.status} />}<span className={'transaction-amount ' + (tx.amountMinor > 0 ? 'positive' : '')}>{tx.amountMinor > 0 ? '+' : ''}{formatMoney(tx.amountMinor, locale, tx.currency)}{compact && tx.status !== 'completed' && <small>{t(tx.status)}</small>}</span><ArrowUpRight size={16} aria-hidden="true" />
   </button>)}</div>;
 }
-export function Dialog({ title, onClose, children, busy = false, className = '' }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean; className?: string }) {
+export function Dialog({ title, onClose, children, busy = false, className = '', modal = true }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean; className?: string; modal?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null); const { t } = useTranslation(); const titleId = useId();
-  useEffect(() => { const previous = document.activeElement as HTMLElement | null; const dialog = ref.current!; dialog.showModal(); return () => { dialog.close(); previous?.focus(); }; }, []);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null; const dialog = ref.current!;
+    const position = () => {
+      if (modal) return;
+      const panel = dialog.closest('.assistant-panel')?.getBoundingClientRect();
+      const beside = !!panel && panel.left > 660;
+      const width = Math.min(620, beside ? panel.left - 32 : window.innerWidth - 24);
+      dialog.style.width = width + 'px';
+      dialog.style.left = (beside ? panel.left - width - 16 : 12) + 'px';
+      dialog.style.top = (beside ? Math.max(12, Math.min(panel.top, 92)) : 12) + 'px';
+    };
+    if (modal) dialog.showModal(); else { dialog.show(); position(); window.addEventListener('resize', position); }
+    return () => { window.removeEventListener('resize', position); dialog.close(); previous?.focus(); };
+  }, [modal]);
   return <dialog ref={ref} className={'dialog ' + className} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); if (!busy) onClose(); }} onClick={e => { if (e.target === ref.current && !busy) onClose(); }}>
     <div className="dialog-inner"><div className="dialog-header"><h2 id={titleId}>{title}</h2><button className="icon-button" aria-label={t('close')} disabled={busy} onClick={onClose}><X size={21} /></button></div>{children}</div>
   </dialog>;

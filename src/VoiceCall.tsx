@@ -33,7 +33,7 @@ export function VoiceCall({selection,onReply,onClose,onSession,onRegistered}:{se
   async function start(){
     if(!audio.current||!capability?.enabled)return;
     setError('');setMuted(false);setFragments([]);setBankReply(null);setBankResultOpen(false);follow.current=true;
-    client.current=new VoiceClient({status:setState,error:setError,
+    client.current=new VoiceClient({status:value=>{setState(value);if(value==='closed')onClose();},error:setError,
       caption:fragment=>setFragments(items=>[...items,fragment].slice(-400)),
       reply:r=>{setBankReply(r);callback.current(r);},session:onSession},audio.current);
     await client.current.start({...selection,voice});
@@ -84,7 +84,7 @@ export function VoiceCall({selection,onReply,onClose,onSession,onRegistered}:{se
     <audio ref={audio} aria-label={t('voiceCall.audio')}/>
     <footer className="voice-call-footer">
       {bankReply?.flow?.canRegister&&<p className="voice-review-hint" role="status">{t('voiceCall.reviewBeforeSend')}</p>}
-      {bankReply?.flow&&(bankReply.flow.canRegister||bankReply.flow.requestId)&&<ChatFlow actionsOnly comparison={<VoiceComparison comparison={bankReply.voiceSummary?.comparison||null}/>} result={bankReply.flow} conversationId={bankReply.conversation.id} onRegistered={claim=>{
+      {bankReply?.flow&&(bankReply.flow.canRegister||bankReply.flow.requestId)&&<ChatFlow callReview actionsOnly comparison={<VoiceComparison comparison={bankReply.voiceSummary?.comparison||null}/>} result={bankReply.flow} conversationId={bankReply.conversation.id} onRegistered={claim=>{
         const updated={...bankReply,text:claim.message.text,flow:claim.flow,messages:[claim.message],voiceSummary:null,navigation:null,destination:null};
         setBankReply(updated);callback.current(updated);onRegistered(claim.id);
       }}/>}

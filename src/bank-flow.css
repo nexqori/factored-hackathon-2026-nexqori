@@ -99,3 +99,13 @@
 .chat-claim-actions .button{flex:1;white-space:normal}
 .chat-claim-review .dialog-inner{max-height:calc(100dvh - 24px);overflow:auto}
 @media(max-width:500px){.chat-claim-actions{flex-direction:column}}
+
+/* A call review must not make the call controls inert or cover the agent. */
+.call-claim-review{position:fixed;margin:0;z-index:40;box-shadow:0 12px 50px #392c2733;max-height:calc(100dvh - 110px)}
+.call-claim-review .dialog-inner{max-height:inherit;padding:20px}
+.call-claim-review .form-stack{gap:14px}
+.call-claim-review .voice-comparison{padding:12px;margin-bottom:0}
+@media(max-width:1050px){
+ .call-claim-review{max-height:calc(100dvh - 190px)}
+ .assistant-panel:has(.call-claim-review) .voice-call-actions{position:fixed;bottom:12px;left:12px;right:12px;z-index:41;padding:10px;background:var(--nq-background);border:1px solid var(--nq-border);border-radius:12px;box-shadow:0 4px 20px #392c2720}
+}

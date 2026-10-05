@@ -110,3 +110,8 @@ def command_locale(text):
     if text.startswith(('Show','Open','Go','Please','Block','Do not')): return 'en'
     if text.startswith(('Me leve','Abra','Mostre','Vá','Encerre','Bloqueie','Não')): return 'pt'
     return 'es'
+
+
+def test_portuguese_sentence_can_name_a_spanish_merchant():
+    from backend.chat_language import wrong_language
+    assert not wrong_language('Vi uma transacao no comercio Mercado Llevar, marcada como suspeita, mas fui eu que a fiz, quero reconhecer-la como normal', 'pt')

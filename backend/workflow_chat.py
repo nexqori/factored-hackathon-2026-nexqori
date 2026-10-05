@@ -32,7 +32,7 @@ from .prompt_guard import inspect_prompt, guard_message
 from .query_documents import can_document
 from .query_answers import query_answer
 from .case_followup import case_status_reply, case_status_navigation
-from .query_context import apply_query_context
+from .query_context import apply_query_context, recognized_purchase_lookup
 from .claim_summary import claim_preview, confirmation_text, preview_token, review_message, NEXT as CLAIM_NEXT
 from .payment_history import context_comparison, comparison_text
 from .conversation_selection import replace_transaction_context
@@ -215,6 +215,8 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     command = application_command(body.message, body.locale) if not body.pastedText.strip() and not body.replaceTransaction and not body.updateSelection else None
     if not command and not body.updateSelection and wrong_language(body.message, body.locale):
         command = language_reply(body.locale)
+    if not command and not body.pastedText.strip() and not body.updateSelection:
+        command = recognized_purchase_lookup(db, user.id, body.message, body.locale)
     if command:
         # Exact application commands only prepare UI or navigate. They preserve
         # the selected case and never authorize or perform banking operations.

@@ -18,6 +18,27 @@ from .conversation_context import changes_topic
 from .catalog import request_kind
 
 ZONE = ZoneInfo('America/Mexico_City')
+
+
+def recognized_purchase_lookup(db, owner, text, locale):
+    """Locate a self-recognized purchase; never authorize or change its baseline."""
+    from .transaction_suggestions import words, related
+    value = plain(text)
+    if not re.search(r'\b(?:fui eu|fui yo|compra casual|compra ocasional|i made|my purchase|i recognize|reconhecer|reconheco)\b', value):
+        return None
+    tokens = words(text)
+    rows = db.scalars(select(Transaction).where(Transaction.user_id == owner,
+        Transaction.amount_minor < 0).order_by(Transaction.occurred_at.desc()).limit(300)).all()
+    matches = [tx for tx in rows if related(tokens, words(tx.merchant) - {'de','do','da','the','empresa'})]
+    if not matches or len({tx.merchant for tx in matches}) != 1:return None
+    # An unusual purchase of the named merchant is a proposal, never consent.
+    candidate = max(matches, key=lambda tx:abs(tx.amount_minor)) if re.search(r'\b(?:suspeita|suspeito|suspicious|inusual|anomal\w*)\b',value) else matches[0]
+    amount = f'{abs(candidate.amount_minor)/100:,.2f} {candidate.currency}'
+    text = (f'Encontré la compra de {candidate.merchant} por {amount}. La abrí en Movimientos; allí puedes marcarla como compra ocasional sin cambiar tus promedios habituales.',
+            f'I found the {candidate.merchant} purchase for {amount}. I opened it in Transactions; you can mark it as an occasional purchase without changing your usual averages.',
+            f'Encontrei a compra em {candidate.merchant} de {amount}. Abri essa movimentação; você pode marcá-la como compra ocasional sem alterar suas médias habituais.')[('es','en','pt').index(locale)]
+    return {'text':text,'destination':'movements','navigation':navigate_in_app('movements','customer',filters={'transaction':candidate.id}),'appCommand':None}
+
 MONTHS = {
     'enero':1,'january':1,'janeiro':1,'febrero':2,'february':2,'fevereiro':2,
     'marzo':3,'march':3,'marco':3,'abril':4,'april':4,'mayo':5,'may':5,'maio':5,

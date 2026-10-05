@@ -19,13 +19,14 @@ export type FlowResult = { canDocument?: boolean; execution: {phase: string}; wo
 export type ClaimRegistration = { id: string; message: Message; summary: string; nextStep: string; flow: FlowResult };
 type ClaimPreview = { summary: string; previewToken: string; intent: string; transactionId: string | null; operationLabel: string; nextStep: string };
 
-export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false, autoOpen = true, comparison }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; autoOpen?: boolean; comparison?: ReactNode; onRegistered: (claim: ClaimRegistration) => void }) {
+export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false, autoOpen = true, callReview = false, comparison }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; autoOpen?: boolean; callReview?: boolean; comparison?: ReactNode; onRegistered: (claim: ClaimRegistration) => void }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const summaryLabelId = useId();
   const [review, setReview] = useState(false); const [details, setDetails] = useState(''); const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [preview, setPreview] = useState<ClaimPreview | null>(null);
   const attempt = useRef<{signature:string; key:string} | null>(null);
+  const reviewSync = useRef<Promise<unknown>>(Promise.resolve());
   async function loadPreview() {
     setReview(true); setBusy(true); setError(''); setEditing(false); setPreview(null);
     try {
@@ -36,11 +37,17 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
   }
   useEffect(() => {
     if (!preview) return;
-    void api('/conversations/' + conversationId + '/claim-review', 'POST', {
+    // Closing a reviewed draft hides it; only editing revokes its readiness.
+    // Serialize updates so a slow earlier request cannot overwrite ready=true.
+    if (!preview || busy || result.requestId) return;
+    const body = {
       previewToken:preview.previewToken, details:details.trim() || preview.summary,
-      ready:review && !editing && !busy && result.canRegister, locale,
-    }).catch(() => {}); // The form button remains available if speech readiness fails.
-  }, [review, editing, busy, preview, details, conversationId, locale, result.canRegister]);
+      ready:!editing && result.canRegister, locale,
+    };
+    reviewSync.current = reviewSync.current.catch(() => {}).then(() =>
+      api('/conversations/' + conversationId + '/claim-review', 'POST', body)
+    ).catch(e => { setError('error.' + (e instanceof ApiError ? e.code : 'generic')); });
+  }, [editing, busy, preview, details, conversationId, locale, result.canRegister, result.requestId]);
   useEffect(() => { if (result.requestId) setReview(false); }, [result.requestId]);
   const openedReview = useRef<string | null>(null);
   useEffect(() => {
@@ -69,7 +76,7 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
     {!readOnly && result.canRegister && <button className="button primary wide" onClick={() => { void loadPreview(); }}>{t('chatFlow.prepareClaim')}</button>}
     {!readOnly && result.requestId && <Link className="button secondary wide" to={'/complaints?case=' + encodeURIComponent(result.requestId)}>{t('chatFlow.follow')} · {result.requestId}</Link>}
     {!actionsOnly && !readOnly && result.jev.intent === 'unrecognized-charge' && <p><Link to="/cards">{t('chatFlow.cards')}</Link></p>}
-    {review && <Dialog title={t('chatFlow.prepareClaim')} onClose={() => setReview(false)} busy={busy} className="chat-claim-review"><form className="form-stack" onSubmit={e => { e.preventDefault(); void register(); }}>
+    {review && <Dialog modal={!callReview} title={t('chatFlow.prepareClaim')} onClose={() => setReview(false)} busy={busy} className={'chat-claim-review'+(callReview?' call-claim-review':'')}><form className="form-stack" onSubmit={e => { e.preventDefault(); void register(); }}>
       <p>{t('chatClaim.reviewHint')}</p>
       {busy && !preview && <p role="status">{t('loading')}</p>}
       {preview && <>

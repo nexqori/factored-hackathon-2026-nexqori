@@ -19,7 +19,7 @@ from .security import customer, customer_read, current_session, db_session
 from .schemas import StrictModel, Locale
 from .transaction_context import transaction_evidence
 from .workflow_chat import FlowMessage, RegisterClaim, register_reviewed_claim, run_chat_turn, flow_view, enabled as flow_enabled, next_message_time
-from .transaction_suggestions import submit_review
+from .voice_actions import classify_action
 from .claim_summary import preview_token
 from .prompt_guard import inspect_prompt
 from .voice_summary import presentation
@@ -136,7 +136,13 @@ class TranscriptBuffer:
         # that whole fragment; otherwise its suffix leaks into the next turn.
         chosen = sorted((f for f in self.fragments if f['event_id'] not in self.used and f['start_ms']<=offset),
                         key=lambda f:(f['start_ms'],f['end_ms']))
-        text = ''.join(f['delta'] for f in chosen).strip()
+        # Late fragments from a previous utterance must not prefix a new reply.
+        # Acoustic separation, not matching particular confirmation words.
+        start = 0
+        for index in range(1, len(chosen)):
+            if chosen[index]['start_ms'] - chosen[index-1]['end_ms'] > 2500:
+                start = index
+        text = ''.join(f['delta'] for f in chosen[start:]).strip()
         if len(text)>8000: raise ValueError('voice_transcript_limit')
         self.used.update(f['event_id'] for f in chosen)
         return text
@@ -179,7 +185,16 @@ class VoiceRuntime:
             if receipt:
                 previous = row.state.get('reply') or {}
                 return safe_spoken_result(previous, row.locale, previous.get('voiceSummary'))
-            can_submit = bool(submit_review(text) and flow and not flow.request_id and shown
+            action = classify_action(text, row.locale)
+            if action == 'end-call' and inspect_prompt(text, row.locale)['status'] == 'allowed':
+                farewell = ('Gracias por llamar. Que tengas un buen día.', 'Thank you for calling. Have a good day.',
+                            'Obrigado por ligar. Tenha um bom dia.')[('es','en','pt').index(row.locale)]
+                row.state = {**row.state, 'end_requested': True, 'last_action':action}
+                audit(db, row, 'voice_end_requested'); db.commit()
+                return farewell
+            if action == 'case-status' and flow and flow.request_id:
+                selected_request = flow.request_id
+            can_submit = bool(action == 'submit-claim' and flow and not flow.request_id and shown
                 and shown.get('ready') and shown.get('locale') == row.locale
                 and 0 <= now().timestamp() - shown.get('at', 0) < 600
                 and shown.get('token') == preview_token(conv, flow.state, row.locale))
@@ -221,7 +236,7 @@ class VoiceRuntime:
             receipts=dict(row.state.get('delegations',{}))
             if delegation_id not in receipts:
                 receipts[delegation_id]=key
-                row.state={**row.state,'reply':reply,'revision':row.state.get('revision',0)+1,'delegations':receipts}
+                row.state={**row.state,'reply':reply,'revision':row.state.get('revision',0)+1,'delegations':receipts,'last_action':action}
                 audit(db,row,'voice_turn');db.commit()
             return safe_spoken_result(reply,row.locale,summary)
 
@@ -296,7 +311,7 @@ class VoiceRuntime:
         pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='nexqori-voice-turn')
         closed=False; reason='ended'; final_usage=None
         greeting_decided=False; greeting_id=None; greeting_sent_at=None; greeting_acked=False
-        speech_started=False; next_case_check=0
+        speech_started=False; next_case_check=0; ending_at=None; last_output_at=None; last_input_at=0
         try:
             with self.sessions() as db:
                 locale=db.get(VoiceSession,identity).locale
@@ -308,11 +323,17 @@ class VoiceRuntime:
                 if future and future.done():
                     result=future.result();send(socket,'session.commentary.append',delegation_id=work_id,content=result)
                     future=None
+                    with self.sessions() as db:
+                        if db.get(VoiceSession,identity).state.get('end_requested'):
+                            ending_at=time.monotonic(); last_output_at=None
+                if ending_at is not None and ((last_output_at and time.monotonic()-last_output_at>3 and time.monotonic()-ending_at>5)
+                                             or time.monotonic()-ending_at>15):
+                    reason='requested_by_customer'; break
                 if not future and not pending and time.monotonic()>=next_case_check:
                     next_case_check=time.monotonic()+1
                     notice=self.registration_notice(identity)
                     if notice:send(socket,'session.commentary.append',delegation_id=None,content=notice)
-                if not future and pending and time.monotonic()-pending[0][2]>=0.6:
+                if not future and pending and time.monotonic()-max(pending[0][2],last_input_at)>=1.2:
                     work_id,offset,_=pending.pop(0);text=fragments.take(offset)
                     if text:future=pool.submit(self.turn,identity,work_id,text)
                     else:send(socket,'session.commentary.append',delegation_id=work_id,content='Please ask the customer to repeat their last request; no complete transcript was received.')
@@ -334,9 +355,11 @@ class VoiceRuntime:
                     self.update(identity,greeting_status='accepted')  # Acceptance is not proof of playback.
                 elif event.get('type')=='session.input_transcript.delta':
                     speech_started=speech_started or bool(event.get('delta','').strip())
+                    last_input_at=time.monotonic()
                     fragments.add(event)
                 elif event.get('type')=='session.output_transcript.delta':
                     speech_started=speech_started or bool(event.get('delta','').strip())
+                    if ending_at is not None:last_output_at=time.monotonic()
                 elif event.get('type')=='session.delegation.created':
                     item=event.get('delegation',{});did=item.get('id');offset=event.get('offset_ms')
                     if item.get('target')=='client' and isinstance(did,str) and 0<len(did)<=128 and isinstance(offset,(int,float)) and offset>=0 and did not in seen:

@@ -167,8 +167,9 @@ def test_resuming_refunded_case_announces_and_opens_existing_credit(voice, model
     customer.post('/api/voice/sessions/'+started['id']+'/close',json={})
 
 
-@pytest.mark.parametrize('phrase', ['No, enviémoslo a revisión', 'Confirmar y enviar'])
-def test_real_reported_sequence_submits_displayed_draft_once(voice, models, phrase):
+@pytest.mark.parametrize('phrase', ['No, enviémoslo a revisión', 'Confirmar y enviar', 'Okay, send it like it is', 'Yes, send it', 'Okay Send the refund request for review, please', 'Sim, envie assim'])
+def test_real_reported_sequence_submits_displayed_draft_once(voice, models, phrase, monkeypatch):
+    monkeypatch.setattr('backend.voice.classify_action', lambda text,locale: 'submit-claim' if text==phrase else 'continue')
     app, engine, _ = voice; client, _ = login(app)
     _, control = models; control['intent'] = 'unrecognized-charge'
     started = client.post('/api/voice/sessions', json=start_body()).json()
@@ -201,7 +202,8 @@ def test_real_reported_sequence_submits_displayed_draft_once(voice, models, phra
     client.post(f'/api/voice/sessions/{identity}/close',json={})
 
 
-def test_editing_draft_revokes_voice_submission(voice, models):
+def test_editing_draft_revokes_voice_submission(voice, models, monkeypatch):
+    monkeypatch.setattr('backend.voice.classify_action', lambda *a: 'submit-claim')
     app, _, _ = voice; client, _ = login(app)
     _, control = models; control['intent'] = 'unrecognized-charge'
     started = client.post('/api/voice/sessions', json=start_body(transactionId='TX-1002')).json()
@@ -229,6 +231,7 @@ def test_voice_submission_guard_failure_never_registers(voice, models, monkeypat
     assert client.post(f'/api/conversations/{cid}/claim-review',json={
         'previewToken':preview['previewToken'],'details':preview['summary'],'ready':True,'locale':'es'}).status_code==200
     before=client.get('/api/bootstrap').json()['requests']
+    monkeypatch.setattr(voice_module,'classify_action',lambda *a:'submit-claim')
     monkeypatch.setattr(voice_module,'inspect_prompt',lambda *a,**k:{'status':guard_status})
     monkeypatch.setattr(workflow_chat,'inspect_prompt',lambda *a,**k:{'status':guard_status})
     runtime.turn(identity,'submit','Confirmar y enviar')
