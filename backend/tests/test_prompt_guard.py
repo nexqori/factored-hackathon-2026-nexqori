@@ -12,18 +12,18 @@ from intent_lab import providers
 
 
 @pytest.mark.parametrize('label,confidence,status',[
-    ('safe-request',.99,'allowed'),('prompt-injection',.99,'blocked'),
+    ('safe-request',.99,'allowed'),('off-topic',.99,'off-topic'),('prompt-injection',.99,'blocked'),
     ('safe-request',.3,'uncertain'),('other',.99,'unavailable'),('safe-request',float('nan'),'uncertain')])
 def test_guard_choices_and_uncertainty(monkeypatch,label,confidence,status):
     def classify(messages,locale,instructions,**kw):
-        assert len(messages)==1 and set(kw['criteria'])=={'safe-request','prompt-injection'}
+        assert len(messages)==1 and set(kw['criteria'])=={'safe-request','prompt-injection','off-topic'}
         assert 'password: [redacted]' in messages[0]['content'] and 'my-secret' not in str(messages)
         return {'status':'ok','intent':label,'provider_confidence':confidence},{}
     monkeypatch.setattr(providers,'classify_jev',classify)
     assert inspect_prompt('Me cobraron de más. password: my-secret','es')['status']==status
 
 
-@pytest.mark.parametrize('status',['blocked','uncertain','unavailable'])
+@pytest.mark.parametrize('status',['blocked','off-topic','uncertain','unavailable'])
 def test_guard_refuses_before_tools_preserves_case_and_retries_once(setup,models,monkeypatch,status):
     app,engine=setup;client,_=login(app);calls,control=models
     first=client.post('/api/assistant/flow',json=message(transactionId='TX-1002')).json();cid=first['conversation']['id']
@@ -46,3 +46,12 @@ def test_guard_refuses_before_tools_preserves_case_and_retries_once(setup,models
 def test_provider_failure_is_not_allowed(monkeypatch):
     monkeypatch.setattr(providers,'classify_jev',lambda *a,**k:({'status':'error','error':'timeout'},{}))
     assert inspect_prompt('Revisar mi pago','es')=={'status':'unavailable'}
+
+
+@pytest.mark.parametrize('locale', ['es','en','pt'])
+@pytest.mark.parametrize('status', ['blocked','off-topic','uncertain','unavailable'])
+def test_voice_refusal_uses_same_message_without_bank_read(locale,status):
+    from backend.prompt_guard import guard_message
+    from backend.voice_summary import presentation
+    result = presentation(None, 'no-owner', {'guard': {'status': status}}, locale)
+    assert result == {'summary': guard_message(status, locale), 'comparison': None}

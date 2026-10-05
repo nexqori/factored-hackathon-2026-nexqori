@@ -5,8 +5,8 @@ import { formatDate, formatMoney } from './components';
 import type { Locale } from './i18n';
 import './spending.css';
 
-export type SpendingInsight = { transactionId: string; classification: 'unusual' | 'comparable' | 'limited'; comparison: {
-  status: string; reason?: string; basis?: string; currency: string; count?: number; averageMinor?: number;
+export type SpendingInsight = { transactionId: string; classification: 'unusual' | 'comparable' | 'limited' | 'exceptional'; canRecognizeException?:boolean; comparison: {
+  recognizedException?:boolean; status: string; reason?: string; basis?: string; currency: string; count?: number; averageMinor?: number;
   minMinor?: number; maxMinor?: number; differencePercent?: string; unusualIncrease: boolean;
   providerNotice?: { status:string; observation?: {priceMinor:number; previousPriceMinor:number|null; currency:string; planName:string; effectiveDate:string; fetchedAt:string; sourceUrl:string} };
   serviceAgreement?: {status:string; monthlyMinor?:number; billAmountMinor:number; differenceMinor?:number; currency:string; validFrom?:string; validUntil?:string; taxesIncluded?:boolean; extrasRequireApproval?:boolean; planName?:string};
@@ -14,21 +14,27 @@ export type SpendingInsight = { transactionId: string; classification: 'unusual'
 } };
 export type SpendingPage = { items: SpendingInsight[]; nextOffset: number | null };
 
-export function SpendingTrend({ transactionId }: { transactionId: string }) {
+export function SpendingTrend({ transactionId, onChanged }: { transactionId: string; onChanged?:()=>void }) {
   const {t, i18n} = useTranslation(); const locale = i18n.language as Locale;
   const [value, setValue] = useState<SpendingInsight | null>(null); const [error, setError] = useState(false);
+  const [confirming,setConfirming]=useState(false);const [saving,setSaving]=useState(false);const [saveError,setSaveError]=useState(false);
   useEffect(() => {
-    const abort = new AbortController(); setValue(null); setError(false);
+    const abort = new AbortController(); setValue(null); setError(false);setConfirming(false);setSaveError(false);
     void api<SpendingInsight>('/movements/'+encodeURIComponent(transactionId)+'/trend','GET',undefined,abort.signal)
       .then(setValue).catch(()=>{if(!abort.signal.aborted)setError(true);});
     return ()=>abort.abort();
   },[transactionId]);
+  async function recognize(){
+    if(saving)return;setSaving(true);setSaveError(false);
+    try{setValue(await api<SpendingInsight>('/movements/'+encodeURIComponent(transactionId)+'/recognize-exception','POST',{confirmed:true}));setConfirming(false);onChanged?.();}
+    catch{setSaveError(true);}finally{setSaving(false);}
+  }
   const c=value?.comparison;
   return <section className="spending-detail" aria-label={t('spending.title')}>
     <h3>{t('spending.title')}</h3>
     {!c && <p role="status">{t(error?'spending.error':'loading')}</p>}
     {c && <>
-      <p className={c.unusualIncrease?'spending-warning':''}>{t(c.reason==='bill_amount_mismatch'?'spending.billMismatch':
+      <p className={c.unusualIncrease?'spending-warning':''}>{t(c.recognizedException?'spending.exceptionSaved':c.reason==='bill_amount_mismatch'?'spending.billMismatch':
         c.reason==='partial_payment'?'spending.partial':c.reason==='not_a_charge'?'spending.notCharge':
         c.unusualIncrease?'spending.unusualDetail':c.status==='sufficient'?'spending.comparableDetail':'spending.limitedDetail')}</p>
       {!!c.count && <><dl className="detail-list"><div><dt>{t('spending.average')}</dt><dd>{formatMoney(c.averageMinor!,locale,c.currency)}</dd></div>
@@ -37,6 +43,12 @@ export function SpendingTrend({ transactionId }: { transactionId: string }) {
         <p className="muted">{t(c.basis==='bill-reference'?'spending.billBasis':'spending.merchantBasis',{count:c.count})}</p>
         <details><summary>{t('spending.history',{count:c.count})}</summary><ul className="spending-history">{c.samples.map(s=><li key={s.transactionId}><span>{formatDate(s.date,locale)}</span><strong>{formatMoney(s.amountMinor,locale,c.currency)}</strong></li>)}</ul></details></>}
       <p className="muted">{t('spending.rule')}</p>
+      {c.recognizedException&&<p className="spending-recognized" role="status">{t('spending.excluded')}</p>}
+      {value?.canRecognizeException&&<div className="spending-recognition">
+        {confirming?<><p>{t('spending.exceptionConfirm')}</p><div className="service-form-actions"><button className="button primary" disabled={saving} onClick={()=>void recognize()}>{t(saving?'loading':'spending.confirmException')}</button><button className="button secondary" disabled={saving} onClick={()=>setConfirming(false)}>{t('cancel')}</button></div></>
+          :<button className="button secondary" onClick={()=>setConfirming(true)}>{t('spending.recognizeException')}</button>}
+        {saveError&&<p role="alert">{t('error.generic')}</p>}
+      </div>}
       {c.serviceAgreement&&<div className="spending-source spending-agreement"><h4>{t('spending.conditionsTitle')}</h4>
         {c.serviceAgreement.monthlyMinor===undefined?<p>{t('spending.conditionsMissing')}</p>:<>
           <p>{c.serviceAgreement.planName}</p>

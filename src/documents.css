@@ -22,3 +22,14 @@
 .movement-filters label{display:grid;gap:.4rem;min-width:0}.movement-filters input,.movement-filters select{width:100%;min-height:44px}
 .movement-filters .search-field{display:flex;align-items:center}
 @media(max-width:700px){.movement-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.movement-filters .search-field{grid-column:1/-1}}
+
+/* Keep the selected movement ahead of optional analysis and date filters. */
+.movement-extra-filters{margin:0 0 12px;border-bottom:1px solid var(--nq-border)}
+.movement-extra-filters summary{cursor:pointer;min-height:44px;padding:8px 0;display:list-item;list-style-position:inside;color:var(--nq-primary);font-weight:600}
+.movement-extra-filters summary .badge{margin-left:10px}
+.movement-extra-filters .movement-filters{padding-top:10px}
+.movement-results-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.movement-results-bar p{margin:0}
+.transaction-panel+.spending-overview{margin-top:24px}
+.spending-overview>summary{cursor:pointer;min-height:44px;font-weight:600;line-height:1.5;padding:8px 0}
+@media(max-width:700px){.movement-filters{gap:10px}.movement-results-bar{flex-wrap:wrap}}

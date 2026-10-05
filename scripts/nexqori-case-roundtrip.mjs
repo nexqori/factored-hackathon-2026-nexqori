@@ -52,8 +52,8 @@ try {
     await expect(panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true})).toBeVisible();
     await panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
     await page.locator('.chat-details-dialog').getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
-    const review=page.locator('.chat-claim-review');await expect(review.locator('textarea')).not.toHaveValue('');
-    await review.getByRole('checkbox').check();
+    const review=page.locator('.chat-claim-review');await expect(review.locator('.chat-claim-summary')).not.toHaveText('');
+    await expect(review.getByRole('checkbox')).toHaveCount(0);
     const registered=page.waitForResponse(r=>r.url().endsWith('/'+first.conversation.id+'/claim')&&r.request().method()==='POST');
     await review.getByRole('button',{name:copy['chatClaim.register'],exact:true}).click();
     const registration=await registered;assert.equal(registration.status(),200);const claim=await registration.json();

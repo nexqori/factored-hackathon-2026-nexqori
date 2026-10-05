@@ -102,3 +102,22 @@ Para repetir el recorrido completo, ejecutar con el puerto 5192 libre y el front
     node scripts/nexqori-case-roundtrip.mjs
 
 El ensayo registra por el chat un cargo no reconocido, revisa el mismo expediente en administración, confirma las etapas y el reembolso, vuelve al chat y abre el abono. Ejecuta ES/EN/PT con API real, base SQLite aislada y clasificadores controlados; no mide calidad del proveedor ni inicia una llamada facturada.
+
+
+## Revisión simple y grabación del recorrido
+
+Antes de registrar, «Revisar y enviar reclamo» muestra el resumen del servidor y el movimiento. «Corregir datos» permite editar; «Confirmar y enviar» es la confirmación explícita. Abrir o cerrar el resumen no registra nada. La API sigue comprobando versión, titular e idempotencia. Al confirmar se abre Mis reclamos con ese expediente, sin esperar al refresco general de la cuenta. La llamada y la conversación continúan.
+
+Movimientos pone el listado antes del análisis. Fechas y comparación se agrupan en Más filtros; el movimiento indicado por el asistente se resalta dos segundos. Con movimiento reducido se usa un borde fijo. Mis reclamos está junto a Movimientos en el menú.
+
+### Compra válida excepcional
+
+En el detalle de un débito completado, «Reconozco esta compra como excepcional» pide confirmación. Guarda la declaración del titular en spending_exceptions, conserva el movimiento y lo excluye de las muestras futuras del promedio y rango habitual. No devuelve dinero, no desbloquea tarjetas ni cierra reclamos. No admite pagos pendientes, abonos o registros ajenos. La operación es idempotente por movimiento y se audita una vez.
+
+Migración aditiva: fb7208ea46c3, tabla nueva, sin transformar el libro bancario. El análisis consulta esta marca tanto en la interfaz como en evidencia del chat. Las comparaciones ya guardadas en expedientes mantienen su evidencia histórica. El filtro Compra excepcional permite encontrar estos movimientos.
+
+### Mensajes no admitidos
+
+Jev distingue safe-request, prompt-injection y off-topic. Una inyección con confianza suficiente recibe una negativa de autorización; una petición claramente ajena o ininteligible recibe orientación bancaria. Confirmaciones breves, importes, referencias, errores de escritura y relatos vagos no se definen como ataques. Resultado incierto o proveedor no disponible detiene la derivación sin cambiar el caso. La clasificación es probabilística y no reemplaza permisos, confirmaciones ni validaciones del servidor.
+
+Pruebas reproducibles: npm run build; node scripts/nexqori-voice-ui.mjs (audio y transporte simulados, sin llamadas pagadas); node scripts/nexqori-chat-flow.mjs; node scripts/nexqori-case-roundtrip.mjs; node scripts/nexqori-spending.mjs. Cada recorrido crea datos aislados.

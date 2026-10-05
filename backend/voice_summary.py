@@ -52,7 +52,7 @@ def presentation(db, owner, reply, locale):
             summary=language_reply(locale)['text']
         return {'summary':summary,'comparison':None}
     flow=reply.get('flow') or {}
-    if reply.get('guard',{}).get('status') in ('blocked','uncertain','unavailable'):
+    if reply.get('guard',{}).get('status') in ('blocked','off-topic','uncertain','unavailable'):
         from .prompt_guard import guard_message
         return {'summary':guard_message(reply['guard']['status'],locale),'comparison':None}
     registered=registered_summary(db,owner,flow.get('requestId') or flow.get('selectedRequestId'),locale)
@@ -77,6 +77,12 @@ def presentation(db, owner, reply, locale):
     result={'summary':text,'transactionId':reference,'comparison':None}
     if proposed:
         result['summary']+=pick(locale,' ¿Es el que quieres revisar?',' Is that the payment you want to review?',' É esse que deseja analisar?')
+        return result
+    if c.get('recognizedException'):
+        result['summary']=pick(locale,
+            'Reconociste esta compra como excepcional. Queda en tus movimientos y no se usa para calcular tu gasto habitual.',
+            'You recognized this as an occasional purchase. It stays in your transactions and is excluded from your usual spending baseline.',
+            'Você reconheceu esta compra como excepcional. Ela permanece nas movimentações e não entra no cálculo dos gastos habituais.')
         return result
     agreement=c.get('serviceAgreement') or {}; comparison=None
     if agreement.get('status') in ('above-base','within-base'):
