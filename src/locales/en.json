@@ -1066,6 +1066,7 @@
   "claimStage.in_review": "Under review",
   "claimStage.approved": "Approved",
   "refunded": "Refunded",
+  "claimStage.noteHint": "Describe the reason for the decision (at least 10 characters). Entered: {{count}}.",
   "claimStage.note": "Review outcome",
   "claimStage.confirm.delivered": "I confirm receipt of this case for handling.",
   "claimStage.confirm.in_review": "I confirm that I will review the issue and its evidence.",

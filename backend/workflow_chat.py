@@ -340,6 +340,10 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     else: row.state = state
     ctx = state['context']; navigation = None
     if not registered and ctx['triage'].get('family') == 'query' and ctx['jev'].get('status') == 'ok':
+        if ctx['intent'] == 'request-status' and not selection.get('request_id'):
+            from .case_followup import unique_owned_claim
+            selection['request_id'] = unique_owned_claim(db, user.id)
+            state['bank_binding'] = dict(selection)
         evidence = reader.collect(ctx['intent'], selection, body.locale, [])
         ctx['bank_evidence'] = evidence
         balance = db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id == user.id, Product.type.in_(('account','savings'))))

@@ -74,3 +74,19 @@ def test_approval_without_valid_completed_credit_is_not_a_refund(setup, models):
         assert data['refund']['creditTransactionId'] is None
         assert 'todavía no consta' in case_status_reply(data,'es')
         db.rollback()
+
+
+def test_unique_owned_claim_is_used_without_manual_selection(setup, models):
+    from backend.case_followup import unique_owned_claim
+    from backend.models import RequestCase
+    app, engine = setup
+    customer, _ = login(app)
+    _, control = models
+    with make_sessions(engine)() as db:
+        assert unique_owned_claim(db,'mateo') != 'NQ-1021'
+    control.update(intent='request-status',family='query')
+    response=customer.post('/api/assistant/flow',json=message(message='Now check my case',locale='en'))
+    assert response.status_code == 200,response.text
+    result=response.json()
+    assert 'NQ-1021' in result['text']
+    assert result['navigation']['route']=='/complaints?case=NQ-1021'

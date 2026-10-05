@@ -1066,6 +1066,7 @@
   "claimStage.in_review": "En revisión",
   "claimStage.approved": "Aprobado",
   "refunded": "Reembolsado",
+  "claimStage.noteHint": "Describe el motivo de la decisión (mínimo 10 caracteres). Llevas {{count}}.",
   "claimStage.note": "Resultado de la revisión",
   "claimStage.confirm.delivered": "Confirmo que recibí el expediente para atenderlo.",
   "claimStage.confirm.in_review": "Confirmo que voy a revisar el problema y sus evidencias.",

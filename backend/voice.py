@@ -196,6 +196,9 @@ class VoiceRuntime:
                 return farewell
             if action == 'case-status' and flow and flow.request_id:
                 selected_request = flow.request_id
+            elif action == 'case-status' and not selected_request:
+                from .case_followup import unique_owned_claim
+                selected_request = unique_owned_claim(db, user.id)
             can_submit = bool(action == 'submit-claim' and flow and not flow.request_id and shown
                 and shown.get('ready') and shown.get('locale') == row.locale
                 and 0 <= now().timestamp() - shown.get('at', 0) < 600

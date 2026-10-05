@@ -7,6 +7,13 @@ from .claim_review import handling_view
 from .catalog import request_kind
 
 
+def unique_owned_claim(db, owner):
+    """Use an unambiguous owned claim; never guess between multiple cases."""
+    rows = db.scalars(select(RequestCase).where(RequestCase.user_id == owner)).all()
+    claims = [row.id for row in rows if request_kind(row) == 'claim']
+    return claims[0] if len(claims) == 1 else None
+
+
 def read_case_status(db, owner, identity):
     case = db.scalar(select(RequestCase).where(RequestCase.id == identity, RequestCase.user_id == owner))
     if not case:

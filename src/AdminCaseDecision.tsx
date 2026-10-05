@@ -31,7 +31,7 @@ export function AdminCaseDecision({ request, onChanged }: {
     {request.handling?.note && <p className="case-details">{request.handling.note}</p>}
     {error && <p role="alert" className="error-text">{t('error.' + error, { defaultValue: t('error.generic') })}</p>}
     {next && next !== 'refunded' && !request.refund?.creditTransactionId && request.refund?.status !== 'rejected' && <div className="case-review-start form-stack">
-      {next === 'approved' && <label>{t('claimStage.note')}<textarea value={note} onChange={e => setNote(e.target.value)} minLength={10} maxLength={1000} disabled={busy}/></label>}
+      {next === 'approved' && <label>{t('claimStage.note')}<textarea value={note} onChange={e => setNote(e.target.value)} minLength={10} maxLength={1000} disabled={busy} aria-describedby="claim-note-hint"/><small id="claim-note-hint" className="muted">{t('claimStage.noteHint', {count: note.trim().length})}</small></label>}
       <label className="checkbox-label"><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)}/>{t('claimStage.confirm.' + next)}</label>
       <button className="button primary" disabled={!confirmed || busy || (next === 'approved' && note.trim().length < 10)} onClick={() => void advance()}>{t(busy ? 'loading' : 'claimStage.action.' + next)}</button>
     </div>}

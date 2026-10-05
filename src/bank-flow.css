@@ -97,15 +97,24 @@
 .chat-claim-summary p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
 .chat-claim-actions{display:flex;gap:10px;position:sticky;bottom:0;background:var(--nq-background);padding-block:10px}
 .chat-claim-actions .button{flex:1;white-space:normal}
-.chat-claim-review .dialog-inner{max-height:calc(100dvh - 24px);overflow:auto}
+.chat-claim-review .dialog-inner{max-height:none;overflow:visible}
 @media(max-width:500px){.chat-claim-actions{flex-direction:column}}
 
 /* A call review must not make the call controls inert or cover the agent. */
 .call-claim-review{position:fixed;margin:0;z-index:40;box-shadow:0 12px 50px #392c2733;max-height:calc(100dvh - 110px)}
-.call-claim-review .dialog-inner{max-height:inherit;padding:20px}
+.call-claim-review .dialog-inner{max-height:none;padding:20px}
 .call-claim-review .form-stack{gap:14px}
 .call-claim-review .voice-comparison{padding:12px;margin-bottom:0}
 @media(max-width:1050px){
  .call-claim-review{max-height:calc(100dvh - 190px)}
  .assistant-panel:has(.call-claim-review) .voice-call-actions{position:fixed;bottom:12px;left:12px;right:12px;z-index:41;padding:10px;background:var(--nq-background);border:1px solid var(--nq-border);border-radius:12px;box-shadow:0 4px 20px #392c2720}
 }
+
+/* One scroll surface per detail; keep the title and close control visible. */
+.chat-claim-review,.voice-analysis-dialog{overscroll-behavior:contain;scrollbar-width:thin}
+.chat-claim-review .dialog-header,.voice-analysis-dialog .dialog-header{position:sticky;top:-20px;z-index:2;background:var(--nq-background);padding-block:12px;margin-top:-12px;border-bottom:1px solid var(--nq-border)}
+.voice-analysis-dialog .voice-bank-text{font-size:.9rem;line-height:1.55}
+
+.chat-details-dialog{overflow:hidden}
+.chat-details-dialog .dialog-inner{box-sizing:border-box;max-height:calc(100dvh - 42px)}
+.chat-details-dialog .chat-details-content{flex:1;min-height:0}

@@ -5,7 +5,7 @@ from .prompt_guard import redact_credentials
 CRITERIA = {
     'submit-claim': 'The customer explicitly instructs us to submit/send the current complaint or refund request for review, including accepting the displayed draft unchanged. Not payment execution or approval of a refund.',
     'case-status': 'The customer asks what happened to their complaint, how it stands, whether it was sent, resolved, approved or refunded.',
-    'end-call': 'The customer explicitly asks to end this voice call or hang up. A farewell by itself, hypothetical, quotation or negated instruction is not enough.',
+    'end-call': 'The customer asks to end this voice call or hang up, or clearly says goodbye to leave the conversation, including thanking us while saying goodbye. Thanks alone, greetings, quoted or hypothetical farewells, and negated instructions do not end a call.',
     'continue': 'Any other turn: selecting a transaction, describing an issue, changing details, merely saying yes, uncertainty, conditional assent, a question about submitting, or a negated action.',
 }
 
