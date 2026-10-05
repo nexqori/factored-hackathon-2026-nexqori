@@ -29,7 +29,7 @@ import { Cards, type CardAction } from './Cards';
 import { RefundPanel } from './RefundPanel';
 import { Registration } from './Registration';
 const empty: Dashboard = { products: [], transactions: [], requests: [], audit: [] };
-const navigation = [{ path: '/', label: 'home', Icon: Home }, { path: '/movements', label: 'movements', Icon: ArrowLeftRight }, { path: '/complaints', label: 'myClaims', Icon: MessageCircle }, { path: '/products', label: 'products', Icon: Wallet }, { path: '/cards', label: 'cards', Icon: CreditCard }, { path: '/services', label: 'services', Icon: LayoutGrid }, { path: '/requests', label: 'requests', Icon: FileText }, { path: '/documents', label: 'documents.title', Icon: FileText }];
+const navigation = [{ path: '/', label: 'home', Icon: Home }, { path: '/movements', label: 'movements', Icon: ArrowLeftRight }, { path: '/products', label: 'products', Icon: Wallet }, { path: '/cards', label: 'cards', Icon: CreditCard }, { path: '/services', label: 'services', Icon: LayoutGrid }, { path: '/requests', label: 'requests', Icon: FileText }, { path: '/complaints', label: 'myClaims', Icon: MessageCircle }, { path: '/documents', label: 'documents.title', Icon: FileText }];
 type Modal = { type: 'transaction'; transaction: Transaction } | { type: 'request'; id: string } | { type: 'create'; transactionId?: string; service?: Service } | { type: 'handoff'; id: string } | { type: 'review'; id: string };
 function errorText(error: unknown) { const key = error instanceof ApiError ? 'error.' + error.code : 'error.generic'; return i18n.t(i18n.exists(key) ? key : 'error.generic'); }
 function formatNumber(value: number, maximumFractionDigits = 2) { return new Intl.NumberFormat(i18n.language, { maximumFractionDigits }).format(value); }

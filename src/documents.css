@@ -41,7 +41,9 @@
 .movements-page .movement-filters label{font-size:.78rem;gap:4px}
 .movements-page .movement-filters input,.movements-page .movement-filters select{min-height:44px;height:44px;padding:8px 10px;font-size:.82rem}
 .movements-page .movement-filters .search-field{height:44px;padding:0 10px;gap:6px}
-.movements-page .movement-filters .search-field input{padding:8px 0}
+.movements-page .movement-filters .search-field input{height:100%;min-height:0;padding:8px 0;background:transparent;border:0;border-radius:0}
+.movements-page .movement-filters .search-field:focus-within{outline:3px solid var(--nq-primary);outline-offset:2px}
+.movements-page .movement-filters .search-field input:focus-visible{outline:none;box-shadow:none}
 .movements-page .movement-extra-filters summary{font-size:.8rem;padding:10px 0}
 .movements-page .movement-results-bar{font-size:.8rem;margin-bottom:8px}
 .movements-page .spending-overview{padding:4px 12px;border-radius:12px;margin-top:16px;margin-bottom:0}
