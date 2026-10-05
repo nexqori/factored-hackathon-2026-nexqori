@@ -1,4 +1,6 @@
 {
+  "creditCard": "Credit card",
+  "debitCard": "Debit card",
   "auditActions.attention_resolved": "Resolution confirmed",
   "trace.event.attention_resolved": "The resolution was recorded and attention closure was scheduled.",
   "auditActions.attention_closed_by_timer": "Automatic attention closure",

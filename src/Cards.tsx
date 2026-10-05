@@ -5,9 +5,11 @@ import { CreditCard, Eye, EyeOff, ShieldCheck, LockKeyhole } from 'lucide-react'
 import { api, ApiError } from './api';
 import { Dialog } from './components';
 import './cards.css';
+import type { CardKind } from './types';
+import { cardLabelKey } from './productLabels';
 import { CardBlockDialog } from './CardBlockDialog';
 
-type Card = { blockRequiresEmail: boolean; id: string; last4: string; holder: string; expiryMonth: number | null; expiryYear: number | null; canReveal: boolean; canBlock: boolean; status: string };
+type Card = { cardKind?: CardKind | null; blockRequiresEmail: boolean; id: string; last4: string; holder: string; expiryMonth: number | null; expiryYear: number | null; canReveal: boolean; canBlock: boolean; status: string };
 type Details = { number: string; cvv: string; expiresAt: number; expiryMonth: number; expiryYear: number; cvvExpiresAt: number; serverTime: number; revealToken: string; hideDeadline: number; cvvDeadline: number };
 export type CardAction = { action: 'reveal' | 'block'; last4?: string | null; name?:string|null; selectedId?:string; nonce: string };
 
@@ -65,7 +67,7 @@ function CardView({ card, onBlocked, request, cards, onSelect }: { card: Card; o
   return <article className="card-workspace" data-card-id={card.id}>
     <div className="bank-card">
       <div className="card-top"><strong>nexqori.</strong><CreditCard size={28} aria-hidden="true" /></div>
-      <p>{t('cardName')}</p>
+      <p>{t(cardLabelKey(card, 'cardName'))}</p>
       {card.status === 'blocked' && <p className="card-blocked-label" role="status"><LockKeyhole size={16}/>{t('cardBlocked')}</p>}
       <div className="card-number" aria-label={t('cardNumber')}>{details ? details.number.match(/.{1,4}/g)?.join(' ') : '•••• •••• •••• ' + card.last4}</div>
       <dl className="card-fields"><div><dt>{t('cardHolder')}</dt><dd>{card.holder}</dd></div><div><dt>{t('cardExpiry')}</dt><dd data-testid="card-expiry">{details ? String(details.expiryMonth).padStart(2, '0') + '/' + String(details.expiryYear).slice(-2) : '••/••'}</dd></div></dl>
@@ -79,7 +81,7 @@ function CardView({ card, onBlocked, request, cards, onSelect }: { card: Card; o
       <Link className="text-link" to={'/movements?product=' + encodeURIComponent(card.id)}>{t('seeMovements')}</Link>
       <p className="card-security"><ShieldCheck size={18} />{t('cardSecretHint')}</p>
     </div>
-    {ask && <Dialog title={t('confirmIdentity')} onClose={hide} busy={busy}><form onSubmit={reveal} className="form-stack"><p>{t('cardReauth')}</p>{request&&<label>{t('cardSelection')}<select required disabled={busy} value={request.selectedId||''} onChange={e=>{setPassword('');onSelect(e.target.value);}}><option value="">{t('chooseOption')}</option>{cards.filter(c=>c.canReveal).map(c=><option key={c.id} value={c.id}>{t('cardName')} · {c.last4}</option>)}</select></label>}<label>{t('password')}<input autoFocus type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={e => setPassword(e.target.value)} /></label>{error && <p role="alert" className="error-text">{error}</p>}<button className="button primary" disabled={busy}>{t(busy ? 'loading' : 'showCardDetails')}</button></form></Dialog>}
+    {ask && <Dialog title={t('confirmIdentity')} onClose={hide} busy={busy}><form onSubmit={reveal} className="form-stack"><p>{t('cardReauth')}</p>{request&&<label>{t('cardSelection')}<select required disabled={busy} value={request.selectedId||''} onChange={e=>{setPassword('');onSelect(e.target.value);}}><option value="">{t('chooseOption')}</option>{cards.filter(c=>c.canReveal).map(c=><option key={c.id} value={c.id}>{t(cardLabelKey(c, 'cardName'))} · {c.last4}</option>)}</select></label>}<label>{t('password')}<input autoFocus type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={e => setPassword(e.target.value)} /></label>{error && <p role="alert" className="error-text">{error}</p>}<button className="button primary" disabled={busy}>{t(busy ? 'loading' : 'showCardDetails')}</button></form></Dialog>}
     {blockOpen && <CardBlockDialog card={card} onClose={()=>setBlockOpen(false)} onBlocked={()=>{hide();setBlockOpen(false);onBlocked();}}/>}
   </article>;
 }
@@ -94,7 +96,7 @@ export function Cards({ onChanged, action, onActionConsumed }: { onChanged?: () 
     handled.current = action.nonce; setActionError(false);
     const eligible=cards.filter(c=>action.action==='reveal'?c.canReveal:c.canBlock);
     const normalize=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    const available=eligible.filter(c=>(!action.last4||c.last4===action.last4)&&(!action.name||[normalize(t('cardName')), 'nexqori',c.last4].includes(normalize(action.name))));
+    const available=eligible.filter(c=>(!action.last4||c.last4===action.last4)&&(!action.name||[normalize(t(cardLabelKey(c, 'cardName'))), normalize(t('cardName')), 'nexqori',c.last4].includes(normalize(action.name))));
     if(action.action==='reveal'&&eligible.length){
       const selected=available.length===1?available[0]:null;
       setPending({...action,id:selected?.id||eligible[0].id,selectedId:selected?.id||''});onActionConsumed?.();return;
@@ -105,5 +107,5 @@ export function Cards({ onChanged, action, onActionConsumed }: { onChanged?: () 
     onActionConsumed?.();
   }, [action,status,cards,onActionConsumed]);
   useEffect(() => { const controller = new AbortController(); api<{ cards: Card[] }>('/cards', 'GET', undefined, controller.signal).then(data => { setCards(data.cards); setStatus('ready'); }).catch(() => { if (!controller.signal.aborted) setStatus('error'); }); return () => controller.abort(); }, []);
-  return <section><div className="page-heading"><h1>{t('cards')}</h1><p>{t('cardsIntro')}</p></div>{actionError&&<p role="alert">{t('cardActionUnavailable')}</p>}{choices&&<Dialog title={t('cardChooseAction')} onClose={()=>setChoices(null)}><div className="form-stack">{choices.cards.map(card=><button className="button secondary" key={card.id} onClick={()=>{setPending({...choices.action,id:card.id,selectedId:card.id});setChoices(null);}}>{t('card')} · •••• {card.last4}</button>)}</div></Dialog>}{status === 'loading' ? <p role="status">{t('loading')}</p> : status === 'error' ? <p role="alert">{t('error.generic')}</p> : cards.length ? cards.map(card => <CardView cards={cards} onSelect={id=>{if(pending)setPending({...pending,id:id||cards.find(c=>c.canReveal)!.id,selectedId:id,nonce:crypto.randomUUID()});}} card={card} request={pending?.id===card.id?pending:undefined} key={card.id} onBlocked={() => { setCards(old => old.map(c => c.id === card.id ? { ...c, status: 'blocked', canReveal: false, canBlock: false } : c)); onChanged?.(); }} />) : <p className="empty-panel">{t('noCards')}</p>}</section>;
+  return <section><div className="page-heading"><h1>{t('cards')}</h1><p>{t('cardsIntro')}</p></div>{actionError&&<p role="alert">{t('cardActionUnavailable')}</p>}{choices&&<Dialog title={t('cardChooseAction')} onClose={()=>setChoices(null)}><div className="form-stack">{choices.cards.map(card=><button className="button secondary" key={card.id} onClick={()=>{setPending({...choices.action,id:card.id,selectedId:card.id});setChoices(null);}}>{t(cardLabelKey(card))} · •••• {card.last4}</button>)}</div></Dialog>}{status === 'loading' ? <p role="status">{t('loading')}</p> : status === 'error' ? <p role="alert">{t('error.generic')}</p> : cards.length ? cards.map(card => <CardView cards={cards} onSelect={id=>{if(pending)setPending({...pending,id:id||cards.find(c=>c.canReveal)!.id,selectedId:id,nonce:crypto.randomUUID()});}} card={card} request={pending?.id===card.id?pending:undefined} key={card.id} onBlocked={() => { setCards(old => old.map(c => c.id === card.id ? { ...c, status: 'blocked', canReveal: false, canBlock: false } : c)); onChanged?.(); }} />) : <p className="empty-panel">{t('noCards')}</p>}</section>;
 }

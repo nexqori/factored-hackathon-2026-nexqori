@@ -8,4 +8,4 @@ COPY experiments/intent-lab/intent_lab /app/experiments/intent-lab/intent_lab
 COPY alembic.ini /app/alembic.ini
 USER nexqori
 EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && python -m backend.seed && uvicorn backend.main:create_app --factory --host 0.0.0.0 --port 8000 --no-proxy-headers"]
+CMD ["sh", "-c", "alembic upgrade head && python -m backend.seed && python -m backend.six_month_demo --configured && uvicorn backend.main:create_app --factory --host 0.0.0.0 --port 8000 --no-proxy-headers"]

@@ -241,7 +241,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     @app.get("/api/cards")
     def cards(user=Depends(customer_read), db=Depends(db_session)):
         rows=db.execute(select(Product, CardProfile).outerjoin(CardProfile, and_(CardProfile.product_id==Product.id, CardProfile.user_id==Product.user_id)).where(Product.user_id==user.id, Product.type=="card")).all()
-        return {"cards": [{"id": p.id, "last4": p.last4, "holder": user.name,
+        return {"cards": [{"id": p.id, "last4": p.last4, "cardKind": p.card_kind, "holder": user.name,
             "expiryMonth": None, "expiryYear": None,
             "status": c.status if c else "unavailable", "canBlock": bool(c and c.status=="active"), "blockRequiresEmail": email_required(),
             "canReveal": bool(c and c.status=="active" and os.getenv("CARD_PROVIDER")=="local_fixture" and local_card_available(c))} for p,c in rows]}
@@ -281,7 +281,7 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
         refunds={r.request_id:r for r in db.scalars(select(Refund).where(Refund.user_id==user.id))}
         events=db.execute(select(AuditEvent,User.name).join(User,User.id==AuditEvent.actor_id).where(AuditEvent.user_id==user.id).order_by(AuditEvent.created_at.desc()).limit(250)).all()
         return {
-            "products":[{"id":p.id,"type":p.type,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency,"status":card_status.get(p.id,"active"),"transferReference":p.transfer_reference} for p in products],
+            "products":[{"id":p.id,"type":p.type,"cardKind":p.card_kind,"last4":p.last4,"balanceMinor":p.balance_minor,"currency":p.currency,"status":card_status.get(p.id,"active"),"transferReference":p.transfer_reference} for p in products],
             "transactions":[{"id":t.id,"productId":t.product_id,"merchant":t.merchant,"category":t.category,"amountMinor":t.amount_minor,"currency":t.currency,"date":t.occurred_at.isoformat(),"status":t.status,"paymentId":payments.get(t.id),"transferId":transfers.get(t.id)} for t in txs],
             "requests":[request_view(r,refund=refunds.get(r.id)) for r in cases],
             "audit":[audit_view(e,name) for e,name in events]

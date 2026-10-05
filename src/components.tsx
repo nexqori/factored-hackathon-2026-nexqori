@@ -1,3 +1,4 @@
+import { productLabelKey } from './productLabels';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X, ArrowUpRight, ShoppingBag, Coffee, ArrowDownLeft, Zap, Play, CircleHelp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,7 @@ export function TransactionList({ rows, onSelect, compact = false, products, hig
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   return <div className={'transaction-list ' + (compact ? 'compact' : '') + (products ? ' movement-details' : '')}>{rows.map(tx => <button className={'transaction-row'+(highlightedId===tx.id?' movement-highlighted':'')} data-transaction-id={tx.id} key={tx.id} onClick={() => onSelect(tx)}>
     <TransactionIcon category={tx.category} /><span className="transaction-name"><strong>{tx.merchant}</strong><small>{t(tx.category)} · {formatDate(tx.date, locale)}</small></span>
-    {products && <span className="movement-meta"><span>{t('product')}: {(() => { const product = products.find(p => p.id === tx.productId); return product ? t(product.type) + ' · •••• ' + product.last4 : tx.productId; })()}</span><time dateTime={tx.date}>{new Intl.DateTimeFormat(localeTags[locale], {dateStyle:'medium', timeStyle:'short', timeZone:'America/Mexico_City'}).format(new Date(tx.date))}</time></span>}
+    {products && <span className="movement-meta"><span>{t('product')}: {(() => { const product = products.find(p => p.id === tx.productId); return product ? t(productLabelKey(product)) + ' · •••• ' + product.last4 : tx.productId; })()}</span><time dateTime={tx.date}>{new Intl.DateTimeFormat(localeTags[locale], {dateStyle:'medium', timeStyle:'short', timeZone:'America/Mexico_City'}).format(new Date(tx.date))}</time></span>}
     {!compact && <Badge status={tx.status} />}<span className={'transaction-amount ' + (tx.amountMinor > 0 ? 'positive' : '')}>{tx.amountMinor > 0 ? '+' : ''}{formatMoney(tx.amountMinor, locale, tx.currency)}{compact && tx.status !== 'completed' && <small>{t(tx.status)}</small>}</span><ArrowUpRight size={16} aria-hidden="true" />
   </button>)}</div>;
 }

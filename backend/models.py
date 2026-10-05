@@ -108,8 +108,9 @@ class Product(Base):
     last4: Mapped[str] = mapped_column(String(4))
     balance_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), default="MXN")
+    card_kind: Mapped[str | None] = mapped_column(String(8), nullable=True)
     transfer_reference: Mapped[str | None] = mapped_column(String(18), unique=True, nullable=True)
-    __table_args__ = (UniqueConstraint("id","user_id"), CheckConstraint("type IN ('account','savings','card')"), CheckConstraint("currency = 'MXN'"))
+    __table_args__ = (UniqueConstraint("id","user_id"), CheckConstraint("type IN ('account','savings','card')"), CheckConstraint("card_kind IS NULL OR (type = 'card' AND card_kind IN ('credit','debit'))", name="ck_products_card_kind"), CheckConstraint("currency = 'MXN'"))
 
 class CardProfile(Base):
     __tablename__ = "card_profiles"
