@@ -14,7 +14,7 @@ let diagnostics = '', browser, page;
 server.stderr.on('data', chunk => diagnostics += chunk.toString());
 const report = { checks: [], accessibility: [], errors: [] };
 async function login(person) {
-  const context = await browser.newContext({ viewport: { width: 1512, height: 1050 } });
+  const context = await browser.newContext({ viewport: process.env.NEXQORI_ADMIN_MOBILE === '1' ? { width: 390, height: 844 } : { width: 1512, height: 1050 } });
   const response = await context.request.post(origin + '/api/auth/login', { headers: { Origin: origin }, data: { identifier: person.email, password: person.password } });
   assert.equal(response.status(), 200);
   return { context, headers: { Origin: origin, 'X-CSRF-Token': (await response.json()).csrfToken } };
@@ -50,11 +50,18 @@ try {
       await page.goto(origin + '/admin/complaints?case=' + claim.id); await language(locale);
       const detail = page.locator('.claims-detail');
       await expect(detail.locator('.case-review-context')).toBeVisible();
+      await detail.locator('[data-trace-tab=decision]').click();
       const actions = detail.locator('.admin-case-decision');
       for (const stage of ['delivered', 'in_review', 'approved']) {
         const button = actions.getByRole('button', { name: copy['claimStage.action.' + stage], exact: true });
         await expect(button).toBeDisabled();
         if (stage === 'approved') await actions.getByLabel(copy['claimStage.note'], { exact: true }).fill('Verificación: expediente y evidencia revisados para autorizar el siguiente paso.');
+        if (stage === 'approved') {
+          await detail.locator('[data-trace-tab=evidence]').click();
+          await expect(actions).toBeHidden();
+          await detail.locator('[data-trace-tab=decision]').click();
+          await expect(actions.locator('.case-review-start textarea')).toHaveValue('Verificación: expediente y evidencia revisados para autorizar el siguiente paso.');
+        }
         await actions.getByLabel(copy['claimStage.confirm.' + stage], { exact: true }).check();
         await button.click();
         await expect(actions.locator('[aria-current="step"]')).toHaveText(new RegExp(copy['claimStage.' + stage]));
@@ -150,6 +157,35 @@ try {
       await customer.context.close();
     }
   }
+  page = await admin.context.newPage();
+  await page.goto(origin + '/admin/complaints');
+  await expect(page.locator('.inbox-pagination')).toBeVisible();
+  await expect(page.locator('.claim-choice')).toHaveCount(5);
+  assert(await page.locator('.inbox-rows').evaluate(e => e.scrollHeight <= e.clientHeight + 1), 'All cards of a page should fit');
+  const first = await page.locator('.claim-choice').first().getAttribute('data-claim-id');
+  await page.locator('.inbox-pagination button').last().click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.locator('.claim-choice').first()).not.toHaveAttribute('data-claim-id', first);
+  const second = await page.locator('.claim-choice').first().getAttribute('data-claim-id');
+  assert.notEqual(first, second);
+  await page.locator('.claim-choice').first().click();
+  await expect(page).not.toHaveURL(/[?&]user=/);
+  await expect(page.locator('.claim-trace')).toHaveAttribute('data-trace-ready', 'true');
+  await page.reload();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.locator('.claim-trace')).toHaveAttribute('data-trace-ready', 'true');
+  await page.locator('.inbox-case-nav button').last().click();
+  await expect(page.locator('.claims-detail-header')).not.toContainText(second);
+  if (process.env.NEXQORI_ADMIN_MOBILE === '1') await page.locator('.inbox-back').click();
+  await page.locator('.inbox-filters input[type=search]').fill('no-such-claim');
+  await expect(page.locator('.claim-choice')).toHaveCount(0);
+  await expect(page.locator('.inbox-pagination button').last()).toBeDisabled();
+  await page.locator('.inbox-filters input[type=search]').fill('');
+  await expect(page.locator('.claim-choice')).toHaveCount(5);
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await checkAxe('inbox-pagination');
+  await page.screenshot({path:path.join(folder,'inbox.png'),fullPage:true});
+  report.checks.push({pagination:true,filters:true,selectionPreserved:true,draftPreserved:true});
   assert.deepEqual(report.errors, []); await fs.writeFile(path.join(folder, 'report.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ folder, ...report }, null, 2));
 } catch (error) { if (page && !page.isClosed()) await page.screenshot({ path: path.join(folder, 'failure.png'), fullPage: true }).catch(() => {}); throw error; }

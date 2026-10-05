@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpRight, FileSearch } from 'lucide-react';
+import { AdminClaimsPanel } from './AdminClaimsPanel';
 import { ClaimTrace } from './ClaimTrace';
 import { RequestStatus } from './RequestProgress';
 import { serviceTitle } from './catalog';
@@ -17,6 +18,7 @@ export function ClaimsPanel({ users, requests, onRequest, admin = true, onCreate
   const owned = requests.filter(r => r.kind === 'claim' && (!userId || r.userId === userId));
   const selected = owned.find(r => r.id === caseId);
   const visible = owned.filter(r => (status === 'all' || (status.startsWith('refund_') ? r.refund?.status === status.slice(7) : r.status === status)) && [r.id, r.customerName, r.details, r.refund?.id, r.transactionId, r.refund?.creditTransactionId].some(s => s?.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
+  if (admin) return <AdminClaimsPanel users={users} requests={requests} onRefresh={onRefresh}/>;
   return <div className="claims-panel"><div className="page-heading"><p className="eyebrow">{admin ? t('users') + ' / ' : ''}{t('trace.title')}</p><h1>{t(admin ? 'claims.title' : 'myClaims')}</h1><p>{t(admin ? 'claims.intro' : 'claims.customerIntro')}</p></div>
     {onRefresh && <div className="claims-refresh"><button className="button secondary" disabled={refreshing} onClick={async () => { setRefreshing(true); setRefreshError(false); try { await onRefresh(); setRefreshVersion(value => value + 1); } catch { setRefreshError(true); } finally { setRefreshing(false); } }}>{t(refreshing ? 'loading' : 'caseAdmin.refresh')}</button>{refreshError && <p role="alert">{t('trace.error')}</p>}</div>}
     <>{!admin && <button className="button primary customer-claims-intro" onClick={onCreate}>{t("newClaim")}</button>}</><div className="claims-filters">{admin && <label>{t('customer')}<select value={userId} onChange={e => { setParams(e.target.value ? { user: e.target.value } : {}); setSearch(''); setStatus('all'); setLimit(30); }}><option value="">{t('auditAll')}</option>{users.filter(u => u.role === 'customer').map(u => <option key={u.id} value={u.id}>{u.name} · {u.email}</option>)}</select></label>}<label>{t('claims.searchLabel')}<input type="search" maxLength={100} value={search} placeholder={t('claims.search')} onChange={e => { setSearch(e.target.value); setLimit(30); }} /></label><label>{t('status')}<select value={status} onChange={e => { setStatus(e.target.value); setLimit(30); }}>{['all', 'received', 'in_review', 'handed_off', 'refund_pending', 'refund_approved', 'refund_rejected'].map(s => <option key={s} value={s}>{t(s.startsWith('refund_') ? 'refundStatus.' + s.slice(7) : s)}</option>)}</select></label></div>
