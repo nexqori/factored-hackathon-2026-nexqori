@@ -118,3 +118,6 @@
 .chat-details-dialog{overflow:hidden}
 .chat-details-dialog .dialog-inner{box-sizing:border-box;max-height:calc(100dvh - 42px)}
 .chat-details-dialog .chat-details-content{flex:1;min-height:0}
+
+.dialog.call-claim-review{max-height:calc(100dvh - 110px)}
+@media(max-width:1050px){.dialog.call-claim-review{max-height:calc(100dvh - 150px)}.assistant-panel:has(.call-claim-review){z-index:60}}

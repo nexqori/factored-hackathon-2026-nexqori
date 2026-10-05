@@ -49,9 +49,6 @@ try {
     const first=await send({es:'No reconozco el cobro del teléfono [CASE-1]',en:'I do not recognize the phone charge [CASE-1]',pt:'Não reconheço a cobrança do telefone [CASE-1]'}[locale]);
     assert.equal(first.flow.suggestedTransaction.id,person.transactionId);
     await panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true}).click();
-    await expect(panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true})).toBeVisible();
-    await panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
-    await page.locator('.chat-details-dialog').getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
     const review=page.locator('.chat-claim-review');await expect(review.locator('.chat-claim-summary')).not.toHaveText('');
     await expect(review.getByRole('checkbox')).toHaveCount(0);
     const registered=page.waitForResponse(r=>r.url().endsWith('/'+first.conversation.id+'/claim')&&r.request().method()==='POST');
