@@ -1098,3 +1098,13 @@
 - Bloqueo resuelto con alternativa: revisión automática rechazó publicar y aplicar una contraseña fija de administrador por dejar acceso reutilizable en GitHub. Se entregan las claves existentes sólo en guía privada por instalación; README contiene usuarios y comandos, sin claves.
 - Último avance: implementado, desplegado y validado localmente; commits separados de administración y voz. Datos manuales preservados.
 - Siguiente paso: probar desde una conversación nueva con Bryan; administrador revisa el expediente en otro perfil del navegador. Revisar las comprobaciones de GitHub y la llamada manual antes de fusionar o añadir los siguientes casos.
+
+## Frente: Nexqori — integración final de Santiago para nube
+- Fecha: 2026-10-05 09:05 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado.
+- Pedido vigente: fusionar lo último de Santiago y dejar la integración preparada para desplegar la demo en la nube.
+- [x] Identificar PR #9 (santiago@009475e): preferencias, navegación, tarjetas y documentos. PR #8 en b524c22 tiene las tres comprobaciones GitHub aprobadas; #9 presenta conflictos.
+- [ ] Integrar ambos trabajos conservando atención, voz, evidencia, permisos, correo y formularios.
+- [ ] Validar contratos API, frontend y recorridos afectados; fusionar mediante PR hacia main.
+- [ ] Documentar preparación para nube según plataforma; todavía no se despliega infraestructura.
+- Último avance: inspección de ramas y alcance. Archivos locales ajenos preservados.
+- Siguiente paso: resolver conflictos y ejecutar pruebas; plataforma de nube consultada sin bloquear la integración.
