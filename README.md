@@ -1,6 +1,6 @@
 # Nexqori
 
-Integración vigente: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; PDF, en Mis documentos; trámites, en Mis solicitudes; problemas, en Mis reclamos. Mis solicitudes conserva también acceso a los documentos por compatibilidad.
+Integración vigente: [pagos y transferencias](docs/pagos-y-transferencias.md), [consultas y PDF](docs/consultas-y-documentos.md) y [continuidad de conversación](docs/contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; PDF, en Mis documentos; trámites, en Mis solicitudes; problemas, en Mis reclamos.
 
 Base bancaria local con **React + TypeScript, FastAPI y PostgreSQL**. Identidad Terracota suave, español/inglés/portugués, acceso de cliente y administrador, productos, movimientos, servicios, solicitudes y agente de navegación.
 

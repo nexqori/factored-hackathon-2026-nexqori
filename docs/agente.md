@@ -55,6 +55,6 @@ Por indicación de Bryan, las pantallas y respuestas utilizan lenguaje natural d
 
 “Quiero pagar celular”, “Pay my phone bill” y “Pagar celular” abren Empresa Telefónica. La búsqueda usa el mismo catálogo que la pantalla Servicios; el proveedor nunca sale del texto libre del chat. El comando sólo abre el formulario: datos, revisión y confirmación permanecen en la interfaz. Una consulta genérica como “Servicios” mantiene el catálogo completo.
 
-Las conversaciones se abren por elección del usuario; véase [acceso y conversaciones](acceso-y-conversaciones.md). La voz se implementará en otro flujo, sin motores ni endpoints activos en esta base.
+Las conversaciones se abren por elección del usuario; véase [acceso y conversaciones](acceso-y-conversaciones.md). La llamada opcional usa el mismo intérprete y conserva el caso; se habilita mediante `compose.voice.yaml`. Véase [voz y límites](voz-gpt-live.md).
 
 Perfil, selector de tarjetas, idioma activo y cierre tras PDF: [guía y pruebas](chat-preferencias-y-cierre.md).

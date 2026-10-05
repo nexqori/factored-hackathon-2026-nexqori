@@ -1100,16 +1100,20 @@
 - Siguiente paso: probar desde una conversación nueva con Bryan; administrador revisa el expediente en otro perfil del navegador. Revisar las comprobaciones de GitHub y la llamada manual antes de fusionar o añadir los siguientes casos.
 
 ## Frente: Nexqori — integración final de Santiago para nube
-- Fecha: 2026-10-05 09:32 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado.
+- Fecha: 2026-10-05 09:42 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado.
 - Pedido vigente: fusionar lo último de Santiago y preparar AWS con Docker Compose, subdominio y HTTPS.
 - [x] Integrar PR #9 (santiago@009475e) en la rama del PR #8, conservando autoría, voz, guard Jev, administración y bloqueo por correo. Resolver conflictos y añadir regresiones de navegación por voz, cierre tras PDF y orden del historial.
 - [x] Validar 630 pruebas API y 85 dirigidas tras el último ajuste; 41 frontend y build. Recorridos aislados: perfil 30 axe, documentos 18 axe, nueve conversaciones/59 axe, voz simulada 12 axe y notificaciones 9 axe, sin infracciones detectadas. Evidencia en .local/verification: chat-profile-iF2wxg, document-context-iWrMnI, bank-chat-0ptXF9, voice-ui-zEQNQo, notifications-FrTO1u.
-- [x] Reconstruir API/web local con compose.voice.yaml y cero llamadas activas. Pendiente terminar los recorridos PostgreSQL.
+- [x] Reconstruir API/web local con compose.voice.yaml y cero llamadas activas. API/web/db saludables. Huellas de usuarios, movimientos, pagos, reclamos y mensajes intactas. El seed completó sólo tres referencias de transferencia faltantes; se comprobó que saldos y demás campos no cambiaron.
 - [x] Preparar compose.cloud.yaml, Caddy y docs/despliegue-aws-compose.md; validar origen HTTPS, cookie Secure, voz opcional, servicios internos y sintaxis Caddy sin solicitar un certificado.
-- [ ] Publicar integración, comprobar CI del nuevo commit y fusionar hacia main mediante PR.
+- [x] Publicar integración en PR #8. GitHub aprobó aplicación y LAB; detectó la ruta antigua de tarjetas en el contrato de Security Lab. Actualizarla a /cards y validar sus 105 pruebas localmente.
+- [x] Validar Docker/PostgreSQL: tarjetas 6 axe, navegación 56 vistas/9 comandos/5 axe, experiencia 5 axe, servicios 17 vistas/9 axe, pagos 3 idiomas/15 axe y reclamos 3 casos/19 axe. Informes privados cards-verificacion-ui-823411fa49f0, payments/60e1614c718d y claims/8d5f13d08f74.
+- [ ] Comprobar CI del commit final y fusionar hacia main mediante PR.
 - [ ] Validar DNS, TLS, acceso y proveedores en AWS cuando exista el subdominio/servidor. No se ha desplegado infraestructura ni realizado una llamada facturada.
 - Último avance: implementado y desplegado localmente; pruebas de integración correctas. Configuración AWS preparada y validada sin publicar secretos ni datos.
-- Siguiente paso: finalizar pruebas PostgreSQL y comprobaciones GitHub; fusionar PR #8 que incluye todo el PR #9.
+- Siguiente paso: comprobar CI de la corrección del contrato; fusionar PR #8 que incluye todo el PR #9.
+
+- AWS: consulta de identidad correcta en el perfil default; no se confirma todavía que corresponda a la cuenta personal indicada. No se modificaron recursos ni permisos.
 
 ## Antecedente de Santiago — cierre del PR #5
 - Último avance: implementado, desplegado en banco Docker :5180 versión 0.2.0 y validado localmente. CI inicial de aplicación y editor correcta; corrección de Security Lab lista para repetir CI antes del merge. Informes privados bank-chat-ShSCWm, document-context-nzsaaD y picker-mobile-SjyP9p bajo .local/verification. Interpretación de fechas acotada y local, sin registros bancarios enviados a modelos. Voz aplazada; otros frentes y archivos privados preservados.
