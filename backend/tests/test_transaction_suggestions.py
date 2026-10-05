@@ -190,6 +190,11 @@ def test_search_filters_before_limit_and_keeps_owner_and_audit(phone,models):
 
 
 @pytest.mark.parametrize('text', [
+    'Sí, ese es el que quiero revisar y poner una... solicitud de devolución, no lo',
+    'Sí, ese es el que quiero revisar y poner una solicitud de devolución',
+    'Ese es, quiero pedir un reembolso',
+    'Yes, that is the one. Please request a refund.',
+    'Sim, essa é a cobrança. Quero pedir um reembolso.',
     'Sí, no reconozco ese cobro. ¿Puedes hacerme un reclamo?',
     'pasar Sí, no reconozco ese cobro. ¿Puedes hacerme un reclamo',
     'Sí es ese, prepara mi reclamo',
@@ -227,3 +232,18 @@ def test_compound_selection_prepares_review_without_registering(phone, models, t
 ])
 def test_ambiguous_compound_does_not_select(text):
     assert confirmation(text) != 'yes'
+
+
+@pytest.mark.parametrize('text', [
+    'Sí, ese es el que quiero revisar', 'Sí, es ese, pero no lo reconozco',
+    'Ese es el movimiento', 'Sí, este, revísalo por favor',
+    'Yes, that is the charge I want to review', 'Sim, essa é a cobrança',
+])
+def test_reference_confirmation_does_not_require_a_claim_request(text):
+    assert confirmation(text) == 'yes'
+
+
+@pytest.mark.parametrize('text', ["Don't file a claim", 'No quiero pedir un reembolso', 'Não quero pedir um reembolso'])
+def test_negative_review_request_does_not_open_form(text):
+    from backend.transaction_suggestions import review_requested
+    assert not review_requested(text)

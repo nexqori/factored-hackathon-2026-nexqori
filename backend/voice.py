@@ -121,7 +121,9 @@ class TranscriptBuffer:
         self.ids.add(identity); self.fragments.append(dict(event))
 
     def take(self, offset):
-        chosen = sorted((f for f in self.fragments if f['event_id'] not in self.used and f['end_ms']<=offset),
+        # A delegation can land inside the last word's timestamp span. Keep
+        # that whole fragment; otherwise its suffix leaks into the next turn.
+        chosen = sorted((f for f in self.fragments if f['event_id'] not in self.used and f['start_ms']<=offset),
                         key=lambda f:(f['start_ms'],f['end_ms']))
         text = ''.join(f['delta'] for f in chosen).strip()
         if len(text)>8000: raise ValueError('voice_transcript_limit')
@@ -189,9 +191,11 @@ class VoiceRuntime:
             conv=db.get(Conversation,row.conversation_id)
             registered=(flow.state.get('claim_registration') or {}).get('response')
             if not registered:return None
+            from .case_followup import read_case_status, case_status_navigation
+            navigation=case_status_navigation(read_case_status(db,row.user_id,case.id))
             reply={'text':registered['message']['text'], 'conversation':self.conversation_view(conv),
-                   'messages':[registered['message']], 'flow':flow_view(flow), 'destination':'complaints',
-                   'navigation':navigate_in_app('complaints','customer',case_id=case.id)}
+                   'messages':[registered['message']], 'flow':flow_view(flow), 'destination':navigation['destination'],
+                   'navigation':navigation}
             summary=presentation(db,row.user_id,reply,row.locale)
             if not summary:return None
             reply['voiceSummary']=summary

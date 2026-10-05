@@ -132,3 +132,9 @@ Pedir preparar el reclamo abre su vista previa cuando el flujo tiene contexto su
 Después del envío y al consultar el seguimiento, la navegación permitida abre Mis reclamos con el expediente propio seleccionado. La respuesta se basa en la decisión y el abono actuales del servidor. Ninguna URL libre del modelo puede abrir otro destino o ejecutar un reembolso.
 
 Si la consulta comprueba un reembolso completado, abre directamente Movimientos filtrado por la referencia del abono y actualiza los datos de la pantalla. Si aún está en revisión o aprobado sin abono, abre el expediente en Mis reclamos. Consultar nunca ejecuta ni duplica un reembolso; éste conserva la confirmación administrativa. No hay espera artificial ni promesa de minutos.
+
+### Confirmación natural durante una llamada
+
+Confirmar el movimiento y pedir una revisión son decisiones independientes. «Sí, ese es el que quiero revisar» vincula la única propuesta del titular; «poner una solicitud de devolución» pide abrir su borrador, sin autorizar un reembolso. La transcripción conserva completa la palabra que cruza el instante de delegación para que no se traslade al siguiente turno. Negaciones, incertidumbre, selección de otro movimiento y textos pegados conservan sus controles.
+
+Para validar este recorrido, además de las regresiones del motor, reproducir audio de prueba con proveedores reales en un banco aislado: cargo propuesto → confirmación natural → promedio hablado y borrador editable → envío explícito → expediente → revisión y reembolso administrativos → consulta posterior → confirmación hablada del abono y movimiento visible. Conservar evidencias privadas y distinguir audio sintetizado de voz humana, el cargo de prueba completado de uno pendiente y los turnos secuenciales de interrupciones durante la respuesta del agente.

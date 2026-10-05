@@ -25,13 +25,13 @@ NO = {'no', 'no es ese', 'no es otro', 'es otro', 'otro', 'no es este', 'no not 
 
 def review_requested(message):
     """Request a review form only; never authorization to register or pay."""
-    text = normalize(message)
-    if re.search(r"\b(?:no|not|nao|never|don't|do not)\s+(?:quiero|deseo|necesito|quero|want|prepare|file|submit|hagas|prepares|registre|registres)\b", text):
+    text = ' '.join(re.findall(r'\w+', normalize(message)))
+    if re.search(r"\b(?:no|not|nao|never|don t|do not)\s+(?:quiero|deseo|necesito|quero|want|prepare|file|submit|request|hagas|prepares|registre|registres|solicites|pidas|pongas)\b", text):
         return False
     return bool(re.search(
-        r"\b(?:(?:hacerme|hazme|haz|hacer|prepara|preparar|registrar|crear|presentar|enviar)\s+(?:me\s+)?(?:un|una|el|la|mi|este|esta)\s+(?:reclamo|queja)|"
-        r"(?:prepare|file|create|submit|open)\s+(?:a|the|my|this)\s+(?:complaint|claim)|"
-        r"(?:preparar|prepare|registrar|registre|criar|abrir|enviar)\s+(?:uma|a|minha|esta)\s+reclamacao)\b", text))
+        r"\b(?:(?:hacerme|hazme|haz|hacer|prepara|preparar|registrar|crear|presentar|enviar|poner|ponerme|solicitar|pedir|tramitar|levantar|iniciar)\s+(?:me\s+)?(?:un|una|el|la|mi|este|esta)?\s*(?:reclamo|queja|reembolso|devolucion|solicitud de devolucion|solicitud de reembolso)|"
+        r"(?:prepare|file|create|submit|open|request)\s+(?:a|the|my|this)\s+(?:complaint|claim|refund)|"
+        r"(?:preparar|prepare|registrar|registre|criar|abrir|enviar|pedir|solicitar)\s+(?:um|uma|o|a|minha|meu|esta)\s+(?:reclamacao|reembolso|devolucao))\b", text))
 
 
 def review_only(message):
@@ -60,7 +60,9 @@ def confirmation(message):
                 r"\byes i (?:do not|don t) recognize (?:that|this) (?:charge|payment|transaction)\b|"
                 r"\bsim nao reconheco (?:essa|esta|esse|este) (?:cobranca|pagamento|movimentacao)\b")
     if re.search(explicit, value): return 'yes'
-    if re.match(r"^(?:si es (?:ese|este)|si (?:ese|este)|yes (?:that|this) one|sim e (?:esse|este|essa|esta))\b", value) and review_requested(message):
+    # Resolve the customer's assent independently from what they want to do
+    # next. A review request is not a prerequisite for confirming a proposal.
+    if re.match(r"^(?:(?:si|correcto|exacto) (?:es )?(?:ese|este|esa|esta)|(?:ese|este|esa|esta) (?:es|mismo|misma)|yes (?:that|this)(?: is| one)?|(?:that|this) is the one|sim (?:e )?(?:esse|este|essa|esta)|(?:esse|essa) mesmo)\b", value):
         return 'yes'
     return None
 
