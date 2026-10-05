@@ -71,14 +71,15 @@ def test_same_manifest_is_idempotent_and_does_not_reset_later_user_activity(setu
         assert db.scalar(select(func.count()).select_from(AuditEvent)) == count
 
 
-def test_profiles_can_sign_in_and_read_owned_records_without_repaying_pending_bill(setup):
+@pytest.mark.parametrize('identifier_field', ['email', 'identityNumber'])
+def test_profiles_can_sign_in_and_read_owned_records_without_repaying_pending_bill(setup, identifier_field):
     app, engine = setup; pack = manifest()
     with make_sessions(engine)() as db:
         with db.begin(): result = ensure_pack(db, pack)
     for person in result['users']:
         with TestClient(app) as client:
             logged = client.post('/api/auth/login', headers={'Origin': ORIGIN},
-                                 json={'identifier': person['email'], 'password': pack['passwords'][person['case']['id']]})
+                                 json={'identifier': person[identifier_field], 'password': pack['passwords'][person['case']['id']]})
             assert logged.status_code == 200
             client.headers.update({'Origin': ORIGIN, 'X-CSRF-Token': logged.json()['csrfToken']})
             before = client.get('/api/bootstrap').json()
@@ -151,3 +152,72 @@ def test_month_boundaries_and_catalog_provenance_are_stable():
     assert all(case['merchant'] in providers for case in CASES)
     assert all(set(case['messages']) == {'es', 'en', 'pt'} for case in CASES)
     assert all(case['intent'] in SERVICES for case in CASES)
+
+
+def test_team_alias_upgrade_preserves_activity_and_custom_email(setup):
+    from backend.demo_emails import UX_EMAILS
+    _, engine = setup; pack = manifest()
+    with make_sessions(engine)() as db:
+        with db.begin(): old = ensure_pack(db, pack)
+        people = old['users']
+        original_hashes = {p['userId']: db.get(User, p['userId']).password_hash for p in people}
+        db.get(User, people[-1]['userId']).email = 'custom@example.test'
+        db.get(Product, people[0]['accountId']).balance_minor -= 123
+        db.add(RequestCase(id='alias-existing-claim', user_id=people[0]['userId'], request_key=str(uuid4()),
+                           service='support', reason='other', details='Preserve this claim.'))
+        db.commit()
+        outside = other_records_hash(db, [p['userId'] for p in people]); db.commit()
+        pack['packId'] = 'equipo-ux'
+        with db.begin(): upgraded = ensure_pack(db, pack)
+        assert not upgraded['created']
+        for p in upgraded['users']:
+            expected = 'custom@example.test' if p['case']['id'] == 'documentos' else UX_EMAILS[p['case']['id']]
+            assert p['email'] == db.get(User, p['userId']).email == expected
+            assert db.get(User, p['userId']).password_hash == original_hashes[p['userId']]
+        assert upgraded['users'][0]['balanceMinor'] == people[0]['balanceMinor'] - 123
+        assert upgraded['users'][0]['requestCount'] == 1
+        assert other_records_hash(db, [p['userId'] for p in people]) == outside
+        before = other_records_hash(db, [])
+        audits = db.scalar(select(func.count()).select_from(AuditEvent)); db.commit()
+        with db.begin(): ensure_pack(db, pack)
+        assert other_records_hash(db, []) == before
+        assert db.scalar(select(func.count()).select_from(AuditEvent)) == audits
+
+
+def test_alias_collision_rolls_back_all_previous_alias_changes(setup):
+    from backend.demo_emails import UX_EMAILS
+    _, engine = setup; pack = manifest()
+    with make_sessions(engine)() as db:
+        with db.begin(): ensure_pack(db, pack)
+        db.get(User, 'andrea').email = UX_EMAILS['importe']
+        db.commit(); before = other_records_hash(db, []); db.commit()
+        pack['packId'] = 'equipo-ux'
+        with pytest.raises(ValueError, match='already belongs'):
+            with db.begin(): ensure_pack(db, pack)
+        assert other_records_hash(db, []) == before
+
+
+def test_new_team_uses_readable_aliases_but_other_packs_remain_unique(setup):
+    from backend.demo_emails import UX_EMAILS
+    _, engine = setup; pack = manifest(); pack['packId'] = 'equipo-ux'
+    with make_sessions(engine)() as db:
+        with db.begin(): result = ensure_pack(db, pack)
+        assert {p['email'] for p in result['users']} == set(UX_EMAILS.values())
+    independent = manifest_plan(manifest())
+    assert all(p['email'].startswith('ux-') for p in independent)
+
+
+def test_base_aliases_preserve_personal_contacts_and_passwords(setup):
+    from backend.demo_emails import update_base_demo_emails
+    _, engine = setup
+    with make_sessions(engine)() as db:
+        passwords = {u.id: u.password_hash for u in db.scalars(select(User))}
+        db.get(User, 'mateo').email = 'personal@example.test'
+        db.add(User(id='bryan', name='Bryan', email='bryan@example.test', role='customer', password_hash='unchanged'))
+        db.commit()
+        with db.begin(): update_base_demo_emails(db)
+        assert db.get(User, 'andrea').email == 'andrea.rivera@nexqori.com'
+        assert db.get(User, 'nora').email == 'nora.admin@nexqori.com'
+        assert db.get(User, 'mateo').email == 'personal@example.test'
+        assert db.get(User, 'bryan').email == 'bryan@example.test'
+        assert all(db.get(User, uid).password_hash == value for uid, value in passwords.items())

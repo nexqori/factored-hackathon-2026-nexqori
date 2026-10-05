@@ -23,7 +23,8 @@ async function axe(name) { const report = await new AxeBuilder({ page }).withTag
 async function snapshot(name) { await page.screenshot({ path: output + '/' + name + '.png', fullPage: true }); }
 async function noOverflow() { assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), page.url() + ' overflow'); }
 async function login(email, password) {
-  await page.goto(origin); await page.getByLabel('Correo electrónico').fill(email);
+  await page.goto(origin); if (!email.includes('@')) await page.locator('input[name="loginMethod"][value="identity"]').check();
+  await page.locator('input[autocomplete="username"]').fill(email);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Entrar a mi espacio' }).click();
   await page.locator('.sidebar').waitFor();
@@ -88,7 +89,7 @@ try {
   await page.getByRole('heading', { name: 'Pagar celular o teléfono', exact: true }).waitFor();
   result.checks.push('specific service navigation from assistant; ES/EN/PT and responsive forms');
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
-  await login('admin@nexqori.com', credentials.ADMIN_PASSWORD);
+  await login('00000002', credentials.ADMIN_PASSWORD);
   await page.locator('.admin-other-requests > summary').click();
   await page.locator('.case-card').filter({ hasText: id }).click();
   await page.locator('dialog').waitFor(); assert.ok((await page.locator('dialog').textContent()).includes(note));

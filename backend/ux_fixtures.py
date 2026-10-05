@@ -18,6 +18,7 @@ from sqlalchemy.engine import make_url
 from .models import (User, Product, CustomerProfile, CardProfile, Transaction, PhoneBill,
                      BillPayment, BankTransfer, RequestCase, Refund, AuditEvent)
 from .security import hasher
+from .demo_emails import UX_EMAILS, update_demo_email, update_base_demo_emails
 
 CASES = json.loads(Path(__file__).with_name('ux_scenarios.json').read_text(encoding='utf-8'))['cases']
 ZONE = ZoneInfo('America/Mexico_City')
@@ -64,7 +65,7 @@ def manifest_plan(manifest):
                      ('second', 'phone-bill', str(int(phone)+1), 19900, True),
                      ('net', 'internet-bill', 'INT-'+suffix.upper(), 45900, True),
                      ('tv', 'tv-bill', 'TV-'+suffix.upper(), 24900, False)]]
-        rows.append({'case': case, 'userId': 'ux-user-'+suffix, 'email': 'ux-'+suffix+'@nexqori.com',
+        rows.append({'case': case, 'userId': 'ux-user-'+suffix, 'email': UX_EMAILS[case['id']] if manifest['packId'] == 'equipo-ux' else 'ux-'+suffix+'@nexqori.com',
                      'identityNumber': 'UX'+manifest['runId'].upper()+str(index+1),
                      'accountId': account, 'savingsId': savings, 'cardId': card,
                      'accountReference': reference('account'), 'savingsReference': reference('savings'),
@@ -91,8 +92,15 @@ def other_records_hash(db, owners):
 
 
 def ensure_pack(db, manifest):
-    """One atomic insertion or a read-only repeat. The caller commits/rolls back."""
-    return ensure_profiles(db, manifest, manifest_plan(manifest))
+    """Create or recover records; upgrade only legacy team login aliases."""
+    result = ensure_profiles(db, manifest, manifest_plan(manifest))
+    if manifest['packId'] == 'equipo-ux':
+        for row in result['users']:
+            user = db.get(User, row['userId'])
+            previous = 'ux-'+manifest['runId']+'-'+row['case']['id']+'@nexqori.com'
+            update_demo_email(db, user, previous, UX_EMAILS[row['case']['id']])
+            row['email'] = user.email
+    return result
 
 
 def ensure_profiles(db, manifest, plan):
@@ -150,7 +158,9 @@ def ensure_profiles(db, manifest, plan):
         db.flush()
     if other_records_hash(db, owners) != before: raise ValueError('Existing records changed; abort the UX insertion')
     users = [{key: value for key, value in row.items() if key not in ('transactions', 'createdAt')}
-             | {'balanceMinor': db.get(Product, row['accountId']).balance_minor,
+             | {'email': db.get(User, row['userId']).email,
+                'identityNumber': db.get(User, row['userId']).identity_number,
+                'balanceMinor': db.get(Product, row['accountId']).balance_minor,
                 'requestCount': len(db.scalars(select(RequestCase).where(RequestCase.user_id == row['userId'])).all())}
              for row in plan]
     return {'schemaVersion': 1, 'packId': manifest['packId'], 'runId': manifest['runId'], 'created': not bool(existing),
@@ -167,7 +177,10 @@ def main():
     engine = make_engine()
     try:
         with make_sessions(engine)() as db:
-            with db.begin(): result = ensure_pack(db, manifest)
+            with db.begin():
+                result = ensure_pack(db, manifest)
+                if manifest['packId'] == 'equipo-ux':
+                    update_base_demo_emails(db)
         print(json.dumps(result, ensure_ascii=False))
     finally: engine.dispose()
 

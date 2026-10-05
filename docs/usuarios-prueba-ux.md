@@ -61,3 +61,35 @@ La validación del helper se puede ejecutar sin Docker ni proveedores:
 ```powershell
 npm test -- scripts/verification-user.test.mjs
 ```
+
+## Correos de acceso del equipo
+
+El paquete `equipo-ux` usa correos fáciles de recordar:
+
+| Perfil | Correo |
+| --- | --- |
+| Camila Torres | camila.torres@nexqori.com |
+| Diego Medina | diego.medina@nexqori.com |
+| Valeria Rojas | valeria.rojas@nexqori.com |
+| Lucas Costa | lucas.costa@nexqori.com |
+| Sofía Vega | sofia.vega@nexqori.com |
+| Andrea Rivera | andrea.rivera@nexqori.com |
+| Mateo Silva | mateo.silva@nexqori.com |
+| Nora (administración) | nora.admin@nexqori.com |
+
+Al repetir el comando de preparación con la API actualizada, PostgreSQL cambia
+únicamente los correos originales de estos perfiles. Conserva contraseñas,
+documentos, saldos e historial. Si un correo ya fue personalizado, lo mantiene.
+Bryan queda fuera del cambio. Si un alias pertenece a otra cuenta, la transacción
+se revierte sin sustituir al titular. Los paquetes de verificación conservan
+identificadores únicos para no colisionar con los usuarios manuales.
+
+Estos son identificadores de acceso de prueba, no buzones creados. Para recibir
+códigos se verifica un correo real desde Configuración. También se puede entrar
+por **Documento**, con el identificador ficticio de la guía privada y la misma
+contraseña. No se afirma validación oficial del documento.
+
+El workflow `.github/workflows/ci.yml` ejecuta pruebas y compilación en los PR
+y al actualizar `main` con código. No modifica PostgreSQL ni despliega EC2.
+En cada instalación, ejecutar el comando de preparación aplica estos alias;
+no es necesario copiar una base ni publicar contraseñas en GitHub.

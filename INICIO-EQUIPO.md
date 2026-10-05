@@ -126,3 +126,5 @@ El login incluye Crear mi perfil. Configuración permite cambiar experiencia y a
 En [Tarjetas](http://localhost:5180/cards), el titular puede bloquear su tarjeta con contraseña y confirmación. En **Mis reclamos**, un reclamo de cargo completado permite pedir devolución; el administrador abre el mismo folio, revisa la evidencia y aprueba o rechaza. Sólo la aprobación abona la cuenta del titular y crea un movimiento. No se puede elegir importe o cuenta ajena.
 
 El LAB activa contratos sólo para problemas; consultas y servicios siguen recorridos separados. Sus enlaces abren el banco autenticado y nunca ejecutan operaciones por sí mismos. [Guía de acciones, reglas, endpoints y pruebas](docs/acciones-problemas.md). Actualiza Docker sin borrar volúmenes; la migración `a318d902bc44` conserva los registros existentes.
+
+Tras preparar `equipo-ux`, consulta los [correos actualizados](docs/usuarios-prueba-ux.md#correos-de-acceso-del-equipo). Los documentos y contraseñas anteriores siguen siendo válidos.
