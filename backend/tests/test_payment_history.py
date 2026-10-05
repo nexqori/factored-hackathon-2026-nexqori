@@ -103,12 +103,13 @@ def test_average_rounds_half_cent_up(setup):
 
 
 def test_approved_refund_removes_charge_from_history(setup):
-    from backend.tests.test_operations import make_refund, approve_payload
+    from backend.tests.test_operations import make_refund, approve_payload, approve_case
     app,engine=setup
     with make_sessions(engine)() as db:
         current,rows=prepare(db);reference=rows[0].id;db.commit()
     client,_=login(app);admin,_=login(app,'nora')
-    _,_,refund=make_refund(client,reference)
+    case,_,refund=make_refund(client,reference)
+    approve_case(admin,case)
     with make_sessions(engine)() as db:
         assert compare_payments(db,db.get(Transaction,'TX-1002'))['count']==3
     response=admin.post(f"/api/admin/refunds/{refund['id']}/decision",json=approve_payload())

@@ -75,6 +75,8 @@ def trace_router(request_view, audit_view, conversation_view):
                          for c in conv_rows[:20]]
         decision_actor = db.get(User, refund.decided_by) if refund and refund.decided_by else None
         outcome = "refund_" + refund.status if refund else case.status
+        if case.handling and case.status != 'handed_off' and (not refund or refund.status == 'pending'):
+            outcome = 'claim_' + case.handling.stage
         financial_case = case.reason in {'unknown', 'amount', 'payment'} or case.catalog_service_id in {
             'unrecognized-charge', 'incorrect-charge', 'payment-status'}
         comparison = compare_payments(db, transaction) if transaction and financial_case else None
@@ -107,8 +109,8 @@ def trace_router(request_view, audit_view, conversation_view):
             "reviewContext": {
                 "summary": {locale: comparison_text(comparison, locale) for locale in ('es', 'en', 'pt')},
                 "missingEvidence": missing,
-                "canStartReview": reader.role == 'admin' and case.status == 'received',
-                "canDecideRefund": reader.role == 'admin' and bool(refund and refund.status == 'pending'),
+                "canStartReview": reader.role == 'admin' and bool(case.handling and case.handling.stage == 'delivered'),
+                "canDecideRefund": reader.role == 'admin' and bool(refund and refund.status == 'pending' and case.handling and case.handling.stage == 'approved'),
                 "financialEffect": ('credited' if refund and refund.status == 'approved' else 'none'),
             },
             "source": "nexqori_records", "externalProcessorLogs": False,

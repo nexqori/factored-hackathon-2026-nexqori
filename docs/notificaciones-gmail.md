@@ -26,6 +26,12 @@ SMTP usa `smtp.gmail.com:587` con STARTTLS y validación de certificado. Tambié
 
 `MAIL_FROM` es opcional: por defecto se usa `MAIL_SMTP_USER`. No se almacena la credencial en PostgreSQL, el frontend ni los archivos compartidos del equipo.
 
+## Presentación y despliegue
+
+Los códigos tienen nombre de remitente Nexqori, diseño HTML Terracota y versión de texto simple en ES/EN/PT. No incluyen imágenes externas ni seguimiento. El contenido identifica la acción y la terminación de tarjeta, nunca la contraseña del usuario.
+
+En EC2, la configuración vive en `/opt/nexqori/.local/notifications.env`, con acceso privado. Tras guardarla, recrea API/web desde `/opt/nexqori` con `docker compose -f compose.yaml -f compose.voice.yaml -f compose.cloud.yaml up -d --force-recreate api web`; conserva el archivo privado y la base de datos. Reutilizar un remitente de otra tarea requiere identificarlo primero y conservar sus credenciales fuera de Git. Preparar este diseño no configura Gmail ni demuestra entrega real.
+
 ## Comportamiento y límites
 
 - Código de seis dígitos válido cinco minutos, con cinco intentos. Un minuto mínimo entre envíos y máximo diez códigos por titular en una hora. Reenvío invalida el código anterior del mismo propósito/tarjeta.

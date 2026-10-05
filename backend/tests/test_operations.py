@@ -21,6 +21,13 @@ def make_refund(client, transaction="TX-1001"):
     return case, request, response.json()
 
 
+def approve_case(admin, case):
+    for stage in ('delivered', 'in_review', 'approved'):
+        response = admin.post(f'/api/admin/requests/{case}/stage', json={
+            'confirmed': True, 'stage': stage, 'note': 'Verificación: revisamos la evidencia del reclamo.' if stage == 'approved' else ''})
+        assert response.status_code == 200, response.text
+
+
 def approve_payload(**extra):
     return operation(password=PASSWORDS[1], decision="approve", note="Verificación de evidencia y titularidad.", **extra)
 
@@ -66,6 +73,7 @@ def test_refund_requires_admin_and_credits_exact_owner_once(setup):
     assert client.post(url, json={**request, "amountMinor": 1}).status_code == 422
     assert client.post(url, json={**request, "accountId": "account-02"}).status_code == 422
     assert client.post(url, json=request).json()["id"] == refund["id"]
+    approve_case(admin, case)
     decision_url = f"/api/admin/refunds/{refund['id']}/decision"
     decision = approve_payload()
     assert client.post(decision_url, json=decision).status_code == 403
@@ -116,7 +124,8 @@ def test_destination_and_original_revalidated_at_approval(setup):
     app, engine = setup
     client, _ = login(app)
     admin, _ = login(app, "nora")
-    _, _, refund = make_refund(client)
+    case, _, refund = make_refund(client)
+    approve_case(admin, case)
     with make_sessions(engine)() as db:
         db.get(Transaction, "TX-1001").amount_minor = -100
         db.commit()
@@ -146,8 +155,10 @@ def test_refund_idempotency_keys_cannot_be_rebound(setup):
     app, engine = setup
     client, _ = login(app)
     admin, _ = login(app, "nora")
-    _, first_key, first = make_refund(client)
+    first_case, first_key, first = make_refund(client)
+    approve_case(admin, first_case)
     second_case, _, second = make_refund(client, "TX-1002")
+    approve_case(admin, second_case)
     assert client.post(f"/api/requests/{second_case}/refund", json=first_key).status_code == 409
     decision = approve_payload()
     assert admin.post(f"/api/admin/refunds/{first['id']}/decision", json=decision).status_code == 200
@@ -171,7 +182,8 @@ def test_failed_audit_rolls_back_credit_balance_and_decision(setup):
     app, engine = setup
     client, _ = login(app)
     admin, _ = login(app, "nora")
-    _, _, refund = make_refund(client)
+    case, _, refund = make_refund(client)
+    approve_case(admin, case)
     def fail_audit(_mapper, _connection, record):
         if record.action == "refund_approved":
             raise IntegrityError("verification audit failure", {}, Exception("verification"))

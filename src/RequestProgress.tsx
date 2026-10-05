@@ -6,6 +6,7 @@ import './request-progress.css';
 
 export function RequestStatus({ request }: { request: RequestCase }) {
   const { t } = useTranslation();
+  if (request.handling?.updatedAt && request.status !== 'handed_off' && !request.refund?.creditTransactionId && request.refund?.status !== 'rejected') return <span className="badge request-progress status-in_review"><span aria-hidden="true" />{t('claimStage.' + request.handling.stage)}</span>;
   if (!request.refund) return <Badge status={request.status} />;
   const status = request.refund.status;
   return <span className={'badge request-progress status-' + ({pending:'in_review',approved:'completed',rejected:'declined'}[status])}><span aria-hidden="true" />{t('refundStatus.' + status)}</span>;

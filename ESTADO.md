@@ -877,6 +877,28 @@
 - [ ] Insertar cámara, narración y grabación real; comprobar la reproducción nativa y el tiempo con el montaje del equipo. Esta entrega no es un MP4 final.
 - Resultado: fondos, PPT, textos, gráficos y recursos creados y validados localmente. Sin bloqueo para esta entrega. Siguiente paso: Bryan elige frases/escena EDA y revisa el estilo; montar capturas reales e intercalar partes del equipo para conservar el máximo de cinco minutos.
 
+- Referencias y trabajo por fragmentos, 2026-10-05, America/Lima (UTC-05:00). Pedido vigente: diez referencias en inglés para inspirar la apertura sobre cargo no reconocido, pago pendiente y seguimiento de reclamo; Bryan enviará su discurso por partes.
+- [x] Buscar diez referencias en fuentes de marcas/creadores: Sandwich Loves Slack, Wise Nothing To Hide, Intercom Fin 2, Salesforce Financial Services Demo, Lemonade Claims, Wise Global Recipient Verification, Sierra Flight Disruption Recovery, Zendesk Intelligent Customer Service, Ada Spring Product Launch 2024 y NeuraFlash Agentforce Voice for Banking. Son lanzamientos, demos, campaña y videos de producto; selección editorial, no una clasificación objetiva de las mejores aperturas.
+- [x] Leer páginas oficiales y la transcripción de Fin 2; comprobar tema de cada recurso y enlaces a grabaciones cuando estuvieron disponibles. No se afirma haber visto completos los diez videos; algunos reproductores no pudieron cargarse con la herramienta web. Las sugerencias de adaptación son propias, no citas de los videos.
+- [x] Mantener apertura 1 en cuatro fragmentos: cargo, pago, seguimiento y motivo de Nexqori; referencia inicial de cinco segundos por fragmento, veinte segundos en total. No modificar el PPT ni traducir una versión nueva antes de recibir el discurso.
+- Decisión explícita de Bryan: ordenar primero su texto en español, hacer correcciones pequeñas de introducción/claridad y crítica, aprobarlo y después pasarlo a inglés B1 para grabación. Fondos, transiciones y animaciones se ajustarán al discurso aprobado.
+- [ ] Revisar el primer fragmento cuando Bryan lo envíe; continuar los siguientes con el mismo método. Siguiente paso: recibir su apertura en español. Sin operaciones de producto, llamadas, publicación, commits ni PR; demás frentes conservados.
+- Corrección explícita, 2026-10-05, America/Lima (UTC-05:00): Bryan pidió VIDEOS, no páginas de marcas. Para referencias audiovisuales, entregar enlaces directos a YouTube/Vimeo/reproductor del video, con título y motivo breve. No sustituirlos por artículos o páginas de producto.
+- [x] Localizar diez enlaces directos desde fuentes oficiales: Slack B6zVzWU95Sw, Wise Nothing To Hide wrwa1voFEQw, Fin 2 DJ8aZR1zmpM, Zendesk 2AnxxnLEP60, Ada sIKc8hRTh8s, NeuraFlash OJok71tpVjM, Wise Vimeo 1152194712, Sierra Wistia ljp3am27zb, Intercom Copilot cnhUspTS4YU y Zendesk Resolution Platform jF3PFRv5M2M. Sustituir candidatos sin enlace directo recuperado; no descargar medios ni afirmar reproducción completa. El método de revisión del discurso sigue vigente.
+
+- Apertura personal bilingüe, 2026-10-05, America/Lima (UTC-05:00). Pedido vigente: guardar el discurso inicial de Bryan en MD, español seguido de inglés, corregirlo y avanzar después a la parte 2. Raíz E:/factoredai; rama observada codex/aws-demo-deploy, sin cambiarla.
+- [x] Crear [discurso-bryan-es-en.md](output/pitch/discurso-bryan-es-en.md), borrador 1: experiencia personal, análisis acotado, necesidades y motivo de Nexqori. Español e inglés sencillo orientado a B1; versión principal estimada 45–60 s en inglés y alternativa breve 22–28 s. Son tiempos de ensayo, no una grabación medida.
+- [x] Conservar cargo no reconocido, falta de seguimiento y dificultad de navegación como tres dolores del texto recibido. La navegación sustituye al pago pendiente sólo en esta propuesta; esquema/PPT previos aún sin modificar. Mantener análisis de gastos, posibles cobros indebidos, facilidad de uso y atención personalizada a cualquier hora como necesidades del cliente.
+- [x] Corregir cantidad no comprobada de funcionalidades y evitar extrapolar el corpus sintético a usuarios de toda la banca. Contrastar fuentes agregadas y distinguir navegación del relato de los hallazgos medidos. Guardar método de revisión, enlace a gráficos y diez videos directos en el mismo documento.
+- Resultado: primer fragmento recibido, ordenado, corregido y traducido como borrador a petición explícita; archivo guardado. La versión larga exige recortar otras partes para respetar cinco minutos; la breve utiliza el margen existente. Sin nueva grabación, modificación del PPT, llamadas, cambios de producto, publicación, commits ni PR.
+- [ ] Bryan revisa y elige apertura; después envía el texto de la parte 2 para continuar. Siguiente paso: aprobar este fragmento antes de sincronizar fondos, transiciones y animaciones con la narración final. Partes de Araceli y cierre 5 de Santiago preservados.
+- Corrección vigente, 2026-10-05, America/Lima (UTC-05:00): Bryan pide conservar su texto original, sin alternativas; él decide los cambios de su pitch. Esta instrucción sustituye la propuesta de elegir entre versiones.
+- [x] Restaurar literalmente el español recibido en [discurso-bryan-es-en.md](output/pitch/discurso-bryan-es-en.md), con traducción fiel debajo; retirar reescrituras, alternativas y recomendaciones del documento. Resultado: original guardado; PPT y otros frentes sin cambios. Siguiente paso: recibir el siguiente fragmento y no modificar el discurso sin petición de Bryan.
+- [x] Aplicar la aclaración de Bryan: insertar saltos de línea entre sus frases y en la traducción, sin cambiar las palabras del original. Archivo releído tras el cambio; sin otros cambios.
+- Fondos para el video del pitch, 2026-10-05, America/Lima (UTC-05:00): Bryan pide fondos para combinar después con su recorte de video, en marrón Nexqori o con su logo. Se conserva el estilo “Profundidad y lanzamiento” elegido.
+- [x] Crear [01-fondo-marron.png](output/pitch/fondos-video/01-fondo-marron.png), con centro despejado para el recorte, y copiar la alternativa clara con logo como [02-fondo-claro-logo-nexqori.png](output/pitch/fondos-video/02-fondo-claro-logo-nexqori.png). Ambos PNG se inspeccionaron y miden 1672 × 941 px (16:9 aproximado). Añadir instrucciones breves en [LEEME.md](output/pitch/fondos-video/LEEME.md).
+- Resultado: dos fondos disponibles para montar la apertura. No se alteró el PPT ni se creó video compuesto; Bryan grabará y combinará su recorte después.
+
 ## Frente: Nexqori — integración de voz y primer pitch
 - Fecha: 2026-10-03 18:38 -0500, America/Lima. E:/factoredai; rama codex/voz-pitch, basada en 32fdec4.
 - Pedido vigente: conectar voz al flujo actual, dejar un documento inicial del pitch con la guía compartida y seleccionar tres casos de impacto. Sin PR todavía.
@@ -1108,12 +1130,12 @@
 - [x] Preparar compose.cloud.yaml, Caddy y docs/despliegue-aws-compose.md; validar origen HTTPS, cookie Secure, voz opcional, servicios internos y sintaxis Caddy sin solicitar un certificado.
 - [x] Publicar integración en PR #8. GitHub aprobó aplicación y LAB; detectó la ruta antigua de tarjetas en el contrato de Security Lab. Actualizarla a /cards y validar sus 105 pruebas localmente.
 - [x] Validar Docker/PostgreSQL: tarjetas 6 axe, navegación 56 vistas/9 comandos/5 axe, experiencia 5 axe, servicios 17 vistas/9 axe, pagos 3 idiomas/15 axe y reclamos 3 casos/19 axe. Informes privados cards-verificacion-ui-823411fa49f0, payments/60e1614c718d y claims/8d5f13d08f74.
-- [ ] Comprobar CI del commit final y fusionar hacia main mediante PR.
+- [x] GitHub aprobó aplicación, intent-lab y security-lab en 5bc0ba4. PR #8 y #9 fusionados; main=d94f9a807837c8cbd39ebd03ec9711e6cde4a674. Se comprobó que Santiago 009475e es ancestro de main.
 - [ ] Validar DNS, TLS, acceso y proveedores en AWS cuando exista el subdominio/servidor. No se ha desplegado infraestructura ni realizado una llamada facturada.
 - Último avance: implementado y desplegado localmente; pruebas de integración correctas. Configuración AWS preparada y validada sin publicar secretos ni datos.
-- Siguiente paso: comprobar CI de la corrección del contrato; fusionar PR #8 que incluye todo el PR #9.
+- Siguiente paso: despliegue AWS autorizado en el frente siguiente.
 
-- AWS: consulta de identidad correcta en el perfil default; no se confirma todavía que corresponda a la cuenta personal indicada. No se modificaron recursos ni permisos.
+- AWS: default fue descartado por el usuario. Cuenta personal confirmada por STS: 237153683941, perfil ontime-pdf.
 
 ## Antecedente de Santiago — cierre del PR #5
 - Último avance: implementado, desplegado en banco Docker :5180 versión 0.2.0 y validado localmente. CI inicial de aplicación y editor correcta; corrección de Security Lab lista para repetir CI antes del merge. Informes privados bank-chat-ShSCWm, document-context-nzsaaD y picker-mobile-SjyP9p bajo .local/verification. Interpretación de fechas acotada y local, sin registros bancarios enviados a modelos. Voz aplazada; otros frentes y archivos privados preservados.
@@ -1166,3 +1188,31 @@
 - Límite de publicación: git ls-remote devuelve Repository not found para origin con las credenciales de terminal. No se realizó push ni se cambiaron credenciales/remotos; publicar desde una sesión autorizada de GitHub Desktop.
 - Último avance: implementado, desplegado localmente y validado; santiago contiene todos los cambios verificados y está preparada para publicación.
 - Siguiente paso: publicar santiago desde GitHub Desktop y crear PR; comprobar CI antes de integrar. main, bryan y santiagol conservados.
+
+## Frente: Nexqori — despliegue de demo en EC2 personal
+- Fecha: 2026-10-05 10:22 -0500, America/Lima. E:/factoredai; rama codex/aws-demo-deploy desde main d94f9a8.
+- Pedido vigente: EC2 personal, Docker Compose, configuración privada, llave/IP y HTTPS. Usuario configuró A proxied nexqori.bmachuca-dev.com → 184.192.165.13.
+- [x] Confirmar cuenta 237153683941 (perfil ontime-pdf), crear instancia i-00bac1dc4784122e1 en us-east-1, t3.medium, 30 GB gp3 cifrados e IP fija 184.192.165.13. Estado EC2/System ok. Sólo HTTP/HTTPS públicos; SSH limitado a la IP del usuario.
+- [x] Compilar y desplegar main d94f9a8 con compose.yaml + compose.voice.yaml + compose.cloud.yaml. API/web/db saludables, Caddy activo. Configuración privada copiada; archivos protegidos y lectura del flujo por UID/GID 10001 corregida.
+- [x] Preparar cinco perfiles UX y Bryan con casos MXN; conservar base local. Bryan usa el correo solicitado y tiene 18 movimientos. Nueve credenciales verificadas por HTTPS, roles separados, cookie Secure/HttpOnly, CSRF y cierre de sesión revocado.
+- [x] Obtener certificado Let's Encrypt y validar HTTPS a través de Cloudflare y directo al origen sin omitir TLS. DNS público correcto y redirección HTTP 308.
+- [x] Validar interfaz de Bryan y administrador en seis pantallas, dos axe sin infracciones y cero errores JavaScript. Evidencia privada: .local/deploy/aws/nexqori-20261005/ui-report.json, verification.private.json y capturas cloud-bryan/cloud-admin.
+- [x] Entregar llave nexqori-demo.pem, ACCESOS.private.md, LEEME.private.md y conectar.ps1 en .local/deploy/aws/nexqori-20261005. Respaldo PostgreSQL inicial sólo en EC2: /opt/nexqori/.local/backups/initial-demo.dump. No se ha ensayado restauración completa.
+- [x] Documentar GitHub Actions: CI aprobado en el merge; CD automático todavía no configurado. Faltan rol OIDC acotado, SSM/entrega de revisión y workflow de despliegue con respaldo y salud.
+- [ ] Configurar remitente SMTP y verificar destinatario antes de probar códigos por correo. Jev/LLM configurados y voz habilitada, sin llamada facturada ni prueba auditiva realizada por Codex en nube.
+- Incidencia de aprobación: revisión automática rechazó descargar un paquete que reunía base y claves de proveedores. Se usó alternativa: respaldo conservado en EC2 y entrega exclusiva de llave/accesos de prueba solicitados; no quedó descarga amplia pendiente.
+- Último avance: desplegado y validado en https://nexqori.bmachuca-dev.com. La automatización de navegador integrada no inició; la verificación UI se completó con el test headless del proyecto.
+- Siguiente paso: pruebas manuales del usuario. Continuar estados administrativos y correo en el frente siguiente sin reiniciar sus datos.
+
+## Frente: Nexqori — etapas administrativas y correo de seguridad
+- Fecha: 2026-10-05 10:59 -0500, America/Lima. E:/factoredai; rama codex/reclamos-etapas-correo desde main d94f9a8.
+- Pedido vigente: controles administrativos para entregado, en revisión, aprobado y reembolso; bloqueo con código por correo y correos con identidad Nexqori. Reutilizar configuración de otra tarea si se identifica.
+- [x] Separar aprobación del reclamo y ejecución del reembolso. Etapas con confirmación, orden de servidor, auditoría y motivo; aprobar no cambia saldo. El abono conserva contraseña, cuenta del titular e idempotencia. Migración fa6107d935b2 añade claim_reviews sin transformar reembolsos antiguos.
+- [x] Mostrar avance y motivo al cliente en Mis reclamos. Nueve recorridos ES/EN/PT, 18 axe, sin errores: .local/verification/admin-decision-iJjTQi/report.json. Se corrigieron etiqueta final y prioridad de derivación humana tras revisar captura y regresión.
+- [x] Aplicar correo Nexqori HTML/texto ES/EN/PT, sin imágenes remotas; nueve axe del bloqueo por código en buzón controlado: .local/verification/notifications-evtyWs/report.json. Sin envío real Gmail.
+- [x] Validar 639 pruebas API antes del ajuste de derivación y 18 dirigidas después; 41 frontend, build, PostgreSQL concurrente con abono único. Claims: tres casos/19 axe; pagos: tres idiomas/15 axe; UI: 56 vistas/nueve navegaciones/cinco axe; experiencia: cinco axe. Docker local actualizado y saludable, sin llamadas activas al reiniciar.
+- [ ] Publicar PR, esperar CI e incorporar a main y al despliegue HTTPS. La nube todavía usa main d94f9a8.
+- [ ] Precisar tarjeta o cuenta completa: pregunta pendiente. El bloqueo de tarjeta por código existe; no se añadió bloqueo de toda la cuenta sin definir su alcance.
+- [ ] Identificar la tarea/proyecto de correo para reutilizar remitente; pregunta pendiente. SMTP sigue sin configurar, no se buscaron claves de proyectos ajenos.
+- Último avance: etapas y diseño de correo implementados y validados localmente. Comparación de reinicio conserva usuarios, movimientos, pagos, reclamos y mensajes; hash de productos difiere por causa todavía no aislada (seed asigna referencias faltantes), no se afirma identidad completa de esa tabla. Ensayos financieros sólo en perfiles separados de verificación.
+- Siguiente paso: terminar regresión de catálogo, publicar el cambio revisado y desplegar con respaldo de PostgreSQL en EC2. Esperar las dos precisiones para envío real y alcance de bloqueo.

@@ -75,6 +75,11 @@ for index in range(1,4):
     refunds.append(result.json()['id'])
 
 admins=[login('admin@nexqori.com',os.environ['ADMIN_PASSWORD']) for _ in range(2)]
+for index in range(1,4):
+    # Fixtures are already in review; approval still must be explicit before credit.
+    result=admins[0].post(f'/api/admin/requests/NQ-VERIFY-{suffix}-{index}/stage',json={
+        'confirmed':True,'stage':'approved','note':'Verificación: evidencia ficticia revisada antes del abono.'})
+    assert result.status_code==200,result.text
 
 
 def race(ids, keys):
