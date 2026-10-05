@@ -65,7 +65,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
   async function refresh() { const next = await api<Dashboard>('/bootstrap'); setData(next); if (user.role === 'admin') setAdminData(await api<AdminData>('/admin/overview')); setLoadError(''); return next; }
   useEffect(() => { let active = true; void refresh().catch(e => { if (active) setLoadError(errorText(e)); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [user.id]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 5500); return () => clearTimeout(timer); }, [notice]);
-  useEffect(() => { setMenu(false); setActionError(''); document.querySelector('main')?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); }, [location.pathname, location.search]);
+  useEffect(() => { setMenu(false); setActionError(''); document.querySelector('main')?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); }, [location.pathname]);
   const balance = data.products.reduce((total, p) => total + (p.balanceMinor || 0), 0);
   const productKind = new URLSearchParams(location.search).get('kind');
   const visibleProducts = data.products.filter(p => productKind === 'cards' ? p.type === 'card' : productKind === 'accounts' ? p.type !== 'card' : true);

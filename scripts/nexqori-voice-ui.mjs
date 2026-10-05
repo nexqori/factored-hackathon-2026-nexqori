@@ -72,9 +72,14 @@ try{
   await expect(page).toHaveURL(new RegExp('/movements\\?transaction='+person.transactionId+'$'));
   await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveCount(1);
   await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveAttribute('data-transaction-id',person.transactionId);
+  await expect(page.locator('.transaction-panel [data-transaction-id]')).toBeInViewport();
   await expect(page.getByRole('heading',{name:copy.movements,exact:true})).toBeVisible();
   await page.setViewportSize({width:1366,height:768});
   await expect(page.locator('.spending-overview')).not.toHaveAttribute('open');
+  await expect(page.locator('.movements-page')).not.toContainText(copy.activityNote);
+  await expect(page.locator('.movements-page a[href="/documents"]')).toHaveCount(0);
+  const patternsBox=await page.locator('.spending-overview').boundingBox();assert(patternsBox.height<65);
+  assert.equal(await page.locator('.movement-highlighted').evaluate(el=>getComputedStyle(el).animationDuration),'2s');
   await expect(page.locator('.movement-extra-filters')).not.toHaveAttribute('open');
   const movementBounds=await page.locator('.transaction-panel').boundingBox();
   assert(movementBounds.y>=0&&movementBounds.y+movementBounds.height<=768,JSON.stringify(movementBounds));

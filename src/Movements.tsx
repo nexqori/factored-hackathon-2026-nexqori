@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import type { SpendingInsight, SpendingPage } from './SpendingTrend';
 import { formatMoney } from './components';
@@ -23,11 +23,24 @@ export function Movements({data,onSelect}:{data:Dashboard;onSelect:(tx:Transacti
     return ()=>abort.abort();},[data.transactions,retry]);
   async function more(){if(next===null||loading)return;setLoading(true);setFailed(false);try{const r=await api<SpendingPage>('/movements/trends?offset='+next);setInsights(old=>[...old,...r.items]);setNext(r.nextOffset);}catch{setFailed(true);}finally{setLoading(false);}}
   const rows=filterMovements(data.transactions,params,insights);
+  const list=useRef<HTMLElement>(null);
+  const focusedTransaction=useRef<string|null>(null);
+  const selectedTransaction=params.get('transaction');
+  useEffect(()=>{
+    if(!selectedTransaction){focusedTransaction.current=null;return;}
+    if(focusedTransaction.current===selectedTransaction)return;
+    const frame=requestAnimationFrame(()=>{
+      const row=Array.from(list.current?.querySelectorAll<HTMLElement>('[data-transaction-id]')||[])
+        .find(el=>el.dataset.transactionId===selectedTransaction);
+      if(row){row.scrollIntoView({block:'center',behavior:'instant'});focusedTransaction.current=selectedTransaction;}
+    });
+    return()=>cancelAnimationFrame(frame);
+  },[selectedTransaction,data.transactions]);
   const unusual=insights.filter(i=>i.classification==='unusual');
   function change(key:string,value:string){setParams(old=>{const next=new URLSearchParams(old);if(value)next.set(key,value);else next.delete(key);return next;});}
   const start=params.get('start')||'',end=params.get('end')||'';
   const invalid=!!(start&&!validDate(start)||end&&!validDate(end)||start&&end&&start>end);
-  return <><div className="page-heading"><h1>{t('movements')}</h1></div>
+  return <div className="movements-page"><div className="page-heading"><h1>{t('movements')}</h1></div>
     {params.get('transaction')&&<p className="notice" role="status">{t('movements.assistantMatch')}</p>}
     {(params.get('category')||params.get('amountMinor'))&&<p className="muted">{t('movements.assistantFilters')}: {params.get('category')==='transfer'&&t('transfers')} {params.get('amountMinor')&&new Intl.NumberFormat(i18n.language,{minimumFractionDigits:2}).format(Number(params.get('amountMinor'))/100)}</p>}
     <div className="movement-filters">
@@ -47,12 +60,12 @@ export function Movements({data,onSelect}:{data:Dashboard;onSelect:(tx:Transacti
       {params.size>0&&<button className="text-link" onClick={()=>setParams({})}>{t('clear')}</button>}
     </div>
     {invalid&&<p role="alert">{t('movements.invalidPeriod')}</p>}
-    <section className="panel transaction-panel"><TransactionList highlightedId={params.get('transaction')} rows={rows} products={data.products} onSelect={onSelect}/>{!rows.length&&<p className="empty-panel">{t('noResults')}</p>}</section>
+    <section className="panel transaction-panel" ref={list}><TransactionList highlightedId={params.get('transaction')} rows={rows} products={data.products} onSelect={onSelect}/>{!rows.length&&<p className="empty-panel">{t('noResults')}</p>}</section>
     <details className="spending-overview"><summary>{t('spending.title')}</summary><p>{t('spending.intro')}</p>
       <p className="muted" role="status">{t(loading?'loading':failed?'spending.error':'spending.coverage',{count:insights.length})}</p>
       {failed&&<button className="text-link" onClick={()=>setRetry(n=>n+1)}>{t('retry')}</button>}
       {!!unusual.length&&<div className="spending-highlights">{unusual.slice(0,3).map(i=>{const tx=data.transactions.find(r=>r.id===i.transactionId);return tx&&<button className="spending-highlight" key={tx.id} onClick={()=>onSelect(tx)}><small>{t('spending.unusual')}</small><strong>{tx.merchant} · {formatMoney(Math.abs(tx.amountMinor),i18n.language as Locale,tx.currency)}</strong><span>{t('spending.average')}: {formatMoney(i.comparison.averageMinor!,i18n.language as Locale,tx.currency)}</span><span>{t('spending.review')} →</span></button>;})}</div>}
       {next!==null&&<button className="text-link" disabled={loading} onClick={()=>void more()}>{t('spending.more')}</button>}
     </details>
-  </>;
+  </div>;
 }
