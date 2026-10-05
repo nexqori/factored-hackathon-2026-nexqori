@@ -24,6 +24,7 @@ services:
         required: false
     volumes:
       - ./.local/intent-lab:/app/flow-config:ro
+      - ./.local/demo:/app/demo-config:ro
       - ./.local/provider-updates:/app/provider-updates
     build:
       context: .

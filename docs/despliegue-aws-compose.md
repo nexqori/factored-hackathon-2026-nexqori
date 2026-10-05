@@ -74,3 +74,7 @@ Guarda también la revisión Git desplegada, la configuración privada y los vol
 Una reversión de código debe ser compatible con la migración aplicada. Si no lo es, restaura el respaldo en una base nueva y valida antes de cambiar el destino. No uses `down -v` para reiniciar: elimina la base y los certificados. Conserva respaldos fuera de la instancia y prueba su restauración.
 
 Esta entrega es una demo bancaria con operaciones locales y datos ficticios. El despliegue público, el certificado y los proveedores deben comprobarse en el servidor de destino; las pruebas locales no sustituyen esa comprobación.
+
+## Perfil sintético de seis meses
+
+La carga optativa del historial y sus cuatro productos está documentada en [perfil de seis meses](perfil-seis-meses-despliegue.md). El arranque de la API usa el manifiesto privado `.local/demo/profile.private.json` cuando está instalado en el servidor; no está contenido en Git. El workflow que despliega debe conservarlo o provisionarlo antes de recrear la API y comprobar el perfil por HTTPS después. Abrir un PR no verifica por sí solo ni el despliegue ni la carga de datos.
