@@ -200,6 +200,18 @@ def test_fragment_order_deduplication_and_prompt_permissions():
         assert 'SECRET' not in question and question!=safe_spoken_result({},locale)
 
 
+def test_delegation_inside_last_word_keeps_word_without_consuming_next_answer():
+    buffer=TranscriptBuffer()
+    for event in [
+        {'event_id':'a','delta':'un servicio sobre un ', 'start_ms':0,'end_ms':200},
+        {'event_id':'b','delta':'móvil', 'start_ms':200,'end_ms':450},
+        {'event_id':'c','delta':'Sí, ese es', 'start_ms':1800,'end_ms':2300},
+    ]: buffer.add(event)
+    assert buffer.take(300)=='un servicio sobre un móvil'
+    assert buffer.take(300)==''
+    assert buffer.take(2300)=='Sí, ese es'
+
+
 def test_provider_failure_is_not_retried_automatically_and_known_session_is_closed(voice):
     app,engine,provider=voice;client,_=login(app)
     original=provider.attach;attempts=[]
