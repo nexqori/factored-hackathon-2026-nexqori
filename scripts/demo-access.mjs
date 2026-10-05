@@ -30,7 +30,7 @@ assert url.host=='db' and url.database=='nexqori'
 body=json.load(sys.stdin)
 with make_sessions(make_engine())() as db:
     customer=db.get(User,body['customerId'])
-    admin=db.scalar(select(User).where(User.email=='admin@nexqori.com'))
+    admin=db.get(User,'nora')
     assert customer and customer.name=='Bryan' and customer.role=='customer'
     assert admin and admin.role=='admin'
     assert verify(body['customerPassword'],customer.password_hash)

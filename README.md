@@ -46,6 +46,8 @@ npm run docker:down
 
 Detener contenedores conserva el volumen PostgreSQL. No uses opciones que borren volúmenes si quieres conservar solicitudes y conversaciones. Si el puerto 5180 está ocupado, libera el proceso correspondiente o cambia conjuntamente el puerto y los orígenes permitidos.
 
+Después de preparar `equipo-ux`, los accesos originales cambian a `andrea.rivera@nexqori.com`, `nora.admin@nexqori.com` y `mateo.silva@nexqori.com`. Los cinco perfiles usan nombre y apellido; consulta [correos del equipo](docs/usuarios-prueba-ux.md#correos-de-acceso-del-equipo). Los documentos y contraseñas no cambian; Bryan conserva su correo personal.
+
 ## Bryan y administración para la demo
 
 Los usuarios y casos se guardan en PostgreSQL. El código compartido prepara a Bryan con pesos mexicanos, un recibo de 459 MXN frente a un plan de 299 MXN y una compra de 2.700 MXN frente a un promedio de 600 MXN. No copia conversaciones ni reclamos de Camila.
@@ -57,7 +59,7 @@ node scripts/prepare-bryan-demo.mjs --confirm-local
 node scripts/demo-access.mjs --confirm-local
 ```
 
-Abre `.local/ux-users/bryan-demo/ACCESOS.private.md`: contiene el correo, documento y contraseña de Bryan y de `admin@nexqori.com` (documento `00000002`). El exportador verifica las contraseñas contra la base sin cambiarlas. Cada instalación conserva claves propias; la guía y `.env` quedan fuera de Git. Si una contraseña cambió después del setup, el comando informa la diferencia y no sobrescribe el acceso.
+Abre `.local/ux-users/bryan-demo/ACCESOS.private.md`: contiene el correo, documento y contraseña de Bryan y de administración (documento `00000002`). El exportador verifica las contraseñas contra la base sin cambiarlas. Cada instalación conserva claves propias; la guía y `.env` quedan fuera de Git. Si una contraseña cambió después del setup, el comando informa la diferencia y no sobrescribe el acceso.
 
 La preparación repetida conserva el correo personalizado y la actividad de Bryan. No reinicia pagos ni reclamos. Usa otro perfil del navegador para entrar al [panel administrativo](http://localhost:5180/admin/complaints) mientras pruebas como cliente. Mensajes y pasos: [demo de Bryan](docs/demo-bryan.md). La devolución requiere un cargo completado, confirmación del cliente y aprobación administrativa; un pago pendiente no se devuelve ni cancela automáticamente.
 

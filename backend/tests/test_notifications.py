@@ -201,6 +201,6 @@ def test_branded_email_has_plain_alternative_and_escaped_html(monkeypatch,locale
     html=message.get_body(preferencelist=('html',)).get_content()
     assert message.get_content_type()=='multipart/alternative'
     assert '123456' in plain and '123456' in html
-    assert 'nexqori.' in html and '#9A4B32' in html and '#F2D8C8' in html
+    assert '>nexqori<' in html and '#9A4B32' in html and '#F2D8C8' in html
     assert '<img src=x>' not in html and '&lt;img src=x&gt;' in html
     assert 'private-test-password' not in str(message)

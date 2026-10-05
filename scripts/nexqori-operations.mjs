@@ -16,7 +16,8 @@ for (const tab of [page, admin]) tab.on('pageerror', e => errors.push(e.message)
 const base = 'http://localhost:5180';
 mkdirSync('.local/verification', { recursive: true });
 async function login(tab, email, password) {
-  await tab.goto(base); await tab.getByLabel('Correo electrónico', { exact: true }).fill(email);
+  await tab.goto(base); if (!email.includes('@')) await tab.locator('input[name="loginMethod"][value="identity"]').check();
+  await tab.locator('input[autocomplete="username"]').fill(email);
   await tab.getByLabel('Contraseña', { exact: true }).fill(password);
   await tab.getByRole('button', { name: 'Entrar a mi espacio' }).click();
   await tab.locator('.workspace').waitFor();
@@ -75,7 +76,7 @@ try {
   await inspect(page,'pending-operation-id');
   assert.equal(data.products.find(p => p.id === fixture.accountId).balanceMinor, fixture.balanceBeforeUi);
   assert.equal(data.products.find(p => p.id === fixture.cardId).status, 'blocked');
-  await login(admin, 'admin@nexqori.com', credentials.ADMIN_PASSWORD);
+  await login(admin, '00000002', credentials.ADMIN_PASSWORD);
   await admin.getByRole('searchbox',{name:'Buscar una solicitud'}).fill(operationId);
   assert.equal(await admin.locator('.case-card').count(),1);
   await openCase(admin);

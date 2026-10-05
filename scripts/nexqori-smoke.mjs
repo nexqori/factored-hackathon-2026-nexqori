@@ -147,7 +147,8 @@ try {
   await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
   await page.getByRole('button',{name:'Entrar a mi espacio'}).waitFor();
   assert.equal((await context.request.get(origin+'/api/bootstrap')).status(),401);
-  await page.getByLabel('Correo electrónico').fill('admin@nexqori.com');
+  await page.locator('input[name="loginMethod"][value="identity"]').check();
+  await page.getByLabel('Número de identidad').fill('00000002');
   await page.getByLabel('Contraseña',{exact:true}).fill(credentials.ADMIN_PASSWORD);
   await page.getByRole('button',{name:'Entrar a mi espacio'}).click();
   await page.getByRole('heading',{name:'Solicitudes y trazabilidad'}).waitFor();
