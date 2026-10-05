@@ -58,6 +58,7 @@ try {
     await mutate(customer, '/assistant/tools/read', { intent: record.intent, tool: 'read-transaction-evidence', referenceId: record.transactionId });
     if (index < 2) {
       const refund = await mutate(customer, '/requests/' + request.id + '/refund', { confirmed: true, requestKey: randomUUID() });
+      if (index === 1) for (const stage of ['delivered', 'in_review', 'approved']) await mutate(admin, '/admin/requests/' + request.id + '/stage', { confirmed: true, stage, note: stage === 'approved' ? 'Verificación: evidencia del cargo revisada.' : '' });
       if (index === 1) await mutate(admin, '/admin/refunds/' + refund.id + '/decision', { confirmed: true, requestKey: randomUUID(), decision: 'approve', note: 'Verificación: revisión de importe, titular y cuenta de abono en el panel de reclamos.', password: pack.admin.password });
     } else await mutate(customer, '/requests/' + request.id + '/handoff', { confirmed: true });
     const document = (await mutate(customer, '/conversations/' + record.conversationId + '/documents', { kind: 'claims_summary', scope: 'selected', requestId: request.id, locale: 'es', requestKey: randomUUID() })).document;
@@ -74,8 +75,9 @@ try {
   await page.locator('[data-trace-ready=true]').waitFor();
   await expect(page.locator('.trace-current')).toContainText(copy.es['trace.outcome.refund_pending']);
   await expect(page.locator('.admin-case-decision')).toBeVisible();
-  await expect(page.locator('.admin-case-decision').getByRole('button', { name: copy.es['caseDecision.start'], exact: true })).toBeDisabled();
-  await expect(page.locator('.admin-case-decision .refund-panel select')).toBeVisible();
+  await expect(page.locator('.admin-case-decision').getByRole('button', { name: copy.es['claimStage.action.delivered'], exact: true })).toBeDisabled();
+  await expect(page.locator('.admin-case-decision .refund-panel select')).toHaveCount(0);
+  await expect(page.locator('.admin-case-decision .refund-panel')).toContainText(copy.es['claimStage.approvalRequired']);
   await page.reload(); await page.locator('[data-trace-ready=true]').waitFor();
   await expect(page.locator('.trace-current')).toContainText(copy.es['trace.outcome.refund_pending']);
   const dossier = await (await admin.context.request.get(origin + '/api/admin/users/' + pack.cases[0].userId + '/requests/' + report.cases[0].requestId + '/trace')).json();

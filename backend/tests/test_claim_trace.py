@@ -8,7 +8,7 @@ from sqlalchemy import select
 from backend.db import make_sessions
 from backend.models import AuditEvent, Conversation, Message, now
 from backend.tests.test_api import setup, login, payload
-from backend.tests.test_operations import make_refund, approve_payload
+from backend.tests.test_operations import make_refund, approve_payload, approve_case
 
 
 def trace_url(case, user="andrea"):
@@ -78,12 +78,13 @@ def test_trace_explains_actual_refund_decision_without_closing_claim(setup, deci
     case, _, refund = make_refund(customer)
     pending = admin.get(trace_url(case)).json()
     assert pending['outcome'] == 'refund_pending' and pending['refund']['creditTransactionId'] is None
+    if decision == 'approve': approve_case(admin, case)
     body = {**approve_payload(), 'decision': decision, 'note': 'Verificación: importe y cuenta del mismo titular revisados.'}
     assert admin.post(f"/api/admin/refunds/{refund['id']}/decision", json=body).status_code == 200
     detail = admin.get(trace_url(case)).json()
     final = 'approved' if decision == 'approve' else 'rejected'
     assert detail['outcome'] == 'refund_' + final
-    assert detail['request']['status'] == 'received'
+    assert detail['request']['status'] == ('in_review' if decision == 'approve' else 'received')
     assert detail['refund']['decisionNote'] == body['note']
     assert detail['refund']['decidedBy']['id'] == 'nora'
     assert detail['refund']['decidedAt'] and detail['refund']['destinationLast4'] == '4821'

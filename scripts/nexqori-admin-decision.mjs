@@ -51,8 +51,19 @@ try {
       const detail = page.locator('.claims-detail');
       await expect(detail.locator('.case-review-context')).toBeVisible();
       const actions = detail.locator('.admin-case-decision');
-      await actions.getByLabel(copy['caseDecision.reviewConfirm'], { exact: true }).check();
-      await actions.getByRole('button', { name: copy['caseDecision.start'], exact: true }).click();
+      for (const stage of ['delivered', 'in_review', 'approved']) {
+        const button = actions.getByRole('button', { name: copy['claimStage.action.' + stage], exact: true });
+        await expect(button).toBeDisabled();
+        if (stage === 'approved') await actions.getByLabel(copy['claimStage.note'], { exact: true }).fill('Verificación: expediente y evidencia revisados para autorizar el siguiente paso.');
+        await actions.getByLabel(copy['claimStage.confirm.' + stage], { exact: true }).check();
+        await button.click();
+        await expect(actions.locator('[aria-current="step"]')).toHaveText(new RegExp(copy['claimStage.' + stage]));
+        const intermediate = await (await customer.context.request.get(origin + '/api/bootstrap')).json();
+        assert.deepEqual(intermediate.products, before.products, 'Administrative stages cannot credit money');
+        assert.deepEqual(intermediate.transactions, before.transactions);
+        await customerPage.locator('.claims-refresh button').click();
+        await expect(customerPage.locator('.trace-current')).toContainText(copy['trace.outcome.claim_' + stage]);
+      }
       await expect(actions.locator('.case-review-start')).toHaveCount(0);
       if (decision === 'pending') {
         await expect(detail).toContainText(copy['caseDecision.missing.payment_confirmation']);
@@ -68,6 +79,7 @@ try {
         await refund.getByRole('button', { name: copy.refundSaveDecision, exact: true }).click();
         await expect(refund.locator('form')).toHaveCount(0);
         await expect(refund).toContainText(note);
+        if (decision === 'approve') await expect(actions.locator('[aria-current="step"]')).toContainText(copy['claimStage.refunded']);
         const attention = detail.locator('.attention-review');
         await attention.getByLabel(copy['attention.summary'], { exact: true }).fill('Verificación: resultado explicado al cliente y sin gestiones pendientes.');
         await attention.getByLabel(copy['attention.confirm'], { exact: true }).check();

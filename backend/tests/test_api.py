@@ -173,6 +173,7 @@ def test_admin_review_then_customer_handoff(setup):
     assert overview.status_code==200
     assert len(overview.json()["users"])==3
     assert "password_hash" not in overview.text
+    assert operator.post("/api/admin/requests/"+case+"/stage",json={"confirmed":True,"stage":"delivered"}).status_code==200
     assert operator.post("/api/admin/requests/"+case+"/review",json={"confirmed":True}).status_code==200
     assert operator.post("/api/requests",json=payload()).status_code==403
     assert client.post("/api/requests/"+case+"/handoff",json={"confirmed":True}).status_code==200

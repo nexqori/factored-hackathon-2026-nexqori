@@ -134,6 +134,7 @@ def test_payment_pending_and_changed_case_prevent_closure(setup):
     with sessions() as db:
         db.get(Transaction, 'TX-1002').status = 'completed'; db.commit()
     row = resolve(admin, path)
+    assert admin.post(path.replace('/attention/', '/admin/') + '/stage', json={'confirmed': True, 'stage': 'delivered'}).status_code == 200
     assert admin.post(path.replace('/attention/', '/admin/') + '/review', json={'confirmed': True}).status_code == 200
     assert process_due(sessions, row['dueAt']) == 0
     assert client.get(path).json()['review']['status'] == 'reopened'

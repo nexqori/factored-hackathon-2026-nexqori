@@ -169,7 +169,12 @@ async function createClaim(page, fixture) {
   return requestId;
 }
 async function openClaim(page, id, admin = false) {
-  await page.goto(origin + (admin ? '/admin' : '/complaints'));
+  if (admin) {
+    await page.goto(origin + '/admin/complaints?case=' + encodeURIComponent(id));
+    await expect(page.locator('.claims-detail [data-trace-ready]')).toHaveAttribute('data-trace-ready', 'true');
+    return;
+  }
+  await page.goto(origin + '/complaints');
   await page.locator(admin ? '.case-card' : '.claim-choice').filter({ hasText: id }).click();
   if (!admin) await page.locator('.claims-detail-header button').click();
   await expect(page.getByRole('dialog')).toContainText(id);
@@ -256,12 +261,18 @@ try {
       });
       await step('administrador inicia revisión y aprueba desde frontend', async () => {
         await openClaim(operator, requestId, true);
-        await operator.getByRole('button', { name: t(locale, 'startReview'), exact: true }).click();
-        await operator.getByRole('dialog').getByRole('button', { name: t(locale, 'startReview'), exact: true }).click();
+        const stages = operator.locator('.admin-case-decision');
+        for (const stage of ['delivered', 'in_review', 'approved']) {
+          if (stage === 'approved') await stages.getByLabel(t(locale, 'claimStage.note'), { exact: true }).fill('Verificación: cargo y registros revisados para la siguiente acción.');
+          await stages.getByLabel(t(locale, 'claimStage.confirm.' + stage), { exact: true }).check();
+          await stages.getByRole('button', { name: t(locale, 'claimStage.action.' + stage), exact: true }).click();
+          await expect(stages.locator('[aria-current="step"]')).toHaveText(new RegExp(t(locale, 'claimStage.' + stage)));
+          await money(page, fixture, fixture.initialBalanceMinor);
+        }
         await expect(operator.locator('.refund-panel')).toContainText(t(locale, 'refundStatus.pending'));
         assert.equal((await get(operator, '/admin/overview')).requests.find(r => r.id === requestId).status, 'in_review');
         await operator.getByLabel(t(locale, 'refundEvidence'), { exact: true }).fill('Verificación: compra cancelada y cargo completado revisados. Se aprueba devolución completa a la cuenta del titular.');
-        await operator.getByRole('dialog').getByLabel(t(locale, 'password'), { exact: true }).fill(pack.admin.password);
+        await operator.locator('.refund-panel').getByLabel(t(locale, 'password'), { exact: true }).fill(pack.admin.password);
         await expect(operator.getByRole('button', { name: t(locale, 'refundSaveDecision'), exact: true })).toBeDisabled();
         await operator.getByRole('checkbox', { name: t(locale, 'refundConfirmApprove'), exact: true }).check();
         const sent = operator.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/decision'));
@@ -274,7 +285,6 @@ try {
         const repeated = await controlledPost(operator, '/admin/refunds/' + currentCase.operationId + '/decision', decision);
         assert.equal(repeated.status(), 200);
         assert.equal((await repeated.json()).creditTransactionId, currentCase.creditId);
-        await closeDialog(operator, locale);
       });
       await step('titular ve un único abono y puede rastrearlo por RF', async () => {
         await openClaim(page, requestId);

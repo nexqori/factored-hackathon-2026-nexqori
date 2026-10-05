@@ -19,6 +19,7 @@ from .workflows import workflow_view
 from .catalog import request_kind
 from .cards import reveal_local_card, local_card_available, refresh_local_cvv
 from .operations import operations_router
+from .claim_review import claim_review_router, handling_view, advance, StageInput
 from .notifications import notifications_router, email_required
 from .spending import spending_router
 from .provider_updates import ProviderUpdates, provider_updates_router
@@ -62,7 +63,7 @@ def request_view(r, name=None, refund=None):
                      "createdAt":refund.created_at.isoformat(),"decidedAt":refund.decided_at.isoformat() if refund.decided_at else None,
                      "creditTransactionId":refund.credit_transaction_id}
     kind = request_kind(r)
-    return {"id":r.id,"kind":kind,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation}
+    return {"id":r.id,"kind":kind,"userId":r.user_id,"transactionId":r.transaction_id,"service":r.service,"catalogServiceId":r.catalog_service_id,"sourceProductId":r.source_product_id,"serviceData":r.service_data,"reason":r.reason,"details":r.details,"status":r.status,"createdAt":r.created_at.isoformat(),"updatedAt":r.updated_at.isoformat(),"customerName":name,"refund":operation,"handling":handling_view(r)}
 
 def audit_view(e, name):
     return {"id":e.id,"userId":e.user_id,"requestId":e.request_id,"conversationId":e.conversation_id,"productId":e.product_id,"transactionId":e.transaction_id,"action":e.action,"actorId":e.actor_id,"actorName":name,"at":e.created_at.isoformat()}
@@ -529,12 +530,18 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     def review(request_id: str,payload: ConfirmInput,user=Depends(admin_write),db=Depends(db_session)):
         case=db.scalar(select(RequestCase).where(RequestCase.id==request_id).with_for_update())
         if not case: raise HTTPException(404,"not_found")
+        if request_kind(case) == 'claim':
+            if case.status == 'handed_off': raise HTTPException(409, 'invalid_transition')
+            advance(db, case, user, StageInput(confirmed=True, stage='in_review'))
+            db.commit()
+            return {"ok":True}
         if case.status=="received":
             case.status="in_review";case.updated_at=now()
             add_audit(db,case.user_id,"reviewed",user.id,case.id);db.commit()
         elif case.status!="in_review": raise HTTPException(409,"invalid_transition")
         return {"ok":True}
     app.include_router(operations_router())
+    app.include_router(claim_review_router())
     app.include_router(attention_router())
     app.include_router(notifications_router())
     app.include_router(spending_router())

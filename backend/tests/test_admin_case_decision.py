@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 from backend.db import make_sessions
 from backend.models import AuditEvent, Product, Transaction
 from backend.tests.test_api import setup, login, payload
-from backend.tests.test_operations import make_refund, approve_payload
+from backend.tests.test_operations import make_refund, approve_payload, approve_case
 
 
 def test_review_summary_uses_only_owner_history_and_does_not_authorize_money(setup):
@@ -29,7 +29,7 @@ def test_review_summary_uses_only_owner_history_and_does_not_authorize_money(set
     assert customer.get(url).status_code == 403
     assert other.get(f'/api/requests/{case}/trace').status_code == 404
     detail = admin.get(url).json()['reviewContext']
-    assert detail['canStartReview'] and not detail['canDecideRefund']
+    assert not detail['canStartReview'] and not detail['canDecideRefund']
     assert detail['financialEffect'] == 'none'
     assert '100.00' in detail['summary']['es'] and '9999' not in str(detail)
     assert 'comparable_history' not in detail['missingEvidence']
@@ -49,8 +49,10 @@ def test_admin_decision_is_visible_to_customer_and_retry_has_one_effect(setup, d
     review_url = f'/api/admin/requests/{case}/review'
     assert customer.post(review_url, json={'confirmed': True}).status_code == 403
     assert admin.post(review_url, json={'confirmed': False}).status_code == 422
+    assert admin.post(f'/api/admin/requests/{case}/stage', json={'confirmed': True, 'stage': 'delivered'}).status_code == 200
     assert admin.post(review_url, json={'confirmed': True}).status_code == 200
     assert admin.post(review_url, json={'confirmed': True}).status_code == 200
+    if decision == 'approve': approve_case(admin, case)
     body = {**approve_payload(), 'decision': decision, 'note': 'Revisamos el registro y confirmamos el resultado para el cliente.'}
     url = f"/api/admin/refunds/{refund['id']}/decision"
     assert customer.post(url, json=body).status_code == 403

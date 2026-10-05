@@ -8,7 +8,7 @@ from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from .models import AuditEvent, CardProfile, Product, Refund, RequestCase, Transaction, User, NotificationPreference, now
+from .models import ClaimReview, AuditEvent, CardProfile, Product, Refund, RequestCase, Transaction, User, NotificationPreference, now
 from .schemas import ConfirmInput
 from .workflows import WORKFLOWS
 from .security import admin, admin_write, customer, customer_read, current_session, db_session, LoginLimiter, verify
@@ -141,7 +141,9 @@ def operations_router():
         case = db.get(RequestCase, case_id)
         if not case:
             raise HTTPException(404, "not_found")
-        return refund_state(db, case)
+        state = refund_state(db, case)
+        review = db.get(ClaimReview, case.id)
+        return {**state, 'claimApproved': bool(review and review.stage == 'approved')}
 
     @router.post("/requests/{case_id}/refund")
     def request_refund(case_id: str, payload: OperationInput, user=Depends(customer), db=Depends(db_session)):
@@ -184,6 +186,9 @@ def operations_router():
         if used:
             raise HTTPException(409, "idempotency_conflict")
         if final == "approved":
+            review = db.get(ClaimReview, refund.request_id)
+            if not review or review.user_id != refund.user_id or review.stage != 'approved':
+                raise HTTPException(409, 'claim_approval_required')
             case = db.scalar(select(RequestCase).where(RequestCase.id == refund.request_id, RequestCase.user_id == refund.user_id))
             tx, destination = refund_source(db, case, lock=True)
             if (tx.id != refund.transaction_id or destination.id != refund.destination_product_id

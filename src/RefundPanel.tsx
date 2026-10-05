@@ -5,7 +5,7 @@ import { formatMoney } from './components';
 import type { Locale } from './i18n';
 
 type Refund = { id: string; requestId: string; transactionId: string; amountMinor: number; destinationLast4: string; status: 'pending' | 'approved' | 'rejected'; decisionNote: string | null; creditTransactionId: string | null };
-type State = { eligible: boolean; refund: Refund | null; reason: string | null; preview: { amountMinor: number; destinationLast4: string; merchant: string; transactionId: string } | null };
+type State = { claimApproved?: boolean; eligible: boolean; refund: Refund | null; reason: string | null; preview: { amountMinor: number; destinationLast4: string; merchant: string; transactionId: string } | null };
 
 export function RefundPanel({ requestId, admin, onChanged, onBusy }: { requestId: string; admin: boolean; onChanged: () => Promise<unknown>; onBusy: (value: boolean) => void }) {
   const { t, i18n } = useTranslation();
@@ -24,10 +24,11 @@ export function RefundPanel({ requestId, admin, onChanged, onBusy }: { requestId
     finally { setBusy(false); onBusy(false); }
   }
   const amount = state?.refund || state?.preview;
-  const canAct = !!state && (admin ? state.refund?.status === 'pending' : state.eligible);
+  const canAct = !!state && (admin ? state.refund?.status === 'pending' && state.claimApproved === true : state.eligible);
   return <section className="refund-panel" aria-label={t('refundTitle')}><h3>{t('refundTitle')}</h3>{!state && !error && <p role="status">{t('loading')}</p>}{error && <p role="alert" className="error-text">{error}</p>}
     {amount && <dl className="refund-summary"><div><dt>{t('amount')}</dt><dd>{formatMoney(amount.amountMinor, i18n.language as Locale)}</dd></div><div><dt>{t('refundDestination')}</dt><dd>•••• {amount.destinationLast4}</dd></div><div><dt>{t('reference')}</dt><dd>{amount.transactionId}</dd></div></dl>}
     {state?.refund && <div role="status"><p><strong>{t('refundStatus.' + state.refund.status)}</strong></p><p>{t('operationId')}: <code className="refund-operation-id">{state.refund.id}</code></p>{state.refund.decisionNote && <p className="case-details">{state.refund.decisionNote}</p>}{state.refund.creditTransactionId && <p>{t('refundCreditReference')}: <code className="refund-operation-id">{state.refund.creditTransactionId}</code></p>}</div>}
+    {admin && state?.refund?.status === 'pending' && !state.claimApproved && <p className="info-banner">{t('claimStage.approvalRequired')}</p>}
     {state && !state.refund && !canAct && <p className="muted">{t(admin && state.eligible ? 'refundNotRequested' : 'error.' + state.reason)}</p>}
     {canAct && <form onSubmit={submit} className="form-stack"><p>{t(admin ? 'refundReviewExplain' : 'refundExplain')}</p>{admin && <><label>{t('refundDecision')}<select disabled={busy} value={decision} onChange={e => { setDecision(e.target.value); setConfirm(false); }}><option value="approve">{t('refundApprove')}</option><option value="reject">{t('refundReject')}</option></select></label><label>{t('refundEvidence')}<textarea required minLength={10} maxLength={1000} disabled={busy} value={note} onChange={e => setNote(e.target.value)} /></label><label>{t('password')}<input type="password" autoComplete="current-password" required maxLength={256} disabled={busy} value={password} onChange={e => setPassword(e.target.value)} /></label></>}
     <label className="checkbox-label"><input type="checkbox" required disabled={busy} checked={confirm} onChange={e => setConfirm(e.target.checked)}/>{t(admin ? decision === 'approve' ? 'refundConfirmApprove' : 'refundConfirmReject' : 'refundConfirmRequest')}</label><button className="button primary" disabled={busy || !confirm}>{t(busy ? 'loading' : admin ? 'refundSaveDecision' : 'refundRequest')}</button></form>}

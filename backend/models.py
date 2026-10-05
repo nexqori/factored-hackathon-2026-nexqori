@@ -146,6 +146,7 @@ class Transaction(Base):
 
 class RequestCase(Base):
     __tablename__ = "requests"
+    handling: Mapped["ClaimReview | None"] = relationship(lazy="selectin", uselist=False)
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     transaction_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -168,6 +169,21 @@ class RequestCase(Base):
         CheckConstraint("reason IN ('unknown','amount','payment','other')"),
         CheckConstraint("length(details) BETWEEN 10 AND 1000")
     )
+
+class ClaimReview(Base):
+    __tablename__ = "claim_reviews"
+    request_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    stage: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        ForeignKeyConstraint(["request_id", "user_id"], ["requests.id", "requests.user_id"]),
+        CheckConstraint("stage IN ('delivered','in_review','approved')"),
+        CheckConstraint("stage <> 'approved' OR (note IS NOT NULL AND length(note) BETWEEN 10 AND 1000)"),
+    )
+
 
 class Refund(Base):
     __tablename__ = "refunds"
