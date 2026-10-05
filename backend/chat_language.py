@@ -19,9 +19,9 @@ WORDS['pt'].update('ola obrigado obrigada sim nao no do da das dos os as ao aos 
 WORDS['es'].update('inicio productos producto configuracion servicios servicio transferencias transferencia inversiones inversion documentos documento historial estado cuenta recibos saldo asesor telefono celular'.split())
 WORDS['en'].update('products product configuration transfers transfer documents document history statement receipts advisor phone mobile'.split())
 WORDS['pt'].update('produtos produto configuracoes servicos servico transferencias transferencia documentos documento historico extrato recibos saldo atendente telefone celular'.split())
-WORDS['es'].update('mostrar cierre cerrame salir desconectame llevarme llevar ir ve vuelve volver bloqueame actualiza modifica pon poner ajusta aumenta reduce medio media'.split())
+WORDS['es'].update('va mostrar cierre cerrame salir desconectame llevarme llevar ir ve vuelve volver bloqueame actualiza modifica pon poner ajusta aumenta reduce medio media'.split())
 WORDS['en'].update('set adjust increase decrease update navigate see number ending'.split())
-WORDS['pt'].update('ir por favor sair muda troca troque atualize ajuste aumente diminua podes'.split())
+WORDS['pt'].update('estado ir por favor sair muda troca troque atualize ajuste aumente diminua podes'.split())
 for words in WORDS.values():
     words.add('digital')
 

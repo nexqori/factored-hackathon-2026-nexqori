@@ -2,7 +2,7 @@
 from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy import select, func, exists
-from .models import Transaction, BillPayment, PhoneBill, Refund
+from .models import Transaction, BillPayment, PhoneBill, Refund, SpendingException
 from .provider_updates import price_context, provider_context_text
 from .service_agreements import agreement_context, agreement_text
 
@@ -18,6 +18,11 @@ def compare_payments(db, tx):
     if notice: result['providerNotice'] = notice
     agreement = agreement_context(db, tx)
     if agreement: result['serviceAgreement'] = agreement
+    exception = db.scalar(select(SpendingException).where(
+        SpendingException.transaction_id == tx.id, SpendingException.user_id == tx.user_id))
+    result['recognizedException'] = bool(exception)
+    if exception:
+        result['unusualIncrease'] = False
     return result
 
 
@@ -32,10 +37,12 @@ def _compare_payments(db, tx):
         .where(BillPayment.user_id == tx.user_id, BillPayment.transaction_id == tx.id)).first()
     refunded = exists(select(Refund.id).where(Refund.user_id == tx.user_id,
         Refund.transaction_id == Transaction.id, Refund.status == 'approved'))
+    exceptional = exists(select(SpendingException.transaction_id).where(
+        SpendingException.user_id == tx.user_id, SpendingException.transaction_id == Transaction.id))
     query = select(Transaction).where(Transaction.user_id == tx.user_id,
         Transaction.currency == tx.currency, Transaction.amount_minor < 0,
         Transaction.status == 'completed', Transaction.occurred_at < tx.occurred_at,
-        Transaction.occurred_at >= tx.occurred_at - timedelta(days=DAYS), ~refunded)
+        Transaction.occurred_at >= tx.occurred_at - timedelta(days=DAYS), ~refunded, ~exceptional)
     if linked:
         payment, bill = linked
         count = db.scalar(select(func.count()).select_from(BillPayment).where(
@@ -109,6 +116,10 @@ def comparison_text(value, locale, compact=False):
 def _comparison_text(value, locale):
     if not value or value.get('reason') == 'not_a_charge': return ''
     i = ('es', 'en', 'pt').index(locale)
+    if value.get('recognizedException'):
+        return ('Reconociste esta compra como excepcional. Se conserva en tus movimientos y no se incluye en el promedio ni el rango de gasto habitual.',
+                'You recognized this as an occasional purchase. It stays in your transactions and is excluded from the usual spending average and range.',
+                'Você reconheceu esta compra como excepcional. Ela permanece nas movimentações e não entra na média nem na faixa de gastos habituais.')[i]
     if value.get('reason') == 'bill_amount_mismatch':
         return ('El cargo supera el total del recibo vinculado. Hay que revisar esa diferencia antes de compararlo con otros recibos.',
                 'The charge exceeds the linked bill total. That difference needs review before comparing it with other bills.',
