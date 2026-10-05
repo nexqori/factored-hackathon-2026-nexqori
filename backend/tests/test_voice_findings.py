@@ -215,3 +215,25 @@ def test_editing_draft_revokes_voice_submission(voice, models):
     runtime.turn(identity,'send-while-editing','Confirmar y enviar')
     assert client.get('/api/bootstrap').json()['requests']==before
     client.post(f'/api/voice/sessions/{identity}/close',json={})
+
+
+@pytest.mark.parametrize('guard_status', ['blocked','uncertain','unavailable'])
+def test_voice_submission_guard_failure_never_registers(voice, models, monkeypatch, guard_status):
+    from backend import voice as voice_module, workflow_chat
+    app, _, _ = voice; client, _ = login(app)
+    _, control = models; control['intent'] = 'unrecognized-charge'
+    started = client.post('/api/voice/sessions', json=start_body(transactionId='TX-1002')).json()
+    identity, cid = started['id'], started['conversationId']; runtime=app.state.voice
+    runtime.turn(identity,'prepare','No reconozco ese cargo')
+    preview=client.get(f'/api/conversations/{cid}/claim-preview?locale=es').json()
+    assert client.post(f'/api/conversations/{cid}/claim-review',json={
+        'previewToken':preview['previewToken'],'details':preview['summary'],'ready':True,'locale':'es'}).status_code==200
+    before=client.get('/api/bootstrap').json()['requests']
+    monkeypatch.setattr(voice_module,'inspect_prompt',lambda *a,**k:{'status':guard_status})
+    monkeypatch.setattr(workflow_chat,'inspect_prompt',lambda *a,**k:{'status':guard_status})
+    runtime.turn(identity,'submit','Confirmar y enviar')
+    assert client.get('/api/bootstrap').json()['requests']==before
+    reply=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json()['reply']
+    assert reply['guard']['status']==guard_status and not reply['flow']['canRegister']
+    assert not reply['navigation']
+    client.post(f'/api/voice/sessions/{identity}/close',json={})
