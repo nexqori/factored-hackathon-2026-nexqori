@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Search, FileDown } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import type { SpendingInsight, SpendingPage } from './SpendingTrend';
@@ -27,7 +27,7 @@ export function Movements({data,onSelect}:{data:Dashboard;onSelect:(tx:Transacti
   function change(key:string,value:string){setParams(old=>{const next=new URLSearchParams(old);if(value)next.set(key,value);else next.delete(key);return next;});}
   const start=params.get('start')||'',end=params.get('end')||'';
   const invalid=!!(start&&!validDate(start)||end&&!validDate(end)||start&&end&&start>end);
-  return <><div className="page-heading"><h1>{t('movements')}</h1><p>{t('activityNote')}</p><Link className="text-link" to="/documents"><FileDown size={18} aria-hidden="true"/>{t('documents.open')}</Link></div>
+  return <><div className="page-heading"><h1>{t('movements')}</h1></div>
     {params.get('transaction')&&<p className="notice" role="status">{t('movements.assistantMatch')}</p>}
     {(params.get('category')||params.get('amountMinor'))&&<p className="muted">{t('movements.assistantFilters')}: {params.get('category')==='transfer'&&t('transfers')} {params.get('amountMinor')&&new Intl.NumberFormat(i18n.language,{minimumFractionDigits:2}).format(Number(params.get('amountMinor'))/100)}</p>}
     <div className="movement-filters">
