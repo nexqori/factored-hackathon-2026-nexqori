@@ -22,14 +22,16 @@ from .catalog import SERVICES
 from .assistant import answer
 from .navigation import navigate_in_app
 from .transaction_context import transaction_evidence, transaction_reply
-from .transaction_suggestions import FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply
+from .transaction_suggestions import (FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply,
+                                     browse_request, search_clues, search_navigation, search_reply)
+from .prompt_guard import inspect_prompt, guard_message
 from .query_documents import can_document
 from .query_answers import query_answer
 from .query_context import apply_query_context
 from .claim_summary import claim_preview, confirmation_text, preview_token, review_message, NEXT as CLAIM_NEXT
 from .payment_history import context_comparison, comparison_text
 from .conversation_selection import replace_transaction_context
-from .conversation_context import (changes_topic, provider_history, reviewed_problem, resume_review,
+from .conversation_context import (changes_topic, refines_problem_type, provider_history, reviewed_problem, resume_review,
                                    safe_query_reply, safe_suggestion_reply, remember_safe_reply)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experiments' / 'intent-lab'))
@@ -79,9 +81,9 @@ class SessionReader(BankReader):
         self.db, self.conversation = db, conversation
         self.user = {'id': user.id, 'name': user.name, 'role': user.role}
 
-    def read(self, intent, tool, language='es', reference=None):
+    def read(self, intent, tool, language='es', reference=None, *, transaction_search=None):
         value = read_tool(self.db, self.user['id'], ReadToolInput(intent=intent, tool=tool, referenceId=reference,
-                          conversationId=self.conversation.id, locale=language), commit=False)
+                          conversationId=self.conversation.id, locale=language, transactionSearch=transaction_search), commit=False)
         return {**value, 'observed_at': now().isoformat()}
 
 
@@ -94,6 +96,7 @@ def flow_view(row):
             'missing_fields','contract','trace','latency_ms','verified_facts','bank_evidence','activation_plan')} | {
         'state': 'registered' if row.request_id else value['state'],
         'suggestedTransaction': row.state.get('transaction_suggestion'),
+        'transactionSearch': row.state.get('transaction_search'),
         'selectedRequestId': row.state.get('bank_binding', {}).get('request_id'),
         'canDocument': can_document(row),
         'requestId': row.request_id, 'canRegister': not row.request_id and row.state.get('phase') == 'completed'
@@ -233,6 +236,24 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
         db.add(conv); db.flush()
         db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, conversation_id=conv.id, action='conversation_started'))
     row = db.get(ConversationFlow, conv.id)
+    guard = inspect_prompt(message, body.locale)
+    db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id,
+                     conversation_id=conv.id, action='prompt_guard_' + guard['status']))
+    if guard['status'] != 'allowed':
+        # Refused text stays out of the checkpoint and subsequent model history.
+        refused = guard_message(guard['status'], body.locale)
+        user_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id,
+                               role='user', content=message, locale=body.locale)
+        reply_message = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id,
+                                role='assistant', content=refused, locale=body.locale)
+        db.add_all([user_message, reply_message]); conv.updated_at = now(); db.flush()
+        response = {'text':refused, 'destination':None, 'navigation':None, 'guard':guard,
+                    'conversation':conversation_view(conv),
+                    'messages':[message_view(user_message), message_view(reply_message)],
+                    'flow':dict(flow_view(row), canRegister=False) if row else None}
+        db.add(AssistantTurn(user_id=user.id, request_key=body.requestKey, fingerprint=fingerprint, response=response))
+        db.commit()
+        return response
     previous_request = row.state.get('bank_binding', {}).get('request_id') if row else None
     selection_changed = body.updateSelection and (body.transactionId != conv.transaction_id or body.requestId != previous_request)
     replacing = bool((body.replaceTransaction and body.transactionId != conv.transaction_id)
@@ -265,7 +286,9 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     registered = bool(row and row.request_id)
     # A clarification keeps the active case. An explicit change of topic is
     # classified again rather than swallowed as an answer to the old case.
-    new_topic = bool(row and not registered and not replacing and changes_topic(body.message))
+    browsing = bool(row and not registered and not replacing and not selection_changed
+                    and row.state['context'].get('triage',{}).get('family')=='problem' and browse_request(body.message))
+    new_topic = bool(row and not registered and not replacing and not browsing and (changes_topic(body.message) or refines_problem_type(body.message,row.state['context'].get('intent'))))
     if new_topic:
         dismissed = []
     continuing = row is not None and row.state['phase'] == 'waiting_reply' and not new_topic and not replacing
@@ -276,7 +299,7 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     previous_query = ({key: copy.deepcopy(row.state[key]) for key in ('queryDefaults','queryPeriodUnclear') if key in row.state}
                       if row and not new_topic and row.state['context'].get('triage',{}).get('family')=='query' else {})
     replacement = replace_transaction_context(row.state, selection, message, execution.MAX_REPLIES) if replacing and row else None
-    state = replacement or (copy.deepcopy(row.state) if continuing or registered or reviewing else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
+    state = replacement or (copy.deepcopy(row.state) if continuing or registered or reviewing or browsing else execution.create(workflow_record(), prior_messages + [{'role':'user','content':message}],
                 body.locale, thread_id=conv.id, bank_binding=selection, persist=lambda _: None))
     if replacing or (row and row.state.get('claim_preview_required')):
         state['claim_preview_required'] = True
@@ -284,11 +307,17 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     for key, value in previous_query.items():
         state.setdefault(key, value)
     state['transaction_suggestion'] = None
+    state['transaction_search'] = None
     state['dismissed_transaction_ids'] = dismissed
     state['conversation_context'] = {'mode': 'registered_case' if registered else ('replace_selection' if body.updateSelection else 'replace_transaction') if replacing else 'new_topic' if new_topic else
                                     'continue_question' if continuing else 'continue_review' if reviewing else 'classify',
                                     'source': 'provider_safe_history'}
-    if registered:
+    if browsing:
+        # Viewing records is not an answer to a missing evidence question. Keep
+        # the contract/checkpoint, indexed observations and message budget
+        # unchanged. The Message table still records the navigation exchange.
+        pass
+    elif registered:
         case = db.scalar(select(RequestCase).where(RequestCase.id == row.request_id, RequestCase.user_id == user.id))
         text = ('Tu mensaje queda en esta conversación vinculada al reclamo {id}. Puedes revisar su evolución en Mis reclamos. Para otro tema, inicia una conversación nueva.',
                 'Your message is saved in this conversation linked to complaint {id}. Track its progress in My complaints. Start a new conversation for a different topic.',
@@ -365,17 +394,31 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
             }[question['field']][('es','en','pt').index(body.locale)]
             ctx['reply'] = ctx['reply'].replace(question['text'], question_text)
             question['text'] = question_text
-    if (not registered and not conv.transaction_id and ctx['triage'].get('family') == 'problem'
-            and ctx['jev'].get('status') == 'ok' and ctx['intent'] in FINANCIAL_PROBLEMS
+    if browsing or (not registered and not conv.transaction_id and ctx['triage'].get('family') == 'problem'
+            and ctx['jev'].get('status') == 'ok'
+            and (ctx['intent'] in FINANCIAL_PROBLEMS or (ctx['intent'] in ('needs-clarification','out-of-scope') and search_clues(state['messages'],body.locale)))
             and ctx['state'] == 'ask_customer'):
         # Read-only, audited, same-owner search. It never fills verified facts
         # or the bank binding until the customer explicitly chooses a record.
-        recent = reader.read('account-activity', 'read-transactions', body.locale)
-        candidate = choose(recent['data']['transactions'], state['messages'], dismissed, body.locale)
+        clues = search_clues([{'role':'user','content':message}] if browsing else state['messages'],body.locale)
+        recent = reader.read('account-activity', 'read-transactions', body.locale, transaction_search=clues or None)
+        candidate = None if browsing else choose(recent['data']['transactions'], state['messages'], dismissed, body.locale)
+        state['transaction_search'] = {'kind':'browse' if browsing else 'suggestion' if candidate else 'no_match',
+                                      'count':len(recent['data']['transactions']),'hasMore':recent['data']['hasMore']}
+        navigation = navigate_in_app('movements','customer',filters=search_navigation(clues,candidate))
         if candidate:
             state['transaction_suggestion'] = candidate
             ctx['reply'] = suggestion_reply(candidate, body.locale)
             remember_safe_reply(state, safe_suggestion_reply(body.locale))
+        else:
+            if ctx['intent']=='needs-clarification' and not browsing:
+                ctx['reply'] = ('No encontré un movimiento con esas pistas. ', 'I found no transaction matching those clues. ', 'Não encontrei uma movimentação com essas informações. ')[('es','en','pt').index(body.locale)] + ctx['reply']
+            else:
+                ctx['reply'] = search_reply(body.locale,browsing=browsing)
+            if not browsing:
+                remember_safe_reply(state,ctx['reply'])
+    elif not registered and conv.transaction_id and ctx['intent'] in FINANCIAL_PROBLEMS:
+        navigation = navigate_in_app('movements','customer',filters={'transaction':conv.transaction_id})
     row.state = copy.deepcopy(state)
     # Read tools can autoflush the row before query evidence/reply is attached.
     # Explicitly mark the JSON snapshot so the restored result matches this turn.

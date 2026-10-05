@@ -38,7 +38,10 @@ try{
   const login=await context.request.post(origin+'/api/auth/login',{headers:{Origin:origin},data:{identifier:person.email,password:person.password}});assert.equal(login.status(),200);
   const auth=await login.json();
   const result=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,transactionId:person.transactionId,message:'Verificación [incorrect-charge] me cobraron de más'}});
-  assert.equal(result.status(),200);const reply=await result.json();
+  assert.equal(result.status(),200);const first=await result.json();
+  const next=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,conversationId:first.conversation.id,message:'Esperaba 100 MXN'}});
+  assert.equal(next.status(),200);const reply=await next.json();assert(reply.flow.canRegister);
+  reply.voiceSummary={summary:copy['voiceCall.verdict.unusual'],transactionId:person.transactionId,comparison:{basis:'history',baselineMinor:10000,currentMinor:18500,differenceMinor:8500,currency:'MXN',count:3,verdict:'unusual'}};
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();
   await page.locator('.paste-composer textarea').fill('Borrador conservado');
   await page.getByRole('button',{name:copy.startVoice,exact:true}).click();const call=page.locator('.voice-call');
@@ -66,6 +69,11 @@ try{
   await expect(call.locator('.voice-agent-description')).toHaveText(copy['voiceCall.agent.cedar']);
   await call.getByRole('button',{name:copy['voiceCall.start'],exact:true}).click();
   await expect(call).toContainText(copy['voiceCall.active']);assert.equal(chosenVoice,'cedar');
+  await expect(page).toHaveURL(new RegExp('/movements\\?transaction='+person.transactionId+'$'));
+  await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveCount(1);
+  await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveAttribute('data-transaction-id',person.transactionId);
+  await expect(page.getByRole('heading',{name:copy.movements,exact:true})).toBeVisible();
+  assert.equal(await page.evaluate(()=>window.__voiceCheck.microphones),1,'Navigation must keep the same microphone/session');
   await expect(page.locator('.assistant-panel > .voice-call')).toHaveCount(1);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.chat-details-button')).not.toBeVisible();
@@ -100,8 +108,14 @@ try{
   await page.locator('.assistant-panel').screenshot({path:path.join(folder,'speaking-'+locale+'.png')});
   await page.evaluate(()=>window.__voiceCheck.rms=0);
   await expect(call).toHaveAttribute('data-speaking','false');
-  await call.locator('.voice-bank-result summary').click();await expect(call.locator('.voice-bank-text')).toHaveText(reply.text);
-  await call.locator('.voice-bank-result summary').click();
+  await expect(page.locator('.voice-bank-text')).toHaveCount(0);
+  await call.getByRole('button',{name:copy['voiceCall.fullDetail'],exact:true}).click();
+  await expect(page.locator('.voice-bank-text')).toHaveText(reply.text);
+  await expect(page.locator('.voice-comparison-row')).toHaveCount(2);
+  await axe('comparison-'+locale);
+  await page.getByRole('dialog').screenshot({path:path.join(folder,'comparison-'+locale+'.png')});
+  await page.getByRole('dialog').getByRole('button',{name:copy.close,exact:true}).click();
+  await expect(call.getByRole('button',{name:copy['voiceCall.fullDetail'],exact:true})).toBeFocused();
   await call.getByRole('button',{name:copy['voiceCall.mute'],exact:true}).click();
   await expect(call.getByRole('button',{name:copy['voiceCall.unmute'],exact:true})).toHaveAttribute('aria-pressed','true');
   await expect(call).toContainText(copy['voiceCall.muted']);
@@ -148,14 +162,24 @@ try{
   assert.equal(await call.locator('.voice-call-body').evaluate(el=>el.scrollTop),0,'New captions must not interrupt reading older text');
   await call.locator('.voice-call-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
   await page.locator('.assistant-panel').screenshot({path:path.join(folder,'long-call-'+locale+'.png')});
+  await page.setViewportSize({width:1512,height:1050});
+  await call.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
+  const review=page.locator('.chat-claim-review');
+  await expect(review.locator('textarea')).not.toHaveValue('');
+  await review.locator('input[type=checkbox]').check();
+  await review.getByRole('button',{name:copy['chatClaim.register'],exact:true}).click();
+  await expect(page).toHaveURL(/\/complaints\?case=NQ-/);
+  await expect(call).toContainText('NQ-');
+  assert.equal(await page.evaluate(()=>window.__voiceCheck.microphones),1);
+  await expect(call).toContainText(copy['voiceCall.active']);
   await call.getByRole('button',{name:copy['voiceCall.end'],exact:true}).click();await expect(call).toHaveCount(0);await expect(page.locator('.paste-composer textarea')).toBeEnabled();
   await expect(page.locator('.paste-composer textarea')).toHaveValue('Borrador conservado');
-  await expect(page.locator('.chat-bubble.assistant').last()).toHaveText(reply.text);
+  await expect(page.locator('.chat-bubble.assistant').last()).toContainText('NQ-');
   await expect(page.getByRole('button',{name:copy.startVoice,exact:true})).toBeFocused();
   await expect(page.locator('.chat-details-button')).toBeEnabled();
   await expect.poll(()=>closed).toBeGreaterThan(1);assert((await page.evaluate(()=>window.__voiceCheck.stopped))>0);
   assert.equal(await page.evaluate(()=>window.__voiceCheck.analysersClosed),2);
-  report.checks.push({locale,disabledWithoutMicrophone:true,recoverPreviousCall:true,inlineVoiceOnly:true,chosenVoice,orderedTranscripts:true,audioDrivenAnimation:true,reducedMotion:true,longCallContained:true,keyboardScroll:true,bankResultSeparated:true,draftPreserved:true,closed:true});await context.close();
+  report.checks.push({locale,disabledWithoutMicrophone:true,recoverPreviousCall:true,inlineVoiceOnly:true,chosenVoice,orderedTranscripts:true,audioDrivenAnimation:true,reducedMotion:true,longCallContained:true,keyboardScroll:true,bankResultSeparated:true,filteredMovementNavigation:true,microphonePreservedDuringNavigation:true,draftPreserved:true,closed:true});await context.close();
  }
  assert.deepEqual(report.errors,[]);await fs.writeFile(path.join(folder,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({folder,...report},null,2));
 }catch(error){if(page)await page.screenshot({path:path.join(folder,'failure.png'),fullPage:true}).catch(()=>{});throw error;}

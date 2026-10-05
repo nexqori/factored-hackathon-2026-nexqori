@@ -37,3 +37,10 @@ def test_filtered_navigation_is_structured_bounded_and_read_only():
     for invalid in ({'start':'2026-09-01'},{'start':'2026-02-30','end':'2026-03-01'},{'user':'someone'}, {'product':'../admin'},{}):
         with pytest.raises(ValueError):navigate_in_app('movements','customer',filters=invalid)
     with pytest.raises(ValueError):navigate_in_app('requests','customer',filters=filters)
+
+
+def test_transaction_search_navigation_has_canonical_route_and_no_operation():
+    assert navigate_in_app('movements','customer',filters={'transaction':'TX-123'})['route']=='/movements?transaction=TX-123'
+    assert navigate_in_app('movements','customer',filters={'q':'Teléfono','status':'pending','amountMinor':45900})['route']=='/movements?q=Tel%C3%A9fono&status=pending&amountMinor=45900'
+    for filters in ({'transaction':'../admin'},{'status':'refund'},{'amountMinor':True},{'amountMinor':-1},{'q':'a'*101}):
+        with pytest.raises(ValueError):navigate_in_app('movements','customer',filters=filters)

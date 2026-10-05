@@ -87,7 +87,8 @@ def test_conditions_reach_review_and_registered_claim_without_model_or_financial
     response=client.post('/api/assistant/flow',json=message(transactionId=txid,locale=locale,message='Me cobraron de más en el teléfono, revisen el importe'))
     assert response.status_code==200,response.text
     value=response.json();cid=value['conversation']['id']
-    assert not value['flow']['canRegister']
+    assert value['flow']['canRegister']
+    assert 'difference' not in value['flow']['missing_fields']
     for amount in ('299','459','160'):assert amount in value['text']
     clarified=client.post('/api/assistant/flow',json=message(conversationId=cid,locale=locale,message='Mi plan es de 299 MXN. No acepté cargos adicionales.'))
     assert clarified.status_code==200,clarified.text

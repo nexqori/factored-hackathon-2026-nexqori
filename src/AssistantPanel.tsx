@@ -13,7 +13,8 @@ import { localeTags, type Locale } from './i18n';
 import type { Destination, NavigationCommand } from './navigation';
 import type { Conversation, ConversationList, ConversationPage, Message } from './types';
 
-export type ChatReply = { flow?: FlowResult; text: string; destination: string | null; navigation: NavigationCommand | null; conversation: Conversation; messages: Message[] };
+export type VoiceSummary = {summary:string;transactionId?:string;comparison:{basis:'agreement'|'history';baselineMinor:number;currentMinor:number;differenceMinor:number;currency:string;count:number;verdict:string}|null};
+export type ChatReply = { voiceSummary?:VoiceSummary|null; flow?: FlowResult; text: string; destination: string | null; navigation: NavigationCommand | null; conversation: Conversation; messages: Message[] };
 export type TransactionQuestion = { nonce: string; transactionId: string; merchant: string };
 export function Bot({ large = false }: { large?: boolean }) { return <img className={'bot-avatar' + (large ? ' bot-large' : '')} src="/nexqori-bot.png" alt="" aria-hidden="true" width={large ? 100 : 48} height={large ? 100 : 48} />; }
 
@@ -116,7 +117,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
     <div className="conversation-toolbar"><button disabled={busy || voice} onClick={fresh}><Plus size={16} />{t('newConversationShort')}</button><button disabled={busy || voice} onClick={() => { setHistory(true); void fetchHistory(); }}><History size={16} />{t('conversations')}</button></div>
     <button ref={voiceEntry} className="voice-entry" disabled={busy || voice || historyBusy} onClick={()=>setVoice(true)}><Phone size={16}/>{t('startVoice')}</button>
     </div>
-    {voice&&<VoiceCall onSession={id=>{conversationId.current=id;}} selection={{conversationId:conversationId.current,transactionId:selectedTx||null,requestId:selectedRequest||null,locale}} onReply={result=>{conversationId.current=result.conversation.id;setConversation(result.conversation);setFlow(result.flow||null);setSelectedTx(result.conversation.transactionId||'');setSelectedRequest(result.flow?.selectedRequestId||'');setMessages(items=>[...items,...result.messages.filter(m=>!items.some(old=>old.id===m.id))]);replyHandler.current(result);}} onClose={()=>{setVoice(false);requestAnimationFrame(()=>voiceEntry.current?.focus());}}/>}
+    {voice&&<VoiceCall onRegistered={onClaim} onSession={id=>{conversationId.current=id;}} selection={{conversationId:conversationId.current,transactionId:selectedTx||null,requestId:selectedRequest||null,locale}} onReply={result=>{conversationId.current=result.conversation.id;setConversation(result.conversation);setFlow(result.flow||null);setSelectedTx(result.conversation.transactionId||'');setSelectedRequest(result.flow?.selectedRequestId||'');setMessages(items=>[...items,...result.messages.filter(m=>!items.some(old=>old.id===m.id))]);replyHandler.current(result);}} onClose={()=>{setVoice(false);requestAnimationFrame(()=>voiceEntry.current?.focus());}}/>}
     <div className="chat-text-view" hidden={voice}>
     {conversation && <div className="conversation-current" title={title}><MessageCircle size={13} /><span lang={conversation.title ? conversation.locale : locale}>{title}</span></div>}
     <div ref={log} className="chat-messages" tabIndex={0} aria-label={t('conversation')} role="log" aria-live="polite" aria-relevant="additions">

@@ -34,6 +34,8 @@ export function Movements({data,onSelect}:{data:Dashboard;onSelect:(tx:Transacti
       {!!unusual.length&&<div className="spending-highlights">{unusual.slice(0,3).map(i=>{const tx=data.transactions.find(r=>r.id===i.transactionId);return tx&&<button className="spending-highlight" key={tx.id} onClick={()=>onSelect(tx)}><small>{t('spending.unusual')}</small><strong>{tx.merchant} · {formatMoney(Math.abs(tx.amountMinor),i18n.language as Locale,tx.currency)}</strong><span>{t('spending.average')}: {formatMoney(i.comparison.averageMinor!,i18n.language as Locale,tx.currency)}</span><span>{t('spending.review')} →</span></button>;})}</div>}
       {next!==null&&<button className="text-link" disabled={loading} onClick={()=>void more()}>{t('spending.more')}</button>}
     </section>
+    {params.get('transaction')&&<p className="notice" role="status">{t('movements.assistantMatch')}</p>}
+    {(params.get('category')||params.get('amountMinor'))&&<p className="muted">{t('movements.assistantFilters')}: {params.get('category')==='transfer'&&t('transfers')} {params.get('amountMinor')&&new Intl.NumberFormat(i18n.language,{minimumFractionDigits:2}).format(Number(params.get('amountMinor'))/100)}</p>}
     <div className="movement-filters">
       <label className="search-field"><Search size={19} aria-hidden="true"/><span className="sr-only">{t('search')}</span><input type="search" placeholder={t('search')} value={params.get('q')||''} onChange={e=>change('q',e.target.value)}/></label>
       <label>{t('product')}<select value={params.get('product')||''} onChange={e=>change('product',e.target.value)}><option value="">{t('documents.allProducts')}</option>{data.products.map(p=><option key={p.id} value={p.id}>{t(p.type)} · •••• {p.last4}</option>)}</select></label>

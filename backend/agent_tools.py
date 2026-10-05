@@ -1,5 +1,8 @@
 """Authenticated read gateway. Financial commands deliberately have no dispatcher."""
 from uuid import uuid4
+from datetime import date as CalendarDate, datetime, time, timedelta, timezone
+from typing import Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,6 +17,15 @@ from .transaction_context import transaction_evidence
 from .workflows import workflow_view
 
 
+class TransactionSearch(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    q: str | None = Field(default=None, min_length=1, max_length=100)
+    status: Literal['completed','pending','declined'] | None = None
+    category: Literal['transfer'] | None = None
+    amountMinor: int | None = Field(default=None, gt=0, le=10**12)
+    date: CalendarDate | None = None
+
+
 class ReadToolInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     intent: str = Field(min_length=1, max_length=64)
@@ -21,6 +33,7 @@ class ReadToolInput(BaseModel):
     referenceId: str | None = Field(default=None, min_length=1, max_length=64)
     conversationId: str | None = Field(default=None, min_length=1, max_length=64)
     locale: Locale = 'es'
+    transactionSearch: TransactionSearch | None = None
 
 
 def read_tool(db, owner_id, payload, *, commit=True):
@@ -28,6 +41,8 @@ def read_tool(db, owner_id, payload, *, commit=True):
     definition = TOOLS.get(payload.tool)
     if not definition or definition['kind'] != 'read' or payload.tool not in tools_for(payload.intent):
         raise HTTPException(403, 'tool_not_allowed')
+    if payload.transactionSearch is not None and payload.tool != 'read-transactions':
+        raise HTTPException(422, 'validation')
     if bool(definition['reference']) != bool(payload.referenceId):
         raise HTTPException(422, 'tool_reference_required' if definition['reference'] else 'tool_reference_not_allowed')
     if payload.conversationId:
@@ -54,7 +69,20 @@ def _read(db, owner, p):
         rows = db.scalars(select(Product).where(Product.user_id == owner, Product.type.in_(('account', 'savings'))).order_by(Product.id).limit(21)).all()
         return {'products': [{'id': r.id, 'type': r.type, 'last4': r.last4, 'balanceMinor': r.balance_minor, 'currency': r.currency} for r in rows[:20]], 'hasMore': len(rows) > 20, 'limit': 20}, {}
     if p.tool == 'read-transactions':
-        rows = db.scalars(select(Transaction).where(Transaction.user_id == owner).order_by(Transaction.occurred_at.desc(), Transaction.id.desc()).limit(21)).all()
+        query = select(Transaction).where(Transaction.user_id == owner)
+        search = p.transactionSearch
+        if search:
+            query = query.where(Transaction.amount_minor < 0)
+            if search.q:
+                pattern='%'+search.q.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')+'%'
+                query=query.where(Transaction.merchant.ilike(pattern,escape='\\') | Transaction.id.ilike(pattern,escape='\\'))
+            if search.status: query=query.where(Transaction.status==search.status)
+            if search.category: query=query.where(Transaction.category==search.category)
+            if search.amountMinor: query=query.where(Transaction.amount_minor==-search.amountMinor)
+            if search.date:
+                start=datetime.combine(search.date,time.min,ZoneInfo('America/Mexico_City')).astimezone(timezone.utc)
+                query=query.where(Transaction.occurred_at>=start,Transaction.occurred_at<start+timedelta(days=1))
+        rows = db.scalars(query.order_by(Transaction.occurred_at.desc(), Transaction.id.desc()).limit(21)).all()
         return {'transactions': [{'id': r.id, 'merchant': r.merchant, 'category': r.category, 'amountMinor': r.amount_minor, 'currency': r.currency, 'status': r.status, 'date': r.occurred_at.isoformat()} for r in rows[:20]], 'hasMore': len(rows) > 20, 'limit': 20}, {}
     if p.tool == 'read-cards':
         rows = db.execute(select(Product, CardProfile).join(CardProfile, (CardProfile.product_id == Product.id) & (CardProfile.user_id == Product.user_id)).where(Product.user_id == owner, Product.type == 'card').order_by(Product.id).limit(21)).all()

@@ -10,7 +10,7 @@ from backend.tests.test_workflow_chat import models,message
 from backend.models import VoiceSession,Conversation,Message,Session
 from backend.db import make_sessions
 from backend.voice import TranscriptBuffer,safe_spoken_result
-from backend.voice_provider import configuration
+from backend.voice_provider import configuration, GREETINGS
 
 
 class Socket:
@@ -57,6 +57,61 @@ def test_disabled_never_creates_provider_session(setup,monkeypatch):
     assert client.post('/api/voice/sessions',json=start_body()).status_code==503
     assert fake.created==[]
     with make_sessions(engine)() as db:assert db.scalar(select(func.count()).select_from(VoiceSession))==0
+
+
+@pytest.mark.parametrize('locale',['es','en','pt'])
+def test_one_opening_after_started_with_matching_ack_and_no_backend_turn(voice,locale):
+    app,engine,provider=voice;client,_=login(app)
+    identity=client.post('/api/voice/sessions',json=start_body(locale=locale)).json()['id']
+    assert provider.socket.sent==[]
+    provider.socket.events.put({'type':'session.started'})
+    wait_until(lambda:provider.socket.sent)
+    greeting=provider.socket.sent[0]
+    assert greeting['type']=='session.instructions.append'
+    assert greeting['delegation_id'] is None and GREETINGS[locale] in greeting['content']
+    assert 'andrea' not in greeting['content'] and 'TX-1001' not in greeting['content']
+    if locale=='es':
+        assert 'es-MX' in greeting['content'] and 'voseo' in greeting['content']
+    provider.socket.events.put({'type':'session.instructions.appended','client_event_id':'unrelated'})
+    provider.socket.events.put({'type':'session.started'})
+    provider.socket.events.put({'type':'session.instructions.appended','client_event_id':greeting['event_id']})
+    def accepted():
+        with make_sessions(engine)() as db:return db.get(VoiceSession,identity).state.get('greeting_status')=='accepted'
+    wait_until(accepted)
+    assert len(provider.socket.sent)==1
+    with make_sessions(engine)() as db:
+        row=db.get(VoiceSession,identity)
+        assert row.state['revision']==0 and row.state['delegations']=={}
+        assert not db.scalar(select(Message).where(Message.conversation_id==row.conversation_id))
+    assert client.post(f'/api/voice/sessions/{identity}/close',json={}).json()['remoteClosed']
+
+
+def test_late_started_event_does_not_interrupt_a_customer_who_already_spoke(voice):
+    app,engine,provider=voice;client,_=login(app)
+    identity=client.post('/api/voice/sessions',json=start_body()).json()['id']
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'first',
+                                'delta':'Quiero revisar un pago','start_ms':0,'end_ms':100})
+    provider.socket.events.put({'type':'session.started'})
+    def skipped():
+        with make_sessions(engine)() as db:return db.get(VoiceSession,identity).state.get('greeting_status')=='skipped_conversation_started'
+    wait_until(skipped)
+    assert provider.socket.sent==[]
+    assert client.post(f'/api/voice/sessions/{identity}/close',json={}).json()['remoteClosed']
+
+
+def test_rejected_greeting_is_not_retried_or_reported_as_spoken(voice):
+    app,engine,provider=voice;client,_=login(app)
+    identity=client.post('/api/voice/sessions',json=start_body()).json()['id']
+    provider.socket.events.put({'type':'session.started'})
+    wait_until(lambda:provider.socket.sent)
+    greeting=provider.socket.sent[0]
+    provider.socket.events.put({'type':'error','client_event_id':greeting['event_id']})
+    def failed():
+        with make_sessions(engine)() as db:
+            row=db.get(VoiceSession,identity)
+            return row.state.get('greeting_status')=='failed' and row.state.get('remote_closed')
+    wait_until(failed)
+    assert [e['type'] for e in provider.socket.sent]==['session.instructions.append','session.close']
 
 
 def test_ownership_csrf_validation_and_single_active_session(voice):
@@ -176,3 +231,28 @@ def test_transport_cleanup_failure_still_persists_remote_closure(voice):
     assert result.status_code==200 and result.json()['remoteClosed']
     assert result.json()['status']=='closed'
     assert client.get('/api/voice/capabilities').json()['pendingSessionId'] is None
+
+
+@pytest.mark.parametrize('locale',['es','en','pt'])
+def test_voice_suggests_then_browses_without_repeating_date_or_leaking_bank_values(voice,models,locale):
+    app,engine,provider=voice;client,_=login(app);calls,control=models;control['intent']='payment-status'
+    before=client.get('/api/bootstrap').json()
+    started=client.post('/api/voice/sessions',json=start_body(locale=locale)).json();identity=started['id']
+    for n,text in enumerate(['Tengo un problema con un pago','Puedes mostrarme las últimas transacciones'],1):
+        provider.socket.events.put({'type':'session.input_transcript.delta','event_id':f't{n}','delta':text,'start_ms':n*100,'end_ms':n*100+80})
+        provider.socket.events.put({'type':'session.delegation.created','delegation':{'id':f'd{n}','target':'client'},'offset_ms':n*100+80})
+        result=wait_until(lambda:(v if (v:=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json()).get('revision')==n else None))
+        assert result['status']=='active' and result['reply']['navigation']['destination']=='movements'
+        if n==1:
+            assert result['reply']['flow']['suggestedTransaction']
+            assert 'date' not in safe_spoken_result(result['reply'],'en').lower()
+        else:
+            assert result['reply']['navigation']['route']=='/movements'
+            assert result['reply']['flow']['transactionSearch']['kind']=='browse'
+    wait_until(lambda:len([e for e in provider.socket.sent if e['type']=='session.commentary.append'])==2)
+    outgoing=json.dumps(provider.socket.sent)
+    for tx in before['transactions']:
+        assert tx['id'] not in outgoing and tx['merchant'] not in outgoing
+    after=client.get('/api/bootstrap').json()
+    for key in ('products','transactions','requests'):assert after[key]==before[key]
+    assert client.post(f'/api/voice/sessions/{identity}/close',json={}).json()['remoteClosed']

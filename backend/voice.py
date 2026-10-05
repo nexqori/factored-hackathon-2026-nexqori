@@ -18,8 +18,9 @@ from .models import VoiceSession, Session, Conversation, ConversationFlow, User,
 from .security import customer, customer_read, current_session, db_session
 from .schemas import StrictModel, Locale
 from .transaction_context import transaction_evidence
-from .workflow_chat import FlowMessage, run_chat_turn, enabled as flow_enabled
-from .voice_provider import LiveProvider, VOICES, enabled, api_key, send
+from .workflow_chat import FlowMessage, run_chat_turn, flow_view, enabled as flow_enabled
+from .voice_summary import presentation
+from .voice_provider import LiveProvider, VOICES, enabled, api_key, send, opening_instructions
 
 ACTIVE = ('connecting','active','closing')
 LIMIT_SECONDS = 300
@@ -54,29 +55,52 @@ def disconnect(socket):
     except Exception: pass
 
 
-def safe_spoken_result(reply, locale):
-    """Allowlisted descriptions, never interpolate bank values or model text."""
+def safe_spoken_result(reply, locale, verified_presentation=None):
+    """Only deterministic bank presentation, never arbitrary model reply text."""
+    if verified_presentation:
+        return verified_presentation['summary']
     flow = reply.get('flow') or {}
+    i=('es','en','pt').index(locale)
+    if flow.get('state')=='provider_unavailable':
+        return ('No pude completar la revisión en este momento. Tu conversación y el movimiento elegido se conservan. Puedes pedirme que lo intente de nuevo.',
+                'I could not finish the review right now. Your conversation and selected transaction are preserved. You can ask me to try again.',
+                'Não consegui concluir a análise agora. Sua conversa e a movimentação escolhida foram preservadas. Pode pedir que eu tente novamente.')[i]
+    search=flow.get('transactionSearch') or {}
+    if flow.get('suggestedTransaction'):
+        return ('Encontré un movimiento posible y lo estoy mostrando en Movimientos y en el panel de la llamada. ¿Es ese el que quieres revisar? Puedes decir sí o no.',
+                'I found a possible transaction and am showing it in Transactions and the call panel. Is that the one you want to review? You can say yes or no.',
+                'Encontrei uma possível movimentação e estou mostrando em Movimentações e no painel da chamada. É essa que você quer revisar? Pode dizer sim ou não.')[i]
+    if search.get('kind')=='browse':
+        return ('Voy a mostrar tus movimientos en pantalla. Seguimos con el mismo problema. Dime cuál quieres revisar por el comercio o la referencia que ves.',
+                'I will show your transactions on screen. We are continuing the same issue. Tell me which one to review using the merchant or reference you see.',
+                'Vou mostrar suas movimentações na tela. Continuamos com o mesmo problema. Diga qual quer revisar pelo estabelecimento ou pela referência que vê.')[i]
+    if search.get('kind')=='no_match':
+        return ('No encontré un movimiento que coincida con esas pistas. ¿Recuerdas el comercio o prefieres que muestre todos tus movimientos? No necesitas darme todos los datos.',
+                'I found no transaction matching those clues. Do you remember the merchant, or would you prefer to see all your transactions? You do not need to provide every detail.',
+                'Não encontrei uma movimentação com essas informações. Lembra do estabelecimento ou prefere ver todas as movimentações? Não precisa informar todos os dados.')[i]
     # Known field names select fixed questions. Never relay model-generated
     # questions or bank-enriched reply text to the external speech model.
     questions={
         'difference':('¿Qué importe esperabas pagar?', 'What amount did you expect to pay?', 'Qual valor você esperava pagar?'),
         'date':('¿En qué fecha ocurrió?', 'On what date did it happen?', 'Em que data aconteceu?'),
-        'transaction_id':('Termina la llamada y elige en pantalla el movimiento que quieres revisar.', 'End the call and select the transaction you want to review on screen.', 'Encerre a chamada e selecione na tela a movimentação que deseja revisar.'),
-        'request_id':('Termina la llamada y elige en Detalles el caso que quieres consultar.', 'End the call and choose the case you want to check in Details.', 'Encerre a chamada e escolha em Detalhes o caso que deseja consultar.')}
+        'transaction_id':('Puedo buscar el movimiento por ti. Dime el comercio o el importe que recuerdas.', 'I can look up the transaction for you. Tell me the merchant or the amount you remember.', 'Posso buscar a movimentação para você. Diga o estabelecimento ou o valor que lembra.'),
+        'request_id':('Puedes abrir Mis reclamos para elegir el expediente sin terminar la llamada.', 'You can open My complaints to choose the case without ending the call.', 'Pode abrir Minhas reclamações para escolher o protocolo sem encerrar a chamada.')}
     missing=flow.get('missing_fields') or []
-    if missing and missing[0] in questions:return questions[missing[0]][('es','en','pt').index(locale)]
+    # Selecting a record can supply its date and amount. Ask that first rather
+    # than demanding fields already available in the authenticated bank.
+    field='transaction_id' if 'transaction_id' in missing else missing[0] if missing else None
+    if field in questions:return questions[field][i]
     key = 'review' if flow.get('canRegister') else 'question' if flow.get('missing_fields') else 'screen'
     messages = {
-        'review':('El caso está listo. Termina la llamada para revisar el resumen en pantalla y decidir si quieres registrarlo.',
-            'The case is ready. End the call to review the summary on screen and decide whether to register it.',
-            'O caso está pronto. Encerre a chamada para revisar o resumo na tela e decidir se deseja registrá-lo.'),
-        'question':('Necesito un dato más. La pregunta está en el chat; puedes responderla por voz.',
-            'I need one more detail. The question is in the chat; you can answer by voice.',
-            'Preciso de mais uma informação. A pergunta está no chat; você pode responder por voz.'),
-        'screen':('La respuesta está en tu chat. Revisa los detalles en pantalla y dime cómo seguimos.',
-            'The answer is in your chat. Review the details on screen and tell me how to continue.',
-            'A resposta está no chat. Confira os detalhes na tela e me diga como continuar.')}
+        'review':('Reuní los datos para solicitar revisión de un supervisor. Puedes revisar y confirmar el reclamo aquí sin terminar la llamada.',
+            'I gathered the details for supervisor review. You can review and confirm the complaint here without ending the call.',
+            'Reuni os dados para análise de um supervisor. Pode revisar e confirmar a reclamação aqui sem encerrar a chamada.'),
+        'question':('Necesito aclarar qué ocurrió y qué resultado esperabas. Cuéntamelo y continuamos.',
+            'I need to clarify what happened and what outcome you expected. Tell me so we can continue.',
+            'Preciso esclarecer o que aconteceu e qual resultado esperava. Conte para continuarmos.'),
+        'screen':('Entiendo que hay un problema. ¿El importe es mayor al esperado, no reconoces el pago o no se completó?',
+            'I understand there is a problem. Is the amount higher than expected, is it unfamiliar, or did the payment not complete?',
+            'Entendo que há um problema. O valor é maior que o esperado, não reconhece o pagamento ou ele não foi concluído?')}
     return messages[key][('es','en','pt').index(locale)]
 
 
@@ -138,6 +162,8 @@ class VoiceRuntime:
             reply=run_chat_turn(FlowMessage(message=text,locale=row.locale,conversationId=conv.id,
                 transactionId=conv.transaction_id,requestId=selected_request,requestKey=key),
                 user,db,self.conversation_view,self.message_view)
+            summary=presentation(db,user.id,reply,row.locale)
+            reply={**reply,'voiceSummary':summary}
             # The shared service committed the turn. Its key prevents duplicate
             # messages even if a crash occurs before this receipt is committed.
             db.expire_all(); row=db.scalar(select(VoiceSession).where(VoiceSession.id==identity).with_for_update())
@@ -146,7 +172,27 @@ class VoiceRuntime:
                 receipts[delegation_id]=key
                 row.state={**row.state,'reply':reply,'revision':row.state.get('revision',0)+1,'delegations':receipts}
                 audit(db,row,'voice_turn');db.commit()
-            return safe_spoken_result(reply,row.locale)
+            return safe_spoken_result(reply,row.locale,summary)
+
+    def registration_notice(self, identity):
+        with self.sessions() as db:
+            row=db.scalar(select(VoiceSession).where(VoiceSession.id==identity).with_for_update())
+            if not row or not self.live(identity):return None
+            flow=db.get(ConversationFlow,row.conversation_id)
+            if not flow or flow.user_id!=row.user_id or not flow.request_id or row.state.get('announced_case_id')==flow.request_id:return None
+            case=db.get(RequestCase,flow.request_id)
+            if not case or case.user_id!=row.user_id:return None
+            conv=db.get(Conversation,row.conversation_id)
+            registered=(flow.state.get('claim_registration') or {}).get('response')
+            if not registered:return None
+            reply={'text':registered['message']['text'], 'conversation':self.conversation_view(conv),
+                   'messages':[registered['message']], 'flow':flow_view(flow), 'destination':None, 'navigation':None}
+            summary=presentation(db,row.user_id,reply,row.locale)
+            if not summary:return None
+            reply['voiceSummary']=summary
+            row.state={**row.state,'reply':reply,'revision':row.state.get('revision',0)+1,'announced_case_id':case.id}
+            audit(db,row,'voice_case_registered_notice');db.commit()
+            return summary['summary']
 
     def start(self, identity, socket):
         stop=threading.Event(); ready=threading.Event()
@@ -193,12 +239,23 @@ class VoiceRuntime:
         fragments=TranscriptBuffer(); pending=[]; seen=set(); future=None; work_id=None
         pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='nexqori-voice-turn')
         closed=False; reason='ended'; final_usage=None
+        greeting_decided=False; greeting_id=None; greeting_sent_at=None; greeting_acked=False
+        speech_started=False; next_case_check=0
         try:
+            with self.sessions() as db:
+                locale=db.get(VoiceSession,identity).locale
             self.update(identity,'active');ready.set()
             while not stop.is_set() and self.live(identity):
+                if greeting_sent_at is not None and not greeting_acked and time.monotonic()-greeting_sent_at>10:
+                    self.update(identity,greeting_status='unconfirmed')
+                    greeting_sent_at=None  # Never retry speech after an ambiguous acknowledgment.
                 if future and future.done():
                     result=future.result();send(socket,'session.commentary.append',delegation_id=work_id,content=result)
                     future=None
+                if not future and not pending and time.monotonic()>=next_case_check:
+                    next_case_check=time.monotonic()+1
+                    notice=self.registration_notice(identity)
+                    if notice:send(socket,'session.commentary.append',delegation_id=None,content=notice)
                 if not future and pending and time.monotonic()-pending[0][2]>=0.6:
                     work_id,offset,_=pending.pop(0);text=fragments.take(offset)
                     if text:future=pool.submit(self.turn,identity,work_id,text)
@@ -206,7 +263,24 @@ class VoiceRuntime:
                 try: raw=socket.recv(timeout=0.3)
                 except TimeoutError: continue
                 event=json.loads(raw)
-                if event.get('type')=='session.input_transcript.delta': fragments.add(event)
+                if event.get('type')=='session.started' and not greeting_decided:
+                    greeting_decided=True
+                    if speech_started:
+                        self.update(identity,greeting_status='skipped_conversation_started')
+                    else:
+                        greeting_id='greeting-'+str(uuid4())
+                        send(socket,'session.instructions.append',event_id=greeting_id,delegation_id=None,
+                             content=opening_instructions(locale))
+                        greeting_sent_at=time.monotonic()
+                        self.update(identity,greeting_status='sent')
+                elif event.get('type')=='session.instructions.appended' and greeting_id and event.get('client_event_id')==greeting_id:
+                    greeting_acked=True
+                    self.update(identity,greeting_status='accepted')  # Acceptance is not proof of playback.
+                elif event.get('type')=='session.input_transcript.delta':
+                    speech_started=speech_started or bool(event.get('delta','').strip())
+                    fragments.add(event)
+                elif event.get('type')=='session.output_transcript.delta':
+                    speech_started=speech_started or bool(event.get('delta','').strip())
                 elif event.get('type')=='session.delegation.created':
                     item=event.get('delegation',{});did=item.get('id');offset=event.get('offset_ms')
                     if item.get('target')=='client' and isinstance(did,str) and 0<len(did)<=128 and isinstance(offset,(int,float)) and offset>=0 and did not in seen:
@@ -214,7 +288,10 @@ class VoiceRuntime:
                         seen.add(did);pending.append((did,offset,time.monotonic()))
                 elif event.get('type')=='session.closed':
                     closed=True;final_usage=event.get('usage');break
-                elif event.get('type')=='error':raise RuntimeError('voice_provider_error')
+                elif event.get('type')=='error':
+                    if greeting_id and event.get('client_event_id')==greeting_id:
+                        self.update(identity,greeting_status='failed')
+                    raise RuntimeError('voice_provider_error')
         except Exception:
             reason='connection_lost'
         finally:

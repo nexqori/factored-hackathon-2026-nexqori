@@ -127,7 +127,7 @@ try {
   const currentData=await(await context.request.get(origin+'/api/bootstrap')).json();
   const currentBalance=currentData.products.filter(p=>['account','savings'].includes(p.type)).reduce((sum,p)=>sum+(p.balanceMinor||0),0);
   const expectedBalance=new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(currentBalance/100);
-  await page.getByRole('textbox', {name:'Mensaje para Nexqori'}).fill('¿Cuál es mi saldo?');
+  await page.getByRole('textbox', {name:'Mensaje para Nexi'}).fill('¿Cuál es mi saldo?');
   await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
   await page.getByRole('heading',{name:'Mis productos',exact:true}).waitFor();
   await page.locator('.chat-bubble.assistant').last().waitFor();

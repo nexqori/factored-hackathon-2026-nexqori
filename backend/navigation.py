@@ -22,13 +22,18 @@ def navigate_in_app(destination, role, service_id=None, *, filters=None):
     if role!="customer":
         raise PermissionError("forbidden")
     if filters is not None:
-        if destination!='movements' or service_id or not filters or set(filters)-{'start','end','product'}:raise ValueError('Invalid filters')
+        if destination!='movements' or service_id or not filters or set(filters)-{'start','end','product','transaction','q','status','category','amountMinor'}:raise ValueError('Invalid filters')
         if bool(filters.get('start'))!=bool(filters.get('end')):raise ValueError('Incomplete period')
         if filters.get('start'):
             start,end=date.fromisoformat(filters['start']),date.fromisoformat(filters['end'])
             if start.isoformat()!=filters['start'] or end.isoformat()!=filters['end'] or start>end or (end-start).days>366:raise ValueError('Invalid period')
         if 'product' in filters and not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',filters['product']):raise ValueError('Invalid product')
-        ordered={key:filters[key] for key in ('start','end','product') if key in filters}
+        if 'transaction' in filters and not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',filters['transaction']):raise ValueError('Invalid transaction')
+        if 'q' in filters and (not isinstance(filters['q'],str) or not 1<=len(filters['q'])<=100):raise ValueError('Invalid query')
+        if 'status' in filters and filters['status'] not in ('completed','pending','declined'):raise ValueError('Invalid status')
+        if 'category' in filters and filters['category']!='transfer':raise ValueError('Invalid category')
+        if 'amountMinor' in filters and (type(filters['amountMinor']) is not int or not 0<filters['amountMinor']<=10**12):raise ValueError('Invalid amount')
+        ordered={key:filters[key] for key in ('start','end','product','transaction','q','status','category','amountMinor') if key in filters}
         return {'tool':'navigate_in_app','destination':'movements','filters':ordered,'route':'/movements?'+urlencode(ordered)}
     if service_id is not None:
         if destination!="services" or service_id not in SERVICES: raise ValueError("Unknown service destination")

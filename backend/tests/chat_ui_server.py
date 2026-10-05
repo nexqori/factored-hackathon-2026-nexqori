@@ -12,6 +12,7 @@ from backend.models import Base, User, Product, Transaction, now
 from backend.security import hasher
 from backend.main import create_app
 from backend import workflow_chat as chat
+chat.inspect_prompt=lambda *a,**k: {'status':'allowed'}
 
 if os.getenv('NEXQORI_CHAT_UI_CHECK') != '1': raise RuntimeError('Explicit isolated UI test required')
 folder=Path(os.environ['NEXQORI_CHAT_UI_DATA']).resolve()

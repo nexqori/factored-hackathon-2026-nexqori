@@ -6,14 +6,17 @@ import {VoiceClient,type VoiceCapabilities,type VoiceSelection} from './voiceCli
 import {groupVoiceTranscript,type VoiceFragment} from './voiceTranscript';
 import {useVoiceActivity} from './useVoiceActivity';
 import type {ChatReply} from './AssistantPanel';
+import {ChatFlow} from './ChatFlow';
+import {Dialog,formatMoney} from './components';
+import type {Locale} from './i18n';
 
-export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<VoiceSelection,'voice'>;onReply:(reply:ChatReply)=>void;onClose:()=>void;onSession:(id:string)=>void}){
-  const {t}=useTranslation();const [capability,setCapability]=useState<VoiceCapabilities|null>(null);
+export function VoiceCall({selection,onReply,onClose,onSession,onRegistered}:{selection:Omit<VoiceSelection,'voice'>;onReply:(reply:ChatReply)=>void;onClose:()=>void;onSession:(id:string)=>void;onRegistered:(id:string)=>void}){
+  const {t,i18n}=useTranslation();const locale=i18n.language as Locale;const [capability,setCapability]=useState<VoiceCapabilities|null>(null);
   const voiceId=useId();
   const agentDescriptionId=useId();
   const [state,setState]=useState('ready');const [error,setError]=useState('');const [voice,setVoice]=useState('marin');
   const [muted,setMuted]=useState(false);const [fragments,setFragments]=useState<VoiceFragment[]>([]);
-  const [bankReply,setBankReply]=useState('');
+  const [bankReply,setBankReply]=useState<ChatReply|null>(null);const [bankResultOpen,setBankResultOpen]=useState(false);
   const audio=useRef<HTMLAudioElement>(null);const client=useRef<VoiceClient|null>(null);
   const heading=useRef<HTMLHeadingElement>(null);const body=useRef<HTMLDivElement>(null);
   const follow=useRef(true);const callback=useRef(onReply);callback.current=onReply;
@@ -29,10 +32,10 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
   useEffect(()=>{if(follow.current&&body.current)body.current.scrollTop=body.current.scrollHeight;},[fragments,bankReply]);
   async function start(){
     if(!audio.current||!capability?.enabled)return;
-    setError('');setMuted(false);setFragments([]);setBankReply('');follow.current=true;
+    setError('');setMuted(false);setFragments([]);setBankReply(null);setBankResultOpen(false);follow.current=true;
     client.current=new VoiceClient({status:setState,error:setError,
       caption:fragment=>setFragments(items=>[...items,fragment].slice(-400)),
-      reply:r=>{setBankReply(r.text);callback.current(r);},session:onSession},audio.current);
+      reply:r=>{setBankReply(r);callback.current(r);},session:onSession},audio.current);
     await client.current.start({...selection,voice});
   }
   async function closePrevious(){
@@ -53,7 +56,7 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
         <div className="voice-agent-orbit"><img src="/nexqori-bot.png" alt=""/></div>
         <div className="voice-agent-wave">{[0,1,2,3,4,5,6].map(i=><span key={i} style={{'--bar':i} as CSSProperties}/>)}</div>
       </div>
-      <p className="voice-agent-name">{t('voiceCall.agent')} · {voice.charAt(0).toUpperCase()+voice.slice(1)}</p>
+      <p className="voice-agent-name">{t('assistant')} · {voice.charAt(0).toUpperCase()+voice.slice(1)}</p>
       <p className="voice-call-status" role="status">{t(status)}</p>
     </header>
     <div className="voice-call-body" ref={body} tabIndex={0} role="region" aria-label={t(running||transcript.length?'voiceCall.transcript':'voiceCall.about')} onScroll={()=>{const el=body.current;if(el)follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;}}>
@@ -63,6 +66,7 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
         <details className="voice-call-info"><summary>{t('voiceCall.about')}</summary><p className="muted">{t('voiceCall.intro')}</p></details>
       </div>}
       {(running||transcript.length>0)&&<>
+
         <p className="voice-transcript-hint">{t('voiceCall.captionsHint')}</p>
         <div className="voice-transcript" role="log" aria-label={t('voiceCall.transcript')} aria-live="polite" aria-relevant="additions text">
           {!transcript.length&&<p className="voice-transcript-empty">{t('voiceCall.waiting')}</p>}
@@ -70,11 +74,29 @@ export function VoiceCall({selection,onReply,onClose,onSession}:{selection:Omit<
             <strong>{t(row.speaker==='user'?'voiceCall.heard':'voiceCall.spoken')}</strong><p>{row.text}</p>
           </div>)}
         </div>
-        {bankReply&&<details className="voice-bank-result"><summary>{t('voiceCall.bankResult')}</summary><p className="voice-bank-text">{bankReply}</p><small>{t('voiceCall.screen')}</small></details>}
       </>}
     </div>
+    {bankResultOpen&&bankReply&&<Dialog title={t('voiceCall.findings')} onClose={()=>setBankResultOpen(false)} className="voice-analysis-dialog">
+      {bankReply.voiceSummary?.comparison&&<section className="voice-comparison" aria-label={t('voiceCall.comparison')}>
+        <h3>{t('voiceCall.comparison')}</h3>
+        {[{label:t(bankReply.voiceSummary.comparison.basis==='agreement'?'spending.conditionsBase':'spending.average'),value:bankReply.voiceSummary.comparison.baselineMinor},
+          {label:t('voiceCall.currentAmount'),value:bankReply.voiceSummary.comparison.currentMinor}].map((bar,index)=><div key={index} className="voice-comparison-row">
+          <div><span>{bar.label}</span><strong>{formatMoney(bar.value,locale,bankReply.voiceSummary!.comparison!.currency)}</strong></div>
+          <span className={'voice-comparison-bar bar-'+index} style={{width:Math.max(2,100*bar.value/Math.max(1,bankReply.voiceSummary!.comparison!.baselineMinor,bankReply.voiceSummary!.comparison!.currentMinor))+'%'}} aria-hidden="true"/>
+        </div>)}
+        <p>{t('voiceCall.verdict.'+bankReply.voiceSummary.comparison.verdict)}</p>
+      </section>}
+      {bankReply.voiceSummary&&<p>{bankReply.voiceSummary.summary}</p>}
+      <p className="voice-bank-text">{bankReply.text}</p>
+    </Dialog>}
     <audio ref={audio} aria-label={t('voiceCall.audio')}/>
     <footer className="voice-call-footer">
+      {bankReply&&<button className="button secondary voice-detail-button" onClick={()=>setBankResultOpen(true)}>{t('voiceCall.fullDetail')}</button>}
+      {bankReply?.flow&&(bankReply.flow.canRegister||bankReply.flow.requestId)&&<ChatFlow actionsOnly result={bankReply.flow} conversationId={bankReply.conversation.id} onRegistered={claim=>{
+        const updated={...bankReply,text:claim.message.text,flow:claim.flow,messages:[claim.message],voiceSummary:null,navigation:null,destination:null};
+        setBankReply(updated);callback.current(updated);onRegistered(claim.id);
+      }}/>}
+
       {error&&<p className="error-text" role="alert">{t('error.'+error,{defaultValue:t('error.voice_connection')})}</p>}
       {running&&error==='voice_playback'&&<button className="button secondary" onClick={()=>void resumeAudio()}><Volume2 size={16}/>{t('voiceCall.resumeAudio')}</button>}
       {!running&&capability?.pendingSessionId&&<button className="button secondary" onClick={()=>void closePrevious()}>{t('voiceCall.closePrevious')}</button>}

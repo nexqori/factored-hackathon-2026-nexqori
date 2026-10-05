@@ -7,5 +7,6 @@ export function filterMovements(rows:Transaction[],params:URLSearchParams,insigh
   const start=params.get('start'),end=params.get('end'),product=params.get('product'),status=params.get('status'),search=(params.get('q')||'').toLocaleLowerCase();
   if(start&&!validDate(start)||end&&!validDate(end)||start&&end&&start>end)return [];
   const trend=params.get('trend');const matches=new Set(insights.filter(i=>i.classification===trend).map(i=>i.transactionId));
-  return rows.filter(row=>(!trend||trend==='all'||matches.has(row.id))&&(!product||row.productId===product)&&(!status||status==='all'||row.status===status)&&(!start||bankDate(row.date)>=start)&&(!end||bankDate(row.date)<=end)&&(row.merchant+' '+row.id).toLocaleLowerCase().includes(search));
+  const transaction=params.get('transaction'),category=params.get('category'),amount=params.get('amountMinor');
+  return rows.filter(row=>(!transaction||row.id===transaction)&&(!category||row.category===category)&&(amount===null||row.amountMinor===-Number(amount))&&(!trend||trend==='all'||matches.has(row.id))&&(!product||row.productId===product)&&(!status||status==='all'||row.status===status)&&(!start||bankDate(row.date)>=start)&&(!end||bankDate(row.date)<=end)&&(row.merchant+' '+row.id).toLocaleLowerCase().includes(search));
 }

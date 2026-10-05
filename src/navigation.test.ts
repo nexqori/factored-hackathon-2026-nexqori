@@ -1,7 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 import { currentDestination, navigateWithCommand, safeNavigation } from './navigation';
+import {filterMovements} from './movementFilters';
+import type {Transaction} from './types';
 
 describe('Agent navigation boundary', () => {
+  it('opens only the matching owned-screen transaction and validates search parameters',()=>{
+    const route='/movements?transaction=TX-123';
+    const command={tool:'navigate_in_app',destination:'movements',filters:{transaction:'TX-123'},route};
+    expect(safeNavigation(command)).toBe(route);
+    expect(safeNavigation({...command,route:route+'&execute=refund'})).toBeNull();
+    expect(safeNavigation({...command,filters:{transaction:'../admin'}})).toBeNull();
+    const rows=[{id:'TX-123',merchant:'Teléfono',amountMinor:-45900,category:'utilities',date:'2026-10-03T18:00:00Z',status:'pending'},
+      {id:'TX-1234',merchant:'Teléfono',amountMinor:-29900,category:'utilities',date:'2026-10-02T18:00:00Z',status:'completed'}] as Transaction[];
+    expect(filterMovements(rows,new URLSearchParams('transaction=TX-123'))).toEqual([rows[0]]);
+    const filters={q:'Teléfono',status:'pending',amountMinor:45900};
+    const filtered='/movements?q=Tel%C3%A9fono&status=pending&amountMinor=45900';
+    expect(safeNavigation({...command,filters,route:filtered})).toBe(filtered);
+    expect(filterMovements(rows,new URLSearchParams(filtered.split('?')[1]))).toEqual([rows[0]]);
+    for(const amountMinor of [-1,'45900',Infinity,true])expect(safeNavigation({...command,filters:{amountMinor}})).toBeNull();
+  });
   it('validates movement filters and their exact route without accepting extra parameters',()=>{
     const command={tool:'navigate_in_app',destination:'movements',filters:{start:'2026-09-01',end:'2026-09-30',product:'account-01'},route:'/movements?start=2026-09-01&end=2026-09-30&product=account-01'};
     expect(safeNavigation(command)).toBe(command.route);
