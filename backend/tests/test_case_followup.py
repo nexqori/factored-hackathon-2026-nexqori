@@ -27,8 +27,10 @@ def test_registered_chat_reads_fresh_decision_and_credit_without_models(setup, m
         assert len(calls) == model_count
         return response.json()
     pending = follow(); assert rid in pending['text']
+    assert pending['navigation']['route'] == '/complaints?case='+rid
     approve_case(admin, rid)
     approved = follow()
+    assert approved['navigation']['route'] == '/complaints?case='+rid
     assert any(word in approved['text'] for word in ('todavía', 'no completed refund', 'ainda'))
     assert customer.get('/api/bootstrap').json()['products'] == before['products']
     refund = admin.get('/api/admin/requests/'+rid+'/refund').json()['refund']
@@ -45,6 +47,7 @@ def test_registered_chat_reads_fresh_decision_and_credit_without_models(setup, m
         assert rid not in json.dumps(state['messages'])
     if decision == 'approve':
         reference = result['creditTransactionId']; assert reference in fresh['text']
+        assert fresh['navigation']['route'] == '/movements?transaction='+reference
         assert any(word in voice for word in ('reembolso realizado', 'has been refunded', 'já foi reembolsada'))
         assert reference not in voice
     else:
@@ -54,6 +57,7 @@ def test_registered_chat_reads_fresh_decision_and_credit_without_models(setup, m
     assert other.post('/api/assistant/flow', json=message(conversationId=cid)).status_code == 404
     control.update(intent='request-status', family='query')
     selected = customer.post('/api/assistant/flow', json=message(locale=locale, requestId=rid, message={'es':'Estado del caso', 'en':'What is my case status?', 'pt':'Qual é o estado da minha reclamação?'}[locale])).json()
+    assert selected['navigation']['route'] == ('/movements?transaction='+reference if decision=='approve' else '/complaints?case='+rid)
     assert rid in selected['text']
     if decision=='approve': assert reference in selected['text']
 

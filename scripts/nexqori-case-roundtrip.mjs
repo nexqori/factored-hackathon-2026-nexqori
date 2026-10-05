@@ -84,11 +84,15 @@ try {
     await expect(actions.locator('[aria-current=step]')).toContainText(copy['claimStage.refunded']);
     await checkAxe('admin-refunded-'+locale);await page.screenshot({path:path.join(folder,'admin-'+locale+'.png'),fullPage:true});
     const after=await(await customer.context.request.get(origin+'/api/bootstrap')).json();const credits=after.transactions.filter(t=>t.category==='refund');assert.equal(credits.length,1);
+    await customerPage.locator('.sidebar nav a[href="/movements"]').click();
     const fresh=await send(followText);assert(fresh.text.includes(credits[0].id));assert(fresh.text.includes(claim.id));
+    await expect(customerPage).toHaveURL(new RegExp('/movements\\?transaction='+credits[0].id));
+    await expect(customerPage.locator('[data-transaction-id="'+credits[0].id+'"]')).toBeInViewport();
     assert.equal(fresh.flow.requestId,claim.id);assert.equal(fresh.conversation.id,first.conversation.id);
     assert.equal((await(await customer.context.request.get(origin+'/api/verification/summary')).json()).bankRecordsSentToModels,false);
     await page.close();page=customerPage;
-    await page.locator('.claims-refresh button').click();
+    await page.locator('.sidebar nav a[href="/complaints"]').click();
+    await page.locator('.claims-list button').filter({hasText:claim.id}).click();
     await expect(page.locator('.trace-current')).toContainText(copy['trace.outcome.refund_approved']);
     await page.getByRole('button',{name:copy['caseDecision.viewCredit'],exact:true}).click();
     await expect(page).toHaveURL(/\/movements\?transaction=CR-/);

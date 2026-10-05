@@ -91,3 +91,57 @@ def test_specific_overcharge_reclassifies_vague_payment_without_losing_selected_
     assert revised['conversation']['transactionId']=='TX-1002' and revised['flow']['canRegister']
     assert revised['conversation']['id']==cid
     assert 'Stream Plus' not in json.dumps(calls)
+
+
+@pytest.mark.parametrize('locale,text', [
+    ('es', 'pasar Sí, no reconozco ese cobro. ¿Puedes hacerme un reclamo'),
+    ('en', 'Yes, I do not recognize that charge. Please prepare a complaint.'),
+    ('pt', 'Sim, não reconheço essa cobrança. Pode preparar uma reclamação?'),
+])
+def test_real_voice_proposal_compound_confirmation_and_review(voice, models, locale, text):
+    app, engine, provider = voice; pack, person, scenario = prepared(engine)
+    calls, control = models; control['intent'] = 'unrecognized-charge'
+    client = TestClient(app)
+    logged = client.post('/api/auth/login', headers={'Origin': ORIGIN}, json={'identifier': person['email'], 'password': pack['passwords']['cargo']}).json()
+    client.headers.update({'Origin': ORIGIN, 'X-CSRF-Token': logged['csrfToken']})
+    started = client.post('/api/voice/sessions', json=start_body(locale=locale)).json()
+    identity, cid = started['id'], started['conversationId']
+    before = client.get('/api/bootstrap').json()
+    def turn(index, message):
+        provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'input-'+str(index),'delta':message,'start_ms':index*1000,'end_ms':index*1000+100})
+        provider.socket.events.put({'type':'session.delegation.created','delegation':{'id':'turn-'+str(index),'target':'client'},'offset_ms':index*1000+100})
+        return wait_until(lambda:(v['reply'] if (v:=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json()).get('revision')==index else None))
+    first = turn(1, {'es':'Tengo un cargo no reconocido del teléfono','en':'I do not recognize my phone charge','pt':'Não reconheço a cobrança do telefone'}[locale])
+    txid = first['flow']['suggestedTransaction']['id']
+    assert first['conversation']['transactionId'] is None
+    result = turn(2, text)
+    assert result['conversation']['transactionId'] == txid
+    assert result['flow']['canRegister'] and result['flow']['reviewRequestKey']
+    assert not result['flow']['suggestedTransaction']
+    speech = result['voiceSummary']['summary']
+    assert '299.00' in speech and '459.00' in speech and '160.00' in speech
+    assert any(word in speech for word in ('promedian', 'average', 'média'))
+    assert result['voiceSummary']['comparison']['differenceMinor'] == 16000
+    preview = client.get(f'/api/conversations/{cid}/claim-preview?locale={locale}').json()
+    assert txid in preview['summary']
+    assert client.get('/api/bootstrap').json()['requests'] == before['requests']
+    later = turn(3, {'es':'Agrega que no autoricé servicios extra','en':'Add that I did not authorize extras','pt':'Acrescente que não autorizei extras'}[locale])
+    assert later['conversation']['transactionId'] == txid
+    assert not later['flow']['suggestedTransaction']
+    assert later['flow']['reviewRequestKey'] == result['flow']['reviewRequestKey']
+    assert txid not in json.dumps(calls)
+    client.post(f'/api/voice/sessions/{identity}/close',json={})
+
+
+def test_requesting_preview_keeps_previously_supplied_amount_without_reasking(setup, models):
+    app, _ = setup; client, _ = login(app); calls, control = models
+    first = client.post('/api/assistant/flow', json=message(transactionId='TX-1002')).json()
+    cid = first['conversation']['id']
+    ready = client.post('/api/assistant/flow', json=message(conversationId=cid, message='Esperaba 100 MXN')).json()
+    assert ready['flow']['canRegister']; count = len(calls)
+    reply = client.post('/api/assistant/flow', json=message(conversationId=cid, message='¿Puedes hacerme un reclamo?')).json()
+    assert reply['flow']['canRegister'] and reply['flow']['reviewRequestKey']
+    assert reply['flow']['missing_fields'] == []
+    assert len(calls) == count
+    preview = client.get(f'/api/conversations/{cid}/claim-preview').json()
+    assert '100 MXN' in preview['summary']

@@ -23,11 +23,46 @@ NO = {'no', 'no es ese', 'no es otro', 'es otro', 'otro', 'no es este', 'no not 
       'not that one', 'nao', 'nao e esse', 'nao e outro', 'outro', 'e outro'}
 
 
-def confirmation(message):
-    # Exact short answers to the one outstanding proposal only. A "yes" embedded
-    # in a story, negation, pasted text or new request never selects a reference.
+def review_requested(message):
+    """Request a review form only; never authorization to register or pay."""
+    text = normalize(message)
+    if re.search(r"\b(?:no|not|nao|never|don't|do not)\s+(?:quiero|deseo|necesito|quero|want|prepare|file|submit|hagas|prepares|registre|registres)\b", text):
+        return False
+    return bool(re.search(
+        r"\b(?:(?:hacerme|hazme|haz|hacer|prepara|preparar|registrar|crear|presentar|enviar)\s+(?:me\s+)?(?:un|una|el|la|mi|este|esta)\s+(?:reclamo|queja)|"
+        r"(?:prepare|file|create|submit|open)\s+(?:a|the|my|this)\s+(?:complaint|claim)|"
+        r"(?:preparar|prepare|registrar|registre|criar|abrir|enviar)\s+(?:uma|a|minha|esta)\s+reclamacao)\b", text))
+
+
+def review_only(message):
+    """Opening the current review is not a new extraction of known details."""
     value = ' '.join(re.findall(r'\w+', normalize(message)))
-    return 'yes' if value in YES else 'no' if value in NO else None
+    return bool(re.fullmatch(
+        r"(?:(?:por favor|please|por favor) )?(?:(?:puedes|podrias|quiero|quisiera|necesito|can you|could you|i want to|pode|quero) )?"
+        r"(?:(?:hacerme|hazme|haz|hacer|prepara|preparar|registrar|crear|presentar|enviar) (?:un|una|el|la|mi|este|esta) (?:reclamo|queja)|"
+        r"(?:prepare|file|create|submit|open) (?:a|the|my|this) (?:complaint|claim)|"
+        r"(?:preparar|prepare|registrar|registre|criar|abrir|enviar) (?:uma|a|minha|esta) reclamacao)"
+        r"(?: por favor| please)?", value))
+
+
+def confirmation(message):
+    # Selecting the one outstanding owned proposal is not banking consent.
+    # Speech often combines assent, the symptom and a request for the review.
+    value = ' '.join(re.findall(r'\w+', normalize(message)))
+    if value in YES: return 'yes'
+    if value in NO: return 'no'
+    if re.search(r"\b(?:otro|otra|another|different|outro|outra|quizas|tal vez|maybe|perhaps|talvez|if|ejemplo|example|exemplo|dije|dijo|said|disse)\b|"
+                 r"\b(?:no es|no estoy segur|not that|not sure|nao e|nao tenho certeza)", value):
+        return None
+    # This explicit referent is safe even if an earlier transcript fragment
+    # precedes it (e.g. 'pasar Sí, no reconozco ese cobro').
+    explicit = (r"\bsi no reconozco (?:ese|este) (?:cobro|cargo|pago|movimiento)\b|"
+                r"\byes i (?:do not|don t) recognize (?:that|this) (?:charge|payment|transaction)\b|"
+                r"\bsim nao reconheco (?:essa|esta|esse|este) (?:cobranca|pagamento|movimentacao)\b")
+    if re.search(explicit, value): return 'yes'
+    if re.match(r"^(?:si es (?:ese|este)|si (?:ese|este)|yes (?:that|this) one|sim e (?:esse|este|essa|esta))\b", value) and review_requested(message):
+        return 'yes'
+    return None
 
 
 def words(value):

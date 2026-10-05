@@ -7,11 +7,11 @@ import {groupVoiceTranscript,type VoiceFragment} from './voiceTranscript';
 import {useVoiceActivity} from './useVoiceActivity';
 import type {ChatReply} from './AssistantPanel';
 import {ChatFlow} from './ChatFlow';
-import {Dialog,formatMoney} from './components';
-import type {Locale} from './i18n';
+import {VoiceComparison} from './VoiceComparison';
+import {Dialog} from './components';
 
 export function VoiceCall({selection,onReply,onClose,onSession,onRegistered}:{selection:Omit<VoiceSelection,'voice'>;onReply:(reply:ChatReply)=>void;onClose:()=>void;onSession:(id:string)=>void;onRegistered:(id:string)=>void}){
-  const {t,i18n}=useTranslation();const locale=i18n.language as Locale;const [capability,setCapability]=useState<VoiceCapabilities|null>(null);
+  const {t}=useTranslation();const [capability,setCapability]=useState<VoiceCapabilities|null>(null);
   const voiceId=useId();
   const agentDescriptionId=useId();
   const [state,setState]=useState('ready');const [error,setError]=useState('');const [voice,setVoice]=useState('marin');
@@ -77,22 +77,14 @@ export function VoiceCall({selection,onReply,onClose,onSession,onRegistered}:{se
       </>}
     </div>
     {bankResultOpen&&bankReply&&<Dialog title={t('voiceCall.findings')} onClose={()=>setBankResultOpen(false)} className="voice-analysis-dialog">
-      {bankReply.voiceSummary?.comparison&&<section className="voice-comparison" aria-label={t('voiceCall.comparison')}>
-        <h3>{t('voiceCall.comparison')}</h3>
-        {[{label:t(bankReply.voiceSummary.comparison.basis==='agreement'?'spending.conditionsBase':'spending.average'),value:bankReply.voiceSummary.comparison.baselineMinor},
-          {label:t('voiceCall.currentAmount'),value:bankReply.voiceSummary.comparison.currentMinor}].map((bar,index)=><div key={index} className="voice-comparison-row">
-          <div><span>{bar.label}</span><strong>{formatMoney(bar.value,locale,bankReply.voiceSummary!.comparison!.currency)}</strong></div>
-          <span className={'voice-comparison-bar bar-'+index} style={{width:Math.max(2,100*bar.value/Math.max(1,bankReply.voiceSummary!.comparison!.baselineMinor,bankReply.voiceSummary!.comparison!.currentMinor))+'%'}} aria-hidden="true"/>
-        </div>)}
-        <p>{t('voiceCall.verdict.'+bankReply.voiceSummary.comparison.verdict)}</p>
-      </section>}
+      <VoiceComparison comparison={bankReply.voiceSummary?.comparison||null}/>
       {bankReply.voiceSummary&&<p>{bankReply.voiceSummary.summary}</p>}
       <p className="voice-bank-text">{bankReply.text}</p>
     </Dialog>}
     <audio ref={audio} aria-label={t('voiceCall.audio')}/>
     <footer className="voice-call-footer">
       {bankReply?.flow?.canRegister&&<p className="voice-review-hint" role="status">{t('voiceCall.reviewBeforeSend')}</p>}
-      {bankReply?.flow&&(bankReply.flow.canRegister||bankReply.flow.requestId)&&<ChatFlow actionsOnly result={bankReply.flow} conversationId={bankReply.conversation.id} onRegistered={claim=>{
+      {bankReply?.flow&&(bankReply.flow.canRegister||bankReply.flow.requestId)&&<ChatFlow actionsOnly comparison={<VoiceComparison comparison={bankReply.voiceSummary?.comparison||null}/>} result={bankReply.flow} conversationId={bankReply.conversation.id} onRegistered={claim=>{
         const updated={...bankReply,text:claim.message.text,flow:claim.flow,messages:[claim.message],voiceSummary:null,navigation:null,destination:null};
         setBankReply(updated);callback.current(updated);onRegistered(claim.id);
       }}/>}

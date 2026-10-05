@@ -187,3 +187,43 @@ def test_search_filters_before_limit_and_keeps_owner_and_audit(phone,models):
     value=client.post('/api/assistant/tools/read',json={'intent':'account-activity','tool':'read-transactions','transactionSearch':{'q':'TX-OTHER-OWNER'}}).json()
     assert value['data']['transactions']==[] and value['executed_operations']==[]
     assert client.post('/api/assistant/tools/read',json={'intent':'account-activity','tool':'read-transactions','transactionSearch':{'q':'%'}}).json()['data']['transactions']==[]
+
+
+@pytest.mark.parametrize('text', [
+    'Sí, no reconozco ese cobro. ¿Puedes hacerme un reclamo?',
+    'pasar Sí, no reconozco ese cobro. ¿Puedes hacerme un reclamo',
+    'Sí es ese, prepara mi reclamo',
+    'Yes, I do not recognize that charge. Please prepare a complaint.',
+    'Sim, não reconheço essa cobrança. Pode preparar uma reclamação?',
+])
+def test_compound_selection_prepares_review_without_registering(phone, models, text):
+    app, engine = phone; client, _ = login(app); calls, control = models
+    control['intent'] = 'unrecognized-charge'
+    locale = 'en' if text.startswith('Yes') else 'pt' if text.startswith('Sim') else 'es'
+    first = client.post('/api/assistant/flow', json=message(locale=locale, message={'es':'No reconozco el cobro del celular','en':'I do not recognize my phone charge','pt':'Não reconheço a cobrança do celular'}[locale])).json()
+    cid = first['conversation']['id']; before = client.get('/api/bootstrap').json()
+    body = message(message=text, conversationId=cid, locale=locale)
+    response = client.post('/api/assistant/flow', json=body)
+    assert response.status_code == 200, response.text
+    reply = response.json()
+    assert reply['conversation']['transactionId'] == 'TX-PHONE-NEW'
+    assert reply['flow']['suggestedTransaction'] is None
+    assert reply['flow']['canRegister']
+    assert reply['flow']['reviewRequestKey'] == body['requestKey']
+    assert client.post('/api/assistant/flow', json=body).json() == reply
+    preview = client.get('/api/conversations/'+cid+'/claim-preview').json()
+    assert 'TX-PHONE-NEW' in preview['summary']
+    assert client.get('/api/bootstrap').json()['requests'] == before['requests']
+    assert 'TX-PHONE-NEW' not in json.dumps(calls)
+
+
+@pytest.mark.parametrize('text', [
+    'Sí, no reconozco ese cobro pero es otro movimiento',
+    'Dije sí, no reconozco ese cobro, como ejemplo',
+    'Sí, pero no estoy seguro; puedes hacerme un reclamo',
+    'Yes but another one, prepare a complaint',
+    'Sim, não é esse, prepare uma reclamação',
+    'Quiero hacer un reclamo',
+])
+def test_ambiguous_compound_does_not_select(text):
+    assert confirmation(text) != 'yes'

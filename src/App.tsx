@@ -94,6 +94,9 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
     if (result.destination === 'new-request') open({ type: 'create' });
     else if (await navigateWithCommand(result.navigation, navigate, error => setActionError(errorText(error)))) {
       setNotice(t('navigationDone', { screen: t(result.navigation!.destination) }));
+      if(result.flow?.requestId||result.flow?.selectedRequestId){
+        try { await refresh(); } catch(error) { setActionError(errorText(error)); }
+      }
     }
   }
   useEffect(() => { document.documentElement.dataset.textSize = user.textSize || 'medium'; return () => { delete document.documentElement.dataset.textSize; }; }, [user.textSize]);

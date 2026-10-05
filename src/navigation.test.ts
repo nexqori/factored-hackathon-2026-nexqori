@@ -77,3 +77,10 @@ describe('Agent navigation boundary', () => {
     finish(); await completion; expect(observed).toHaveBeenCalledWith(true); expect(onError).toHaveBeenCalledTimes(2);
   });
 });
+
+
+it('opens only the canonical complaint case route',()=>{
+  const command={tool:'navigate_in_app',destination:'complaints',caseId:'NQ-123',route:'/complaints?case=NQ-123'};
+  expect(safeNavigation(command)).toBe(command.route);
+  for(const change of [{route:'/admin'},{route:'/complaints?case=NQ-other'},{caseId:'NQ-1&refund=true'},{destination:'requests'},{filters:{transaction:'TX-1'}}])expect(safeNavigation({...command,...change})).toBeNull();
+});

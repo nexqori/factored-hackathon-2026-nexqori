@@ -8,11 +8,15 @@ export const destinations = {
 } as const;
 export type Destination = keyof typeof destinations;
 export type MovementSearch = {start?:string;end?:string;product?:string;transaction?:string;q?:string;status?:string;category?:string;amountMinor?:number};
-export type NavigationCommand = { tool: 'navigate_in_app'; destination: Destination; route: string; serviceId?: string; filters?: MovementSearch };
+export type NavigationCommand = { tool: 'navigate_in_app'; destination: Destination; route: string; serviceId?: string; caseId?: string; filters?: MovementSearch };
 export function safeNavigation(command: unknown): string | null {
   if (!command || typeof command !== 'object') return null;
   const c = command as Partial<NavigationCommand>;
   if (c.tool !== 'navigate_in_app' || !c.destination || !Object.hasOwn(destinations, c.destination)) return null;
+  if(c.caseId!==undefined){
+    if(c.destination!=='complaints'||c.filters!==undefined||c.serviceId!==undefined||typeof c.caseId!=='string'||!/^NQ-[A-Za-z0-9-]{1,61}$/.test(c.caseId))return null;
+    const route='/complaints?case='+encodeURIComponent(c.caseId);return c.route===route?route:null;
+  }
   if(c.filters!==undefined){
     const f=c.filters;
     if(c.destination!=='movements'||c.serviceId!==undefined||!f||typeof f!=='object'||!Object.keys(f).length||Object.keys(f).some(k=>!['start','end','product','transaction','q','status','category','amountMinor'].includes(k)))return null;

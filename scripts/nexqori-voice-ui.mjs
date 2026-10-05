@@ -40,7 +40,7 @@ try{
   const result=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,transactionId:person.transactionId,message:{es:'Verificación [CASE-2] me cobraron de más',en:'Verification [CASE-2] I was charged too much',pt:'Verificação [CASE-2] cobraram a mais'}[locale]}});
   assert.equal(result.status(),200);const first=await result.json();
   const next=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,conversationId:first.conversation.id,message:{es:'Esperaba 100 MXN',en:'I expected 100 MXN',pt:'Esperava 100 MXN'}[locale]}});
-  assert.equal(next.status(),200);const reply=await next.json();assert(reply.flow.canRegister);
+  assert.equal(next.status(),200);let reply=await next.json();assert(reply.flow.canRegister);let voiceRevision=1;
   reply.voiceSummary={summary:copy['voiceCall.verdict.unusual'],transactionId:person.transactionId,comparison:{basis:'history',baselineMinor:10000,currentMinor:18500,differenceMinor:8500,currency:'MXN',count:3,verdict:'unusual'}};
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();
   await page.locator('.paste-composer textarea').fill('Borrador conservado');
@@ -59,7 +59,7 @@ try{
   let pendingSessionId='previous-call';
   await page.route('**/api/voice/capabilities',route=>route.fulfill({json:{enabled:true,maxSeconds:300,voices:['marin','cedar','bossa'],pendingSessionId}}));
   let chosenVoice;await page.route('**/api/voice/sessions',route=>{chosenVoice=route.request().postDataJSON().voice;return route.fulfill({json:{id:'fake-voice',conversationId:reply.conversation.id,status:'active',sdp:'v=0',expiresAt:Math.floor(Date.now()/1000)+300}});});
-  await page.route('**/api/voice/sessions/*/heartbeat',route=>route.fulfill({json:{status:'active',revision:1,reply}}));
+  await page.route('**/api/voice/sessions/*/heartbeat',route=>route.fulfill({json:{status:'active',revision:voiceRevision,reply}}));
   let closed=0;await page.route('**/api/voice/sessions/*/close',route=>{closed++;pendingSessionId=null;return route.fulfill({json:{status:'closed',remoteClosed:true}});});
   await page.getByRole('button',{name:copy.startVoice,exact:true}).click();
   await expect(call.getByRole('button',{name:copy['voiceCall.start'],exact:true})).toBeDisabled();
@@ -178,9 +178,14 @@ try{
   await call.locator('.voice-call-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
   await page.locator('.assistant-panel').screenshot({path:path.join(folder,'long-call-'+locale+'.png')});
   await page.setViewportSize({width:1512,height:1050});
-  await call.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
+  const requestReview=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,conversationId:reply.conversation.id,message:{es:'¿Puedes hacerme un reclamo?',en:'Please prepare a complaint',pt:'Pode preparar uma reclamação?'}[locale]}});
+  assert.equal(requestReview.status(),200);
+  const requested=await requestReview.json();assert(requested.flow.reviewRequestKey);
+  reply={...requested,voiceSummary:reply.voiceSummary};voiceRevision++;
   const review=page.locator('.chat-claim-review');
   await expect(review.locator('.chat-claim-summary')).not.toHaveText('');
+  await expect(review.locator('.voice-comparison-row')).toHaveCount(2);
+  await axe('auto-review-'+locale);
   await expect(review.getByRole('checkbox')).toHaveCount(0);
   const unchanged=await(await context.request.get(origin+'/api/bootstrap')).json();
   assert.equal(unchanged.requests.filter(r=>r.kind==='claim').length,0,'Opening review does not register a claim');
