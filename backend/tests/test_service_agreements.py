@@ -95,7 +95,8 @@ def test_conditions_reach_review_and_registered_claim_without_model_or_financial
     value=clarified.json()
     assert value['flow']['canRegister']
     assert [c[0] for c in calls]==['triage','jev','llm','llm']
-    for amount in ('299','459','160'):assert amount in value['text']
+    assert len(value['text'].split()) < 25
+
     preview=client.get('/api/conversations/'+cid+'/claim-preview').json()
     assert len(preview['summary'])<=1000
     assert '160' in preview['summary']

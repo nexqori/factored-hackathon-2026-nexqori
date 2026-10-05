@@ -60,7 +60,7 @@ export function ChatDetails({ result, conversation, data, selectedTx, selectedRe
       </section>
       <section className="chat-details-progress" aria-label={t('chatDetails.progress')}>
         {changed && !locked && result && <p className="muted">{t('chatSelection.pending')}</p>}
-        {result && conversation ? <ChatFlow result={result} conversationId={conversation.id} onRegistered={onRegistered} readOnly={changed && !locked}/> : <p className="empty-copy">{t('chatDetails.empty')}</p>}
+        {result && conversation ? <ChatFlow autoOpen={false} result={result} conversationId={conversation.id} onRegistered={onRegistered} readOnly={changed && !locked}/> : <p className="empty-copy">{t('chatDetails.empty')}</p>}
       </section>
     </div>
     {conversation && <AttentionReview source={result?.requestId ? 'requests' : 'conversations'} identity={result?.requestId || conversation.id}/>}

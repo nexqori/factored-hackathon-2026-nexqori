@@ -19,7 +19,7 @@ export type FlowResult = { canDocument?: boolean; execution: {phase: string}; wo
 export type ClaimRegistration = { id: string; message: Message; summary: string; nextStep: string; flow: FlowResult };
 type ClaimPreview = { summary: string; previewToken: string; intent: string; transactionId: string | null; operationLabel: string; nextStep: string };
 
-export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false, comparison }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; comparison?: ReactNode; onRegistered: (claim: ClaimRegistration) => void }) {
+export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false, autoOpen = true, comparison }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; autoOpen?: boolean; comparison?: ReactNode; onRegistered: (claim: ClaimRegistration) => void }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const summaryLabelId = useId();
   const [review, setReview] = useState(false); const [details, setDetails] = useState(''); const [editing, setEditing] = useState(false);
@@ -34,14 +34,22 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
     } catch(e) { setError('error.' + (e instanceof ApiError ? e.code : 'generic')); }
     finally { setBusy(false); }
   }
+  useEffect(() => {
+    if (!preview) return;
+    void api('/conversations/' + conversationId + '/claim-review', 'POST', {
+      previewToken:preview.previewToken, details:details.trim() || preview.summary,
+      ready:review && !editing && !busy && result.canRegister, locale,
+    }).catch(() => {}); // The form button remains available if speech readiness fails.
+  }, [review, editing, busy, preview, details, conversationId, locale, result.canRegister]);
+  useEffect(() => { if (result.requestId) setReview(false); }, [result.requestId]);
   const openedReview = useRef<string | null>(null);
   useEffect(() => {
     const key = result.reviewRequestKey ? conversationId + ':' + result.reviewRequestKey : null;
-    if (!readOnly && result.canRegister && key && openedReview.current !== key) {
+    if (autoOpen && !readOnly && result.canRegister && key && openedReview.current !== key) {
       openedReview.current = key;
       if (!review) void loadPreview();
     }
-  }, [conversationId, result.reviewRequestKey, result.canRegister, readOnly]);
+  }, [conversationId, result.reviewRequestKey, result.canRegister, readOnly, autoOpen]);
   async function register() {
     if (busy || !preview || details.trim().length < 10) return; setBusy(true); setError('');
     const body = {details:details.trim(), confirmed:true, locale, previewToken:preview.previewToken};

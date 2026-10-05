@@ -3,7 +3,7 @@ import { ArrowUpRight, Headphones, History, MessageCircle, Plus, Phone, Info } f
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from './api';
 import { Dialog, formatDate, formatMoney } from './components';
-import { type FlowResult } from './ChatFlow';
+import { ChatFlow, type FlowResult } from './ChatFlow';
 import { ChatDetails, type ChatSelection } from './ChatDetails';
 import { VoiceCall } from './VoiceCall';
 import { ChatDocuments, DocumentDownload } from './ChatDocuments';
@@ -140,7 +140,7 @@ export function AssistantPanel({ currentPage, onReply, onProfile, guided = false
         </div>}
       </div>}
       {!conversation?.closed && !busy && flow?.canDocument && conversation && <button className="button secondary chat-next-action" disabled={voice} onClick={()=>setDocumentsOpen(true)}>{t('documents.prepare')}</button>}
-      {!conversation?.closed && !busy && flow?.canRegister && <button className="button secondary chat-next-action" disabled={voice} onClick={() => openDetails()}>{t('chatFlow.prepareClaim')}<ArrowUpRight size={16}/></button>}
+      {!voice && !conversation?.closed && !busy && flow?.canRegister && conversation && <ChatFlow actionsOnly result={flow} conversationId={conversation.id} onRegistered={claim => { setFlow(claim.flow); setMessages(items=>items.some(m=>m.id===claim.message.id)?items:[...items,claim.message]); onClaim(claim.id); }}/>}
       {!conversation?.closed && !busy && flow?.missing_fields.includes('request_id') && <button className="text-link chat-next-action" disabled={voice} onClick={() => openDetails()}>{t('chatDetails.selectRecords')}<ArrowUpRight size={16}/></button>}
     </div>
     {error && !history && <p className="error-text assistant-error" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}

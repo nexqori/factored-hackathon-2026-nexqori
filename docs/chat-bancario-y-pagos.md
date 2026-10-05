@@ -138,3 +138,14 @@ Si la consulta comprueba un reembolso completado, abre directamente Movimientos 
 Confirmar el movimiento y pedir una revisión son decisiones independientes. «Sí, ese es el que quiero revisar» vincula la única propuesta del titular; «poner una solicitud de devolución» pide abrir su borrador, sin autorizar un reembolso. La transcripción conserva completa la palabra que cruza el instante de delegación para que no se traslade al siguiente turno. Negaciones, incertidumbre, selección de otro movimiento y textos pegados conservan sus controles.
 
 Para validar este recorrido, además de las regresiones del motor, reproducir audio de prueba con proveedores reales en un banco aislado: cargo propuesto → confirmación natural → promedio hablado y borrador editable → envío explícito → expediente → revisión y reembolso administrativos → consulta posterior → confirmación hablada del abono y movimiento visible. Conservar evidencias privadas y distinguir audio sintetizado de voz humana, el cargo de prueba completado de uno pendiente y los turnos secuenciales de interrupciones durante la respuesta del agente.
+
+
+### Envío directo del borrador mostrado
+
+Al confirmar el movimiento y completar el contexto del problema, la aplicación abre Mis reclamos y muestra automáticamente el borrador del servidor. Nexi explica una sola vez el promedio y la diferencia. Los turnos posteriores del mismo borrador informan sólo la acción siguiente.
+
+El formulario comunica al servidor que el borrador está visible, con versión, idioma y texto. Editarlo o cerrarlo desactiva la confirmación por voz. Tras verlo, «confirmar y enviar» o «No, enviémoslo a revisión» permiten registrar ese borrador desde una delegación autenticada; un «sí» aislado nunca registra. La autorización caduca a los diez minutos y se invalida al cambiar el contexto. Jev sigue revisando el mensaje. No habilita pagos, reembolsos ni cambios de tarjeta por voz.
+
+El registro utiliza el mismo servicio transaccional e idempotente que el botón, navega al expediente creado y comunica una confirmación breve con despedida. El botón Terminar llamada permanece disponible; el expediente sigue visible al cerrar. Un pago pendiente puede generar un reclamo, pero eso no lo convierte en un cargo reembolsado.
+
+Instrucciones de voz simplificadas conforme a [Prompting GPT-Live](https://developers.openai.com/api/docs/guides/live-prompting): capacidades y condiciones concretas de delegación, resultados breves y procedimientos en el servidor. La validación incluye audio de prueba real y no se sustituye por las pruebas con proveedor simulado.

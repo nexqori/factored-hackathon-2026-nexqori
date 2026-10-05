@@ -114,11 +114,17 @@ def presentation(db, owner, reply, locale):
     if registered:
         text=registered
     elif flow.get('canRegister'):
-        text+=pick(locale,' Preparé el borrador para revisión de un supervisor. Puedes agregar detalles antes de confirmar el envío; después tendrás tu expediente en Mis reclamos.',
-                   ' I prepared the draft for supervisor review. You can add details before confirming submission; then you will have your case in My complaints.',
-                   ' Preparei o rascunho para análise de um supervisor. Pode acrescentar detalhes antes de confirmar o envio; depois terá seu protocolo em Minhas reclamações.')
-        if tx['status']=='pending':text+=pick(locale,' El pago sigue pendiente; no he devuelto ni cancelado dinero.',
-                ' The payment is still pending; I have not refunded or cancelled it.',' O pagamento segue pendente; não efetuei devolução ou cancelamento.')
+        if c.get('status') == 'sufficient':
+            average = money(c['averageMinor'], tx['currency'], locale)
+            difference = money(abs(tx['amountMinor']) - c['averageMinor'], tx['currency'], locale)
+            text = pick(locale,
+                f'Tus {c["count"]} pagos anteriores promedian {average}; este es de {amount}, una diferencia de {difference}.',
+                f'Your {c["count"]} previous payments average {average}; this one is {amount}, a difference of {difference}.',
+                f'Seus {c["count"]} pagamentos anteriores têm média de {average}; este é de {amount}, uma diferença de {difference}.')
+        text += pick(locale,
+            ' Abrí el borrador para revisión de un supervisor. Puedes corregirlo o decir «confirmar y enviar».',
+            ' I opened the draft for supervisor review. You can edit it or say “confirm and send”.',
+            ' Abri o rascunho para análise de um supervisor. Pode corrigir ou dizer “confirmar e enviar”.')
     elif 'difference' in flow.get('missing_fields',[]):
         text+=pick(locale,' ¿Reconoces algún extra o cambio de plan que pueda explicarlo?' if comparison and comparison['basis']=='agreement' else '¿Qué importe esperabas pagar?',
                    ' Do you recognize an extra or plan change that could explain it?' if comparison and comparison['basis']=='agreement' else ' What amount did you expect to pay?',

@@ -14,11 +14,14 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import Field
 from sqlalchemy import select
-from .models import VoiceSession, Session, Conversation, ConversationFlow, User, RequestCase, AuditEvent
+from .models import VoiceSession, Session, Conversation, ConversationFlow, User, RequestCase, AuditEvent, Message, now
 from .security import customer, customer_read, current_session, db_session
 from .schemas import StrictModel, Locale
 from .transaction_context import transaction_evidence
-from .workflow_chat import FlowMessage, run_chat_turn, flow_view, enabled as flow_enabled
+from .workflow_chat import FlowMessage, RegisterClaim, register_reviewed_claim, run_chat_turn, flow_view, enabled as flow_enabled, next_message_time
+from .transaction_suggestions import submit_review
+from .claim_summary import preview_token
+from .prompt_guard import inspect_prompt
 from .voice_summary import presentation
 from .conversation_closed import require_open
 from .navigation import navigate_in_app
@@ -106,6 +109,14 @@ def safe_spoken_result(reply, locale, verified_presentation=None):
     return messages[key][('es','en','pt').index(locale)]
 
 
+def sent_farewell(case_id, locale):
+    return (
+        f'Tu reclamo {case_id} quedó enviado. Ya puedes verlo en Mis reclamos. Gracias por avisarnos; que tengas un buen día.',
+        f'Your complaint {case_id} was submitted. You can now see it in My complaints. Thank you for letting us know. Have a good day.',
+        f'Sua reclamação {case_id} foi enviada. Já pode vê-la em Minhas reclamações. Obrigado por avisar. Tenha um bom dia.'
+    )[('es','en','pt').index(locale)]
+
+
 class TranscriptBuffer:
     """Keep complete fragments in order; never classify every partial caption."""
     def __init__(self):
@@ -163,16 +174,50 @@ class VoiceRuntime:
             flow=db.get(ConversationFlow,conv.id)
             selected_request=(flow.state.get('bank_binding',{}).get('request_id') if flow else row.state.get('request_id'))
             key=hashlib.sha256((identity+':'+delegation_id).encode()).hexdigest()
-            reply=run_chat_turn(FlowMessage(message=text,locale=row.locale,conversationId=conv.id,
-                transactionId=conv.transaction_id,requestId=selected_request,requestKey=key),
-                user,db,self.conversation_view,self.message_view)
+            shown = flow.state.get('shown_claim') if flow else None
+            receipt = (row.state.get('delegations') or {}).get(delegation_id)
+            if receipt:
+                previous = row.state.get('reply') or {}
+                return safe_spoken_result(previous, row.locale, previous.get('voiceSummary'))
+            can_submit = bool(submit_review(text) and flow and not flow.request_id and shown
+                and shown.get('ready') and shown.get('locale') == row.locale
+                and 0 <= now().timestamp() - shown.get('at', 0) < 600
+                and shown.get('token') == preview_token(conv, flow.state, row.locale))
+            if can_submit and inspect_prompt(text, row.locale)['status'] == 'allowed':
+                require_open(db, conv)
+                spoken = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id,
+                    role='user', content=text, locale=row.locale, created_at=next_message_time(db,conv,user))
+                db.add(spoken); db.flush()
+                claim = register_reviewed_claim(conv.id, RegisterClaim(details=shown['details'],
+                    confirmed=True, locale=row.locale, previewToken=shown['token'], requestKey=key),
+                    user, db, self.message_view)
+                reply = {'text':claim['message']['text'], 'conversation':self.conversation_view(conv),
+                    'messages':[self.message_view(spoken),claim['message']], 'flow':claim['flow'],
+                    'destination':'complaints', 'navigation':navigate_in_app('complaints','customer',case_id=claim['id'])}
+            else:
+                reply=run_chat_turn(FlowMessage(message=text,locale=row.locale,conversationId=conv.id,
+                    transactionId=conv.transaction_id,requestId=selected_request,requestKey=key),
+                    user,db,self.conversation_view,self.message_view)
             if (reply.get('appCommand') or {}).get('type')=='prepare_profile':
                 reply={**reply,'appCommand':None,'destination':'settings','navigation':navigate_in_app('settings','customer')}
             summary=presentation(db,user.id,reply,row.locale)
+            # Once the comparison was spoken, subsequent draft turns only state
+            # the next action. Corrections still update the form and chart.
+            findings_key = json.dumps([conv.transaction_id, (summary or {}).get('comparison')], sort_keys=True)
+            if summary and (reply.get('flow') or {}).get('canRegister') and not reply.get('guard'):
+                if row.state.get('spoken_findings') == findings_key:
+                    summary = {**summary, 'summary': (
+                        'El borrador está listo. Puedes corregirlo o decir «confirmar y enviar».',
+                        'The draft is ready. You can edit it or say “confirm and send”.',
+                        'O rascunho está pronto. Pode corrigir ou dizer “confirmar e enviar”.')[('es','en','pt').index(row.locale)]}
+                row.state = {**row.state, 'spoken_findings': findings_key}
+            if can_submit and (reply.get('flow') or {}).get('requestId'):
+                summary = {**(summary or {}), 'summary': sent_farewell(claim['id'],row.locale)}
+                row.state = {**row.state, 'announced_case_id':claim['id']}
             reply={**reply,'voiceSummary':summary}
             # The shared service committed the turn. Its key prevents duplicate
             # messages even if a crash occurs before this receipt is committed.
-            db.expire_all(); row=db.scalar(select(VoiceSession).where(VoiceSession.id==identity).with_for_update())
+            db.flush(); db.expire_all(); row=db.scalar(select(VoiceSession).where(VoiceSession.id==identity).with_for_update())
             receipts=dict(row.state.get('delegations',{}))
             if delegation_id not in receipts:
                 receipts[delegation_id]=key
@@ -198,6 +243,8 @@ class VoiceRuntime:
                    'navigation':navigation}
             summary=presentation(db,row.user_id,reply,row.locale)
             if not summary:return None
+            if case.status == 'received':
+                summary = {**summary, 'summary':sent_farewell(case.id,row.locale)}
             reply['voiceSummary']=summary
             row.state={**row.state,'reply':reply,'revision':row.state.get('revision',0)+1,'announced_case_id':case.id}
             audit(db,row,'voice_case_registered_notice');db.commit()

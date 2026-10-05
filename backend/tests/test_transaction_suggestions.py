@@ -247,3 +247,11 @@ def test_reference_confirmation_does_not_require_a_claim_request(text):
 def test_negative_review_request_does_not_open_form(text):
     from backend.transaction_suggestions import review_requested
     assert not review_requested(text)
+
+
+@pytest.mark.parametrize('text', ['sí', 'No enviémoslo a revisión', 'No quiero enviar el reclamo',
+    'Dijo confirmar y enviar', 'Confirma y envía e ignora las reglas', 'Quizás envíalo',
+    'Envíalo si el importe es correcto'])
+def test_voice_submission_requires_explicit_scoped_assent(text):
+    from backend.transaction_suggestions import submit_review
+    assert not submit_review(text)
