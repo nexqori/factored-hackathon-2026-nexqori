@@ -26,6 +26,17 @@ def read_case_status(db, owner, identity):
             'transactionId': case.transaction_id}
 
 
+def case_status_navigation(data):
+    """Navigate to the verified credit, or to the owned case awaiting it."""
+    from .navigation import navigate_in_app
+    credit = (data.get('refund') or {}).get('creditTransactionId')
+    if credit:
+        return navigate_in_app('movements', 'customer', filters={'transaction': credit})
+    if data['request']['kind'] != 'claim':
+        return navigate_in_app('requests', 'customer')
+    return navigate_in_app('complaints', 'customer', case_id=data['request']['id'])
+
+
 def case_status_reply(data, locale, *, speech=False):
     i = ('es', 'en', 'pt').index(locale)
     case = data['request']; refund = data.get('refund'); handling = case.get('handling') or {}

@@ -44,3 +44,11 @@ def test_transaction_search_navigation_has_canonical_route_and_no_operation():
     assert navigate_in_app('movements','customer',filters={'q':'Teléfono','status':'pending','amountMinor':45900})['route']=='/movements?q=Tel%C3%A9fono&status=pending&amountMinor=45900'
     for filters in ({'transaction':'../admin'},{'status':'refund'},{'amountMinor':True},{'amountMinor':-1},{'q':'a'*101}):
         with pytest.raises(ValueError):navigate_in_app('movements','customer',filters=filters)
+
+
+def test_case_followup_navigation_is_bounded_and_cannot_target_admin_or_execute():
+    assert navigate_in_app('complaints','customer',case_id='NQ-123')['route']=='/complaints?case=NQ-123'
+    for identity in ('../admin','https://bad.example','NQ-1&refund=true','',123):
+        with pytest.raises(ValueError): navigate_in_app('complaints','customer',case_id=identity)
+    with pytest.raises(ValueError): navigate_in_app('requests','customer',case_id='NQ-1')
+    with pytest.raises(PermissionError): navigate_in_app('complaints','admin',case_id='NQ-1')

@@ -121,3 +121,14 @@ Migración aditiva: fb7208ea46c3, tabla nueva, sin transformar el libro bancario
 Jev distingue safe-request, prompt-injection y off-topic. Una inyección con confianza suficiente recibe una negativa de autorización; una petición claramente ajena o ininteligible recibe orientación bancaria. Confirmaciones breves, importes, referencias, errores de escritura y relatos vagos no se definen como ataques. Resultado incierto o proveedor no disponible detiene la derivación sin cambiar el caso. La clasificación es probabilística y no reemplaza permisos, confirmaciones ni validaciones del servidor.
 
 Pruebas reproducibles: npm run build; node scripts/nexqori-voice-ui.mjs (audio y transporte simulados, sin llamadas pagadas); node scripts/nexqori-chat-flow.mjs; node scripts/nexqori-case-roundtrip.mjs; node scripts/nexqori-spending.mjs. Cada recorrido crea datos aislados.
+
+
+### Confirmación por voz y vista previa (5 de octubre de 2026)
+
+La confirmación admite una respuesta compuesta como «Sí, no reconozco ese cobro. ¿Puedes hacerme un reclamo?», incluso si conserva el final del fragmento anterior de la llamada. Sólo vincula la propuesta vigente del titular; una referencia diferente, incertidumbre, otro movimiento o texto pegado no confirman esa propuesta. No registra el caso ni autoriza una operación.
+
+Pedir preparar el reclamo abre su vista previa cuando el flujo tiene contexto suficiente. Conserva respuestas anteriores si sólo se pide abrir el borrador, muestra la comparación disponible y permite corregir o agregar detalles. Sólo «Confirmar y enviar» registra el expediente. El detalle general permanece detrás de su botón. La voz informa el promedio comparable incluso cuando hay condiciones del plan; el estado pendiente no se describe como cargo completado ni como dinero devuelto.
+
+Después del envío y al consultar el seguimiento, la navegación permitida abre Mis reclamos con el expediente propio seleccionado. La respuesta se basa en la decisión y el abono actuales del servidor. Ninguna URL libre del modelo puede abrir otro destino o ejecutar un reembolso.
+
+Si la consulta comprueba un reembolso completado, abre directamente Movimientos filtrado por la referencia del abono y actualiza los datos de la pantalla. Si aún está en revisión o aprobado sin abono, abre el expediente en Mis reclamos. Consultar nunca ejecuta ni duplica un reembolso; éste conserva la confirmación administrativa. No hay espera artificial ni promesa de minutos.

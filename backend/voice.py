@@ -190,7 +190,8 @@ class VoiceRuntime:
             registered=(flow.state.get('claim_registration') or {}).get('response')
             if not registered:return None
             reply={'text':registered['message']['text'], 'conversation':self.conversation_view(conv),
-                   'messages':[registered['message']], 'flow':flow_view(flow), 'destination':None, 'navigation':None}
+                   'messages':[registered['message']], 'flow':flow_view(flow), 'destination':'complaints',
+                   'navigation':navigate_in_app('complaints','customer',case_id=case.id)}
             summary=presentation(db,row.user_id,reply,row.locale)
             if not summary:return None
             reply['voiceSummary']=summary

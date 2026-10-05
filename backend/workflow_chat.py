@@ -26,12 +26,12 @@ from .chat_language import wrong_language, language_reply
 from .conversation_closed import require_open
 from .navigation import navigate_in_app
 from .transaction_context import transaction_evidence, transaction_reply
-from .transaction_suggestions import (FINANCIAL_PROBLEMS, confirmation, choose, suggestion_reply,
+from .transaction_suggestions import (FINANCIAL_PROBLEMS, confirmation, review_requested, review_only, choose, suggestion_reply,
                                      browse_request, search_clues, search_navigation, search_reply)
 from .prompt_guard import inspect_prompt, guard_message
 from .query_documents import can_document
 from .query_answers import query_answer
-from .case_followup import case_status_reply
+from .case_followup import case_status_reply, case_status_navigation
 from .query_context import apply_query_context
 from .claim_summary import claim_preview, confirmation_text, preview_token, review_message, NEXT as CLAIM_NEXT
 from .payment_history import context_comparison, comparison_text
@@ -110,6 +110,7 @@ def flow_view(row):
         'transactionSearch': row.state.get('transaction_search'),
         'selectedRequestId': row.state.get('bank_binding', {}).get('request_id'),
         'canDocument': can_document(row),
+        'reviewRequestKey': row.state.get('claim_review_requested') if not row.request_id else None,
         'requestId': row.request_id, 'canRegister': not row.request_id and row.state.get('phase') == 'completed'
                        and value['triage'].get('family') == 'problem' and value['state'] in ('review_in_bank','human_review')
                        and value['jev'].get('intent') in editor.PROBLEM_PORTS}
@@ -331,6 +332,8 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
                 body.locale, thread_id=conv.id, bank_binding=selection, persist=lambda _: None))
     if replacing or (row and row.state.get('claim_preview_required')):
         state['claim_preview_required'] = True
+    state['claim_review_requested'] = (body.requestKey if review_requested(body.message) and not body.pastedText.strip() else
+        row.state.get('claim_review_requested') if row and not new_topic and not replacing and not selection_changed else None)
     state['language'] = body.locale
     for key, value in previous_query.items():
         state.setdefault(key, value)
@@ -353,6 +356,10 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
             raise HTTPException(503, 'bank_unavailable')
         state['context']['bank_evidence'] = evidence
         state['context']['reply'] = case_status_reply(status_read, body.locale)
+    elif reviewing and flow_view(row)['canRegister'] and review_only(body.message) and not body.pastedText.strip():
+        # A request to open the draft must not erase earlier answers through a
+        # redundant model extraction. Corrections still use the context path.
+        state['messages'] = provider_history(state) + [{'role':'user','content':message}]
     elif reviewing and not resume_review(state, message, execution.MAX_REPLIES):
         # Preserve the review and its limits. Starting the interpreter from
         # scratch here would silently lose the contract and reset the limit.
@@ -390,7 +397,7 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
                 ctx['reply'] = ('Abre Detalles, activa Un caso, elige el registro y pulsa Usar selección.',
                                 'Open Details, select A case, choose the record and press Use selection.',
                                 'Abra Detalhes, marque Um caso, escolha o registro e pressione Usar seleção.')[('es','en','pt').index(body.locale)]
-            navigation = navigate_in_app('complaints','customer')
+            navigation = case_status_navigation(statuses[0]) if statuses else navigate_in_app('complaints','customer')
         selected_evidence = next((r['data'] for r in evidence['reads'] if r['tool']=='read-transaction-evidence'), None)
         if selected_evidence and ctx['intent'] == 'request-status' and statuses:
             ctx['reply'] += '\n\n' + ('Movimiento: ', 'Transaction: ', 'Movimentação: ')[('es','en','pt').index(body.locale)] + selected_evidence['transaction']['id']
@@ -450,6 +457,8 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
                 remember_safe_reply(state,ctx['reply'])
     elif not registered and conv.transaction_id and ctx['intent'] in FINANCIAL_PROBLEMS:
         navigation = navigate_in_app('movements','customer',filters={'transaction':conv.transaction_id})
+    if registered:
+        navigation = case_status_navigation(status_read)
     row.state = copy.deepcopy(state)
     # Read tools can autoflush the row before query evidence/reply is attached.
     # Explicitly mark the JSON snapshot so the restored result matches this turn.

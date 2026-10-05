@@ -92,6 +92,10 @@ def presentation(db, owner, reply, locale):
         text+=pick(locale,f" La base del plan es {money(base,tx['currency'],locale)}; el recibo {'la supera en '+money(delta,tx['currency'],locale) if delta>0 else 'no la supera'}.",
                    f" The plan base is {money(base,tx['currency'],locale)}; the bill {'exceeds it by '+money(delta,tx['currency'],locale) if delta>0 else 'does not exceed it'}.",
                    f" A base do plano é {money(base,tx['currency'],locale)}; a conta {'supera essa base em '+money(delta,tx['currency'],locale) if delta>0 else 'não supera essa base'}.")
+        if c.get('status') == 'sufficient':
+            text+=pick(locale,f" Tus {c['count']} pagos anteriores promedian {money(c['averageMinor'],tx['currency'],locale)}.",
+                       f" Your {c['count']} previous payments average {money(c['averageMinor'],tx['currency'],locale)}.",
+                       f" Seus {c['count']} pagamentos anteriores têm média de {money(c['averageMinor'],tx['currency'],locale)}.")
         text+=pick(locale,' Falta verificar extras o cambios aceptados.',' Accepted extras or plan changes still need verification.',' Ainda é preciso verificar extras ou alterações aceitas.')
     elif c.get('status')=='sufficient':
         base=c['averageMinor'];delta=abs(tx['amountMinor'])-base
@@ -110,9 +114,9 @@ def presentation(db, owner, reply, locale):
     if registered:
         text=registered
     elif flow.get('canRegister'):
-        text+=pick(locale,' Te propongo enviarlo a un supervisor. Revisa el resumen y confirma el registro aquí; tendrás un número de expediente en Mis reclamos.',
-                   ' I suggest sending it for supervisor review. Review the summary and confirm here to receive a case number in My complaints.',
-                   ' Proponho encaminhar para análise de um supervisor. Revise o resumo e confirme aqui para receber um protocolo em Minhas reclamações.')
+        text+=pick(locale,' Preparé el borrador para revisión de un supervisor. Puedes agregar detalles antes de confirmar el envío; después tendrás tu expediente en Mis reclamos.',
+                   ' I prepared the draft for supervisor review. You can add details before confirming submission; then you will have your case in My complaints.',
+                   ' Preparei o rascunho para análise de um supervisor. Pode acrescentar detalhes antes de confirmar o envio; depois terá seu protocolo em Minhas reclamações.')
         if tx['status']=='pending':text+=pick(locale,' El pago sigue pendiente; no he devuelto ni cancelado dinero.',
                 ' The payment is still pending; I have not refunded or cancelled it.',' O pagamento segue pendente; não efetuei devolução ou cancelamento.')
     elif 'difference' in flow.get('missing_fields',[]):

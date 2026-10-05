@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from './api';
@@ -8,6 +8,7 @@ import type { Locale } from './i18n';
 import type { Message } from './types';
 
 export type FlowResult = { canDocument?: boolean; execution: {phase: string}; workflow_id: string; workflow_revision: number; state: string; reply: string;
+  reviewRequestKey?: string | null;
   suggestedTransaction?: {id:string} | null;
   transactionSearch?: {kind:'browse'|'suggestion'|'no_match';count:number;hasMore:boolean} | null;
   selectedRequestId?: string | null;
@@ -18,7 +19,7 @@ export type FlowResult = { canDocument?: boolean; execution: {phase: string}; wo
 export type ClaimRegistration = { id: string; message: Message; summary: string; nextStep: string; flow: FlowResult };
 type ClaimPreview = { summary: string; previewToken: string; intent: string; transactionId: string | null; operationLabel: string; nextStep: string };
 
-export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; onRegistered: (claim: ClaimRegistration) => void }) {
+export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false, comparison }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; comparison?: ReactNode; onRegistered: (claim: ClaimRegistration) => void }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const summaryLabelId = useId();
   const [review, setReview] = useState(false); const [details, setDetails] = useState(''); const [editing, setEditing] = useState(false);
@@ -33,6 +34,14 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
     } catch(e) { setError('error.' + (e instanceof ApiError ? e.code : 'generic')); }
     finally { setBusy(false); }
   }
+  const openedReview = useRef<string | null>(null);
+  useEffect(() => {
+    const key = result.reviewRequestKey ? conversationId + ':' + result.reviewRequestKey : null;
+    if (!readOnly && result.canRegister && key && openedReview.current !== key) {
+      openedReview.current = key;
+      if (!review) void loadPreview();
+    }
+  }, [conversationId, result.reviewRequestKey, result.canRegister, readOnly]);
   async function register() {
     if (busy || !preview || details.trim().length < 10) return; setBusy(true); setError('');
     const body = {details:details.trim(), confirmed:true, locale, previewToken:preview.previewToken};
@@ -56,6 +65,7 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
       <p>{t('chatClaim.reviewHint')}</p>
       {busy && !preview && <p role="status">{t('loading')}</p>}
       {preview && <>
+        {comparison}
         {preview.operationLabel && <p className="chat-claim-operation">{preview.operationLabel}</p>}
         {editing ? <label><span id={summaryLabelId}>{t('chatClaim.summary')}</span><textarea aria-labelledby={summaryLabelId} autoFocus required minLength={10} maxLength={1000} rows={5} value={details} disabled={busy} onChange={e => setDetails(e.target.value)}/></label>
           : <section className="chat-claim-summary" aria-labelledby={summaryLabelId}><h3 id={summaryLabelId}>{t('chatClaim.summary')}</h3><p>{details}</p></section>}

@@ -17,10 +17,14 @@ class NavigateInput(BaseModel):
     destination: Destination
     serviceId: str | None = None
 
-def navigate_in_app(destination, role, service_id=None, *, filters=None):
+def navigate_in_app(destination, role, service_id=None, *, filters=None, case_id=None):
     command=NavigateInput(destination=destination,serviceId=service_id)
     if role!="customer":
         raise PermissionError("forbidden")
+    if case_id is not None:
+        if destination != 'complaints' or service_id or filters is not None or not isinstance(case_id,str) or not re.fullmatch(r'NQ-[A-Za-z0-9-]{1,61}',case_id):
+            raise ValueError('Invalid case')
+        return {'tool':'navigate_in_app','destination':'complaints','caseId':case_id,'route':'/complaints?'+urlencode({'case':case_id})}
     if filters is not None:
         if destination!='movements' or service_id or not filters or set(filters)-{'start','end','product','transaction','q','status','category','amountMinor'}:raise ValueError('Invalid filters')
         if bool(filters.get('start'))!=bool(filters.get('end')):raise ValueError('Incomplete period')
