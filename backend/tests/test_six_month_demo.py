@@ -103,3 +103,64 @@ def test_partial_history_requires_inspection_instead_of_recreation(setup):
 def test_manifest_normalizes_document_without_default_credentials():
     assert validate_manifest(manifest())['document']=='SIX001TEST'
     with pytest.raises(ValueError): validate_manifest({})
+
+
+def test_sync_updates_only_fixture_identity_labels_and_invalidates_old_access(setup):
+    from backend.models import Session, CardProfile
+    from backend.security import hasher, verify
+    from sqlalchemy import select, func
+    _, engine = setup
+    cfg = manifest()
+    with make_sessions(engine)() as db:
+        with db.begin(): ensure_demo(db, cfg)
+        user = db.get(User,cfg['profileId'])
+        user.name='Old Name';user.email='old-demo@example.com';user.identity_number='OLDTEST'
+        user.password_hash=hasher.hash('Another-private-password!')
+        db.get(Product,cfg['profileId']+'-credit').card_kind=None
+        db.get(CardProfile,cfg['profileId']+'-credit').status='blocked'
+        db.get(Product,cfg['profileId']+'-account').balance_minor+=10000
+        db.get(Transaction,cfg['profileId']+'-tx-0004').merchant='Old provider'
+        db.add(Session(token_hash='a'*64,user_id=user.id,csrf_token='b'*64,expires_at=9999999999))
+        db.commit()
+        before=other_records_hash(db,[user.id])
+        original=[(t.id,t.amount_minor,t.occurred_at,t.status) for t in db.scalars(select(Transaction).where(Transaction.user_id==user.id).order_by(Transaction.id))]
+        assert ensure_demo(db,cfg,synchronize=True)['updated'];db.commit()
+        assert (user.name,user.email,user.identity_number)==('Sample Owner','six-month@example.com','SIX001TEST')
+        assert verify(cfg['password'],user.password_hash)
+        assert db.scalar(select(func.count()).select_from(Session).where(Session.user_id==user.id))==0
+        assert db.get(Product,user.id+'-credit').card_kind=='credit'
+        assert db.get(CardProfile,user.id+'-credit').status=='blocked'
+        assert db.get(Product,user.id+'-account').balance_minor==15465004
+        assert [(t.id,t.amount_minor,t.occurred_at,t.status) for t in db.scalars(select(Transaction).where(Transaction.user_id==user.id).order_by(Transaction.id))]==original
+        assert other_records_hash(db,[user.id])==before
+        encoded=user.password_hash
+        assert not ensure_demo(db,cfg,synchronize=True)['updated'];db.commit()
+        assert user.password_hash==encoded
+        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.action=='demo_profile_synchronized'))==1
+
+
+def test_sync_conflicting_identity_rolls_back_without_touching_users(setup):
+    _,engine=setup;cfg=manifest()
+    with make_sessions(engine)() as db:
+        with db.begin(): ensure_demo(db,cfg)
+        before=other_records_hash(db,[]);db.rollback()
+        cfg['email']='andrea@nexqori.com'
+        with pytest.raises(ValueError):
+            with db.begin(): ensure_demo(db,cfg,synchronize=True)
+        assert other_records_hash(db,[])==before
+
+
+def test_configured_json_precedes_file_and_missing_required_config_fails(tmp_path):
+    import json
+    from backend.six_month_demo import configured_manifest
+    missing=str(tmp_path/'missing.json')
+    env={'NEXQORI_DEMO_REQUIRED':'true','NEXQORI_DEMO_PROFILE_FILE':missing}
+    with pytest.raises(ValueError): configured_manifest(env)
+    cfg=manifest()
+    assert configured_manifest({**env,'NEXQORI_DEMO_PROFILE_JSON':json.dumps(cfg)})==validate_manifest(cfg)
+    assert configured_manifest({**env,'NEXQORI_DEMO_ENABLED':'false'}) is None
+    path=tmp_path/'private.json';path.write_text(json.dumps(cfg),encoding='utf-8')
+    assert configured_manifest({**env,'NEXQORI_DEMO_PROFILE_FILE':str(path)})==validate_manifest(cfg)
+    with pytest.raises(ValueError): configured_manifest({**env,'NEXQORI_DEMO_PROFILE_JSON':'x'*16385})
+    with pytest.raises(ValueError): configured_manifest({**env,'NEXQORI_DEMO_PROFILE_JSON':'invalid'})
+    with pytest.raises(ValueError): configured_manifest({'NEXQORI_DEMO_ENABLED':'typo'})

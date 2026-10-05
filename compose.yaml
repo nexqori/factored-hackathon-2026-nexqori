@@ -36,6 +36,11 @@ services:
       SECOND_CUSTOMER_PASSWORD: ${SECOND_CUSTOMER_PASSWORD:?Run npm run setup}
       APP_ORIGINS: ${APP_ORIGINS:-http://localhost:5180,http://127.0.0.1:5180}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Private JSON is supplied by the deployment environment, never committed.
+      # The mounted .local/demo/profile.private.json remains a local fallback.
+      NEXQORI_DEMO_ENABLED: ${NEXQORI_DEMO_ENABLED:-true}
+      NEXQORI_DEMO_REQUIRED: "true"
+      NEXQORI_DEMO_PROFILE_JSON: ${NEXQORI_DEMO_PROFILE_JSON:-}
       CARD_PROVIDER: local_fixture
       BANK_ASSISTANT_FLOW: "true"
       BANK_VOICE_ENABLED: "false"
