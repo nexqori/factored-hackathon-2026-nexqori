@@ -1,0 +1,106 @@
+/* Administrative workbench: the queue and the selected section scroll independently. */
+.admin-inbox .inbox-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:0 0 18px}
+.inbox-heading .eyebrow{font-size:.66rem;color:var(--nq-primary);letter-spacing:.12em}
+.inbox-heading h1{font:400 1.9rem/1.2 Georgia,serif;letter-spacing:-.035em;margin:5px 0 6px}
+.inbox-heading p{font-size:.85rem;color:var(--nq-muted);margin:0}
+.inbox-heading>.button{flex-shrink:0}
+.admin-inbox .inbox-overview{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.inbox-overview button{display:flex;align-items:center;gap:10px;padding:8px 14px;min-height:44px;border:1px solid var(--nq-border);background:white;border-radius:10px;color:var(--nq-muted);font-size:.79rem}
+.inbox-overview strong{font-size:1.05rem;color:var(--nq-text);font-variant-numeric:tabular-nums}
+.inbox-overview button[aria-pressed=true]{background:var(--nq-soft);border-color:var(--nq-primary);color:var(--nq-primary)}
+.admin-inbox .inbox-filters{grid-template-columns:minmax(200px,1.25fr) minmax(160px,1fr) minmax(140px,.65fr);gap:12px;margin-bottom:18px}
+.admin-inbox .inbox-filters>label{grid-column:auto;font-size:.75rem;gap:6px}
+.inbox-search{display:flex;align-items:center;padding-left:12px;border:1px solid #B6A79C;border-radius:10px;background:white;color:var(--nq-muted)}
+.admin-inbox .inbox-search input{border:0;background:transparent;min-width:0}
+.admin-inbox .inbox-filters input,.admin-inbox .inbox-filters select{font-size:.82rem;min-height:44px}
+.admin-inbox .inbox-workspace{grid-template-columns:minmax(245px,300px) minmax(0,1fr);gap:18px;height:calc(100dvh - 450px);min-height:420px;align-items:stretch}
+.admin-inbox .inbox-list{display:flex;flex-direction:column;max-height:none;overflow:hidden;border:1px solid var(--nq-border);border-radius:16px;background:#fff}
+.inbox-list-title{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--nq-border)}
+.inbox-list-title h2{font-size:.88rem;margin:0}
+.inbox-rows{padding:8px;flex:1;overflow:auto;min-height:0;scrollbar-width:thin}
+.admin-inbox .claim-choice{padding:12px;border:1px solid transparent;border-radius:10px;gap:5px;margin:0 0 5px}
+.admin-inbox .claim-choice.selected{border:1px solid var(--nq-primary);background:var(--nq-soft);box-shadow:inset 3px 0 var(--nq-primary)}
+.admin-inbox .claim-choice>div{justify-content:space-between;gap:6px}
+.admin-inbox .claim-choice code{font-size:.64rem}
+.admin-inbox .claim-choice>strong{font-size:.85rem;line-height:1.4}
+.admin-inbox .claim-choice>span{font-size:.73rem;color:var(--nq-muted)}
+.admin-inbox .claim-choice p{-webkit-line-clamp:1;font-size:.72rem;line-height:1.45}
+.admin-inbox .claim-choice .badge{font-size:.62rem;padding:4px 6px}
+.inbox-pagination{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--nq-border);background:var(--nq-background);font-size:.77rem;gap:10px}
+.inbox-pagination .icon-button,.inbox-case-nav .icon-button{min-width:44px;min-height:44px;border:1px solid var(--nq-border);border-radius:9px}
+.admin-inbox .inbox-detail{display:flex;flex-direction:column;border-radius:16px;min-height:0}
+.admin-inbox .claims-detail-header{padding:13px 20px;gap:12px;background:var(--nq-background);flex-shrink:0}
+.admin-inbox .claims-detail-header h2{font-size:1rem;margin:4px 0 0;line-height:1.35}
+.admin-inbox .claims-detail-header .eyebrow{font-size:.64rem;letter-spacing:.04em;color:var(--nq-muted)}
+.inbox-case-nav{display:flex;gap:6px;margin-left:auto}
+.admin-inbox .inbox-back{display:none}
+.admin-inbox .claim-trace{padding:0;display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
+.admin-inbox .claim-trace>.trace-toolbar{display:none}
+.admin-inbox .trace-tabs{margin:0;padding:0 12px;flex-shrink:0;gap:0;background:white}
+.admin-inbox .trace-tabs button{padding:12px 10px;font-size:.77rem;min-height:48px}
+.admin-inbox .trace-tabs button[data-trace-tab=decision]{color:var(--nq-primary);font-weight:700}
+.admin-inbox .trace-tabs button:last-child{margin-left:auto;font-size:.7rem}
+.admin-inbox .trace-body{padding:0 22px 18px;overflow:auto;flex:1;min-height:0;scrollbar-width:thin;scroll-padding:16px}
+.admin-inbox .trace-body [hidden]{display:none!important}
+.admin-inbox .trace-current{margin:18px 0;padding:14px 16px}
+.admin-inbox .trace-current h3{font-size:.96rem;margin:5px 0}
+.admin-inbox .trace-current .eyebrow{font-size:.64rem}
+.admin-inbox .trace-current p{font-size:.8rem}
+.admin-inbox .trace-facts{gap:12px 20px;margin:16px 0;grid-template-columns:repeat(2,minmax(0,1fr))}
+.admin-inbox .trace-section{padding:16px 0}
+.admin-inbox .trace-section h3{font-size:.9rem;margin-bottom:10px}
+.admin-inbox .trace-section p{font-size:.81rem}
+.admin-inbox .trace-body>div>.trace-section:first-child{border-top:0}
+.inbox-summary-actions{display:flex;gap:10px;flex-wrap:wrap;padding:10px 0 6px}
+.inbox-summary-actions .button{font-size:.8rem}
+.admin-inbox .claim-stage-list{gap:6px;margin:14px 0}
+.admin-inbox .claim-stage-list li{padding:6px 8px;font-size:.72rem;border-radius:8px}
+.admin-inbox .admin-case-decision>.case-review-start{margin-top:12px;gap:14px}
+.admin-inbox .case-review-start .button{align-self:flex-start;min-width:200px}
+.admin-inbox .case-review-start textarea{min-height:85px}
+.admin-inbox .trace-json{max-height:none;font-size:.72rem}
+.admin-inbox .claims-empty{margin:auto;padding:32px;max-width:470px}
+.admin-inbox .claims-empty h2{font:400 1.55rem Georgia,serif;margin:20px 0 10px}
+.admin-inbox .claims-empty p{font-size:.85rem;line-height:1.7}
+@media(min-width:1500px){.admin-inbox .inbox-workspace{grid-template-columns:320px minmax(0,1fr)}}
+@media(max-width:850px){
+ .admin-inbox .inbox-workspace{grid-template-columns:1fr;height:auto;min-height:0}
+ .admin-inbox .inbox-list{min-height:400px}
+ .admin-inbox .inbox-detail{display:none}
+ .admin-inbox.has-selection .inbox-list,.admin-inbox.has-selection .inbox-heading,.admin-inbox.has-selection .inbox-overview,.admin-inbox.has-selection .inbox-filters{display:none}
+ .admin-inbox.has-selection .inbox-detail{display:flex;height:calc(100dvh - 122px);min-height:420px}
+ .admin-inbox .inbox-back{display:inline-flex;padding:8px;font-size:.75rem}
+ .admin-inbox .inbox-filters{grid-template-columns:1fr 1fr}
+ .admin-inbox .inbox-filters>label:first-child{grid-column:1/-1}
+ .admin-inbox .inbox-heading{align-items:flex-start}
+ .inbox-heading h1{font-size:1.6rem}
+ .inbox-heading>.button{font-size:.73rem;padding:8px 10px}
+ .admin-inbox .claims-detail-header{flex-wrap:wrap;padding:12px}
+ .admin-inbox .claims-detail-header>div:not(.inbox-case-nav){flex:1;min-width:110px}
+ .admin-inbox .trace-body{padding:0 16px 14px}
+ .admin-inbox .trace-tabs{overflow-x:auto;flex-wrap:nowrap;padding:0 6px;scrollbar-width:thin}
+ .admin-inbox .trace-tabs button{white-space:nowrap;flex-shrink:0}
+ .admin-inbox .trace-tabs button:last-child{margin-left:0}
+ .admin-inbox .trace-facts{gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-inbox .claim-stage-list{gap:4px}
+ .admin-inbox .claim-stage-list li{font-size:.67rem;padding:5px 6px}
+}
+@media(prefers-reduced-motion:reduce){.admin-inbox *{scroll-behavior:auto}}
+
+.admin-inbox .trace-tabs button[data-trace-tab=json]{margin-left:auto}
+.admin-inbox .trace-tabs button.trace-refresh{margin-left:0;min-width:44px;justify-content:center}
+@media(max-width:850px){.admin-inbox .trace-tabs button[data-trace-tab=json]{margin-left:0}}
+
+@media(max-width:600px){.admin-inbox .inbox-back{min-width:44px;min-height:44px;justify-content:center}.admin-inbox .inbox-back span{display:none}}
+
+@media(min-width:851px){
+ .workspace-body.admin-layout:has(.admin-inbox){height:calc(100dvh - 83px);padding:24px;box-sizing:border-box}
+ .admin-layout:has(.admin-inbox)>main{height:100%;min-height:0;display:flex;flex-direction:column}
+ .admin-layout:has(.admin-inbox) .main-footer{margin-top:12px;flex-shrink:0}
+ .admin-inbox{display:flex;flex-direction:column;flex:1;min-height:0}
+ .admin-inbox>.inbox-heading,.admin-inbox>.inbox-overview,.admin-inbox>.inbox-filters{flex-shrink:0}
+ .admin-inbox .inbox-workspace{height:auto;min-height:280px;flex:1}
+}
+
+.admin-inbox .inbox-rows .claim-choice{height:95px;margin-bottom:5px;overflow:hidden;justify-content:center}
+.admin-inbox .inbox-rows .claim-choice>strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}

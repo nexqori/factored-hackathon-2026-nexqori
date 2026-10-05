@@ -74,6 +74,7 @@ try {
   await page.locator('.claim-choice').click();
   await page.locator('[data-trace-ready=true]').waitFor();
   await expect(page.locator('.trace-current')).toContainText(copy.es['trace.outcome.refund_pending']);
+  await page.locator('[data-trace-tab=decision]').click();
   await expect(page.locator('.admin-case-decision')).toBeVisible();
   await expect(page.locator('.admin-case-decision').getByRole('button', { name: copy.es['claimStage.action.delivered'], exact: true })).toBeDisabled();
   await expect(page.locator('.admin-case-decision .refund-panel select')).toHaveCount(0);
@@ -117,7 +118,7 @@ try {
       await page.locator('[data-trace-ready=true]').waitFor();
       await expect(page.locator('.trace-events')).toContainText(t['auditActions.case_document_opened']);
       await expect(page.locator('.trace-events')).toContainText(t['auditActions.case_document_downloaded']);
-      await page.getByRole('button', { name: t['trace.json'], exact: true }).click();
+      await page.getByRole('button', { name: t['inbox.technical'], exact: true }).click();
       const json = JSON.parse(await page.locator('.trace-json').innerText());
       assert.equal(json.request.userId, result.userId); assert.equal(json.externalProcessorLogs, false);
       await page.getByRole('button', { name: t['trace.simple'], exact: true }).click();
