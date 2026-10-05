@@ -1085,7 +1085,7 @@
 - Siguiente paso: Bryan elige la opción para implementarla en el panel de llamada.
 
 ## Frente: Nexqori — hallazgos y soluciones durante la llamada
-- Fecha: 2026-10-04 23:31 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado.
+- Fecha: 2026-10-04 23:33 -0500, America/Lima. E:/factoredai; rama codex/llamada-panel-animado.
 - Pedido vigente: resumen hablado, detalle por botón con comparación, revisión por supervisor y expediente en Reclamos; guard de Jev. Al terminar, crear PR hacia main y entregar accesos de Bryan y administración para las pruebas.
 - [x] Corregir las causas observadas: resumen determinista con importe/fecha/estado, contraste de plan o historial y siguiente paso; detalle y gráfico sólo por botón. Confirmación en pantalla y expediente anunciado una vez sin terminar la llamada. La diferencia no equivale a fraude, devolución ni anulación.
 - [x] Buscar por pistas parciales aunque falte precisar el contrato; confirmar antes de vincular. Al aclarar «me cobraron de más», Jev reevalúa el tipo conservando movimiento y conversación. Condiciones registradas aportan la diferencia sin repetir preguntas de datos conocidos.
@@ -1093,8 +1093,8 @@
 - [x] Validar 499 pruebas API antes del último ajuste; 33 pruebas dirigidas tras el ajuste final, 199 del LAB, 41 frontend y build. Voz controlada ES/EN/PT: 12 axe sin incidencias (voice-ui-AnE1h5); nueve conversaciones y 59 axe (bank-chat-wC26Ba), nueve recorridos de contexto LAB y 18 axe. Proveedores reales en SQLite aislado: voice-replay-l1llf2ry/report.json confirma propuesta → selección → cobro incorrecto y diferencia 160 MXN. Un ensayo anterior devolvió error de formato del proveedor: se conserva validación estricta y se explica cómo reintentar.
 - [x] Desplegar con compose.voice.yaml, cero llamadas activas antes y hash de registros idéntico tras el reinicio. API/web/db saludables. test:ui: 56 vistas, nueve navegaciones, cinco axe; test:experience: cinco axe. test:payments: tres idiomas, 15 axe, un débito por recibo incluso al reintentar y solicitudes intactas (payments/ec12ca644560/report.json).
 - [x] Documentar preparación reproducible de Bryan en README y verificar sus credenciales y las de administración contra los hashes persistidos, sin cambios a cuentas o contraseñas. Entrega local: .local/ux-users/bryan-demo/ACCESOS.private.md. Código compartido: scripts/demo-access.mjs y scripts/prepare-bryan-demo.mjs.
-- [ ] Crear y adjuntar el PR de la integración hacia main; no fusionar todavía.
+- [x] Crear y adjuntar [PR #8](https://github.com/nexqori/nexqori/pull/8) hacia main. Abierto, sin fusionar. Commits separados 1bc63ab (administración), f220fbe (voz/guard) y a3feb5c (demo/accesos). Comprobaciones de GitHub iniciadas; resultado todavía pendiente al registrar este avance.
 - [ ] Prueba auditiva manual de la nueva respuesta y acento. Codex no inició llamadas facturadas; los ensayos de voz sustituyen transporte/audio. SMTP sigue sin configurar. No se añadió cancelación de pagos ni devolución parcial.
 - Bloqueo resuelto con alternativa: revisión automática rechazó publicar y aplicar una contraseña fija de administrador por dejar acceso reutilizable en GitHub. Se entregan las claves existentes sólo en guía privada por instalación; README contiene usuarios y comandos, sin claves.
 - Último avance: implementado, desplegado y validado localmente; commits separados de administración y voz. Datos manuales preservados.
-- Siguiente paso: abrir PR, entregar enlaces y probar desde una conversación nueva con Bryan; administrador revisa el expediente en otro perfil del navegador.
+- Siguiente paso: probar desde una conversación nueva con Bryan; administrador revisa el expediente en otro perfil del navegador. Revisar las comprobaciones de GitHub y la llamada manual antes de fusionar o añadir los siguientes casos.
