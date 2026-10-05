@@ -1,3 +1,5 @@
+import { productLabelKey } from './productLabels';
+import type { CardKind } from './types';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +19,7 @@ type Relation = 'request' | 'transaction' | 'conversation' | 'product';
 type Trace = {
   request: RequestCase; customer: { id: string; name: string }; observedAt: string; outcome: string;
   transaction: { id: string; productId: string; merchant: string; amountMinor: number; currency: string; status: string; date: string } | null;
-  product: { id: string; type: string; last4: string; status: string | null } | null;
+  product: { id: string; cardKind?: CardKind | null; type: string; last4: string; status: string | null } | null;
   refund: { id: string; status: string; amountMinor: number; currency: string; destinationLast4: string; decisionNote: string | null; decidedAt: string | null; decidedBy: { id: string; name: string } | null; creditTransactionId: string | null } | null;
   documentCount: number | null;
   reviewContext?: { summary: Record<Locale, string>; missingEvidence: string[]; canStartReview: boolean; canDecideRefund: boolean; financialEffect: 'credited' | 'none' };
@@ -108,7 +110,7 @@ export function ClaimTrace({ request, admin = false, compact = false, onChanged,
       <section className="trace-section"><h3>{t('trace.evidence')}</h3><p className="muted">{t('trace.evidenceHint')}</p>{trace.transaction ? <dl className="trace-facts">
         <div><dt>{t('linkedMovement')}</dt><dd><code>{trace.transaction.id}</code></dd></div><div><dt>{t('trace.merchant')}</dt><dd>{trace.transaction.merchant}</dd></div>
         <div><dt>{t('amount')}</dt><dd>{formatMoney(trace.transaction.amountMinor, locale, trace.transaction.currency)}</dd></div><div><dt>{t('status')}</dt><dd><Badge status={trace.transaction.status} /></dd></div>
-        <div><dt>{t('date')}</dt><dd>{timestamp(trace.transaction.date)}</dd></div>{trace.product && <div><dt>{t('product')}</dt><dd>{t(trace.product.type)} · •••• {trace.product.last4}{trace.product.status && <span> · {t(trace.product.status)}</span>}</dd></div>}
+        <div><dt>{t('date')}</dt><dd>{timestamp(trace.transaction.date)}</dd></div>{trace.product && <div><dt>{t('product')}</dt><dd>{t(productLabelKey(trace.product))} · •••• {trace.product.last4}{trace.product.status && <span> · {t(trace.product.status)}</span>}</dd></div>}
       </dl> : <p>{t('trace.noMovement')}</p>}</section>
       </div><div hidden={!showDecision}>
       {admin && !compact && <AdminCaseDecision request={trace.request} onChanged={changed}/>}

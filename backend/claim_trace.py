@@ -96,7 +96,7 @@ def trace_router(request_view, audit_view, conversation_view):
             "transaction": ({"id": transaction.id, "productId": transaction.product_id, "merchant": transaction.merchant,
                 "amountMinor": transaction.amount_minor, "currency": transaction.currency, "status": transaction.status,
                 "date": iso_utc(transaction.occurred_at)} if transaction else None),
-            "product": ({"id": product.id, "type": product.type, "last4": product.last4,
+            "product": ({"id": product.id, "type": product.type, "cardKind": product.card_kind, "last4": product.last4,
                          "status": card.status if card else None} if product else None),
             "refund": ({**refund_view(db, refund), "decidedBy": {"id": decision_actor.id, "name": decision_actor.name}
                         if decision_actor else None} if refund else None),

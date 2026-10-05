@@ -47,9 +47,27 @@ def test_merge_upgrades_both_contributors_without_losing_feedback(tmp_path, monk
             db.execute(text("INSERT INTO chat_feedback(id,user_id,submission_id,metric,score,locale,form_duration_ms,conversation_duration_ms,created_at) VALUES('old-score','feedback-owner','00000000-0000-0000-0000-000000000001','nps',9,'es',1200,2000,'2026-10-03 12:00:00')"))
     command.upgrade(config, 'head')
     with engine.connect() as db:
-        assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == ['fa6107d935b2']
+        assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == ['fb7218c04a63']
         assert len(inspect(db).get_check_constraints('service_agreements')) == 3
         assert len(inspect(db).get_check_constraints('chat_feedback')) == 5
         if revision == 'b37d1f4c9a20':
             assert db.execute(text("SELECT score,form_duration_ms,conversation_duration_ms FROM chat_feedback WHERE id='old-score'")).one() == (9,1200,2000)
+    engine.dispose()
+
+
+def test_card_kind_upgrade_preserves_legacy_products(tmp_path, monkeypatch):
+    url = 'sqlite:///' + str(tmp_path / 'card-kind.sqlite')
+    monkeypatch.setenv('DATABASE_URL', url)
+    config = Config('alembic.ini')
+    command.upgrade(config, 'fa6107d935b2')
+    engine = create_engine(url)
+    with engine.begin() as db:
+        db.execute(text("INSERT INTO users(id,email,name,password_hash,role,locale,text_size,created_at) VALUES('legacy','legacy@example.com','Legacy','unchanged','customer','es','medium','2026-10-05 12:00:00')"))
+        db.execute(text("INSERT INTO products(id,user_id,type,last4,balance_minor,currency) VALUES('legacy-card','legacy','card','4101',NULL,'MXN'),('legacy-account','legacy','account','4103',123456,'MXN')"))
+    command.upgrade(config, 'head')
+    with engine.connect() as db:
+        assert db.execute(text('SELECT id,type,last4,balance_minor,card_kind FROM products ORDER BY id')).all() == [
+            ('legacy-account','account','4103',123456,None), ('legacy-card','card','4101',None,None)]
+        assert 'ck_products_card_kind' in {c['name'] for c in inspect(db).get_check_constraints('products')}
+        assert len(inspect(db).get_check_constraints('products')) == 3
     engine.dispose()

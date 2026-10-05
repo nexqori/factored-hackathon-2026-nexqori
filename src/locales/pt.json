@@ -1,4 +1,6 @@
 {
+  "creditCard": "Cartão de crédito",
+  "debitCard": "Cartão de débito",
   "auditActions.attention_resolved": "Resolução confirmada",
   "trace.event.attention_resolved": "A solução foi registrada e o encerramento foi agendado.",
   "auditActions.attention_closed_by_timer": "Encerramento automático",

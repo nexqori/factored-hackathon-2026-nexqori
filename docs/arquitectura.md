@@ -24,7 +24,7 @@ Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Com
 | --- | --- |
 | users | Correo y documento únicos, Argon2, rol cliente/admin, idioma es/en/pt y tamaño de texto. |
 | sessions | Hash de token opaco, token CSRF, caducidad fija de 8 horas. |
-| products | Titular, tipo, últimos cuatro dígitos, saldo en unidades menores, moneda MXN. |
+| products | Titular, tipo, últimos cuatro dígitos, saldo en unidades menores, moneda MXN. `card_kind` opcional: `credit` o `debit` sólo para tarjetas. |
 | card_profiles | Tarjeta/titular y cuenta de abono por FK compuesta, vigencia, estado active/blocked e idempotencia del bloqueo. Sin PAN ni CVV almacenado. |
 | transactions | Titular y producto coherentes por FK compuesta; importe entero y estado. |
 | requests | Titular, servicio de catálogo, movimiento opcional, cuenta de origen con FK compuesta, datos específicos JSON, detalle, idempotencia y estado. |
@@ -85,3 +85,9 @@ Para producción se necesitan decisiones y servicios específicos: identidad/MFA
 El catálogo versionado en `backend/service_catalog.json` es compartido por API y validación de navegación del cliente. Cambiarlo requiere validación y reconstrucción; no es un CMS. La búsqueda tolera acentos, nombres y sinónimos ES/EN/PT. La documentación de [catálogo](catalogo-servicios.md) conserva la procedencia y los límites. La voz es opcional mediante `compose.voice.yaml`; ver [llamadas](voz-gpt-live.md). El despliegue con subdominio usa [Compose y HTTPS en AWS](despliegue-aws-compose.md).
 
 Tarjetas: [contratos, procedencia y límites del proveedor local](tarjetas-y-dataset.md). Procedimientos: [tabla y contratos de atención](contratos-atencion.md). Bloqueo, devolución y consultas separadas: [acciones de problemas](acciones-problemas.md).
+
+### Tipo de tarjeta
+
+La migración `fb7218c04a63` añade `products.card_kind`. Las tarjetas existentes conservan `NULL` cuando no se conoce su tipo; no se deduce por ID, terminación ni movimientos. `/api/cards`, `/api/bootstrap` y el detalle del reclamo exponen `cardKind`. React presenta Tarjeta de crédito / Tarjeta de débito y sus equivalentes EN/PT en tarjetas, productos, movimientos y selectores; el valor desconocido conserva la etiqueta genérica. El campo clasifica el producto y no cambia sus permisos, saldos ni reglas de pago.
+
+Verificación específica: `node scripts/nexqori-card-kinds.mjs` prepara un titular separado de verificación y comprueba ambas etiquetas en ES/EN/PT, escritorio y móvil, además de filtros de movimientos y accesibilidad. Los perfiles manuales se conservan.
