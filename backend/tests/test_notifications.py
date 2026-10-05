@@ -167,8 +167,8 @@ def test_smtp_uses_tls_auth_and_correct_recipient_without_exposing_failure(monke
         def login(self,user,password): steps.append('login'); assert user=='sender@example.com' and password=='private-test-password'
         def send_message(self,message):
             steps.append('send')
-            assert message['To']=='recipient@example.net' and message['From']=='sender@example.com'
-            assert '123456' in message.get_content() and '5511' in message.get_content()
+            assert message['To']=='recipient@example.net' and str(message['From'])=='Nexqori <sender@example.com>'
+            assert '123456' in message.get_body(preferencelist=('plain',)).get_content() and '5511' in message.get_body(preferencelist=('plain',)).get_content()
             return {}
     monkeypatch.setattr(notifications.smtplib,'SMTP',SMTP)
     notifications.send_code('recipient@example.net','123456','card_block','es','5511')
@@ -177,3 +177,30 @@ def test_smtp_uses_tls_auth_and_correct_recipient_without_exposing_failure(monke
     with pytest.raises(HTTPException) as error:
         notifications.send_code('recipient@example.net','123456','card_block','es','5511')
     assert error.value.detail == 'mail_unavailable'
+
+
+@pytest.mark.parametrize('locale', ['es','en','pt'])
+def test_branded_email_has_plain_alternative_and_escaped_html(monkeypatch,locale):
+    from backend import notifications
+    monkeypatch.setenv('MAIL_SMTP_HOST','smtp.gmail.com')
+    monkeypatch.setenv('MAIL_SMTP_USER','sender@example.com')
+    monkeypatch.setenv('MAIL_SMTP_PASSWORD','private-test-password')
+    monkeypatch.delenv('MAIL_FROM',raising=False)
+    monkeypatch.setenv('MAIL_SMTP_SECURITY','starttls')
+    sent=[]
+    class SMTP:
+        def __init__(self,*args,**kwargs):pass
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def starttls(self,**kwargs):pass
+        def login(self,*args):pass
+        def send_message(self,message):sent.append(message);return {}
+    monkeypatch.setattr(notifications.smtplib,'SMTP',SMTP)
+    notifications.send_code('recipient@example.net','123456','card_block',locale,'<img src=x>')
+    message=sent[0];plain=message.get_body(preferencelist=('plain',)).get_content()
+    html=message.get_body(preferencelist=('html',)).get_content()
+    assert message.get_content_type()=='multipart/alternative'
+    assert '123456' in plain and '123456' in html
+    assert 'nexqori.' in html and '#9A4B32' in html and '#F2D8C8' in html
+    assert '<img src=x>' not in html and '&lt;img src=x&gt;' in html
+    assert 'private-test-password' not in str(message)

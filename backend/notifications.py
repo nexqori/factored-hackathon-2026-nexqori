@@ -6,6 +6,8 @@ import smtplib
 import ssl
 import time
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
+from html import escape
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -59,7 +61,8 @@ def send_code(recipient, code, purpose, locale, last4=None):
               if purpose == 'notification_email' else
               (f'bloquear tu tarjeta terminada en {last4}', f'block your card ending in {last4}', f'bloquear seu cartão terminado em {last4}'))[index]
     message = EmailMessage()
-    message['From'] = os.getenv('MAIL_FROM') or os.environ['MAIL_SMTP_USER']
+    sender = os.getenv('MAIL_FROM') or os.environ['MAIL_SMTP_USER']
+    message['From'] = formataddr(('Nexqori', parseaddr(sender)[1]))
     message['To'] = recipient
     message['Subject'] = ('Nexqori · Código de confirmación', 'Nexqori · Confirmation code', 'Nexqori · Código de confirmação')[index]
     message.set_content((
@@ -67,6 +70,24 @@ def send_code(recipient, code, purpose, locale, last4=None):
         f'Your code to {action} is {code}. It expires in 5 minutes. Do not share it or enter it in chat. If you did not request it, do not use it.',
         f'Seu código para {action} é {code}. Expira em 5 minutos. Não compartilhe nem escreva no chat. Se não o solicitou, não o use.',
     )[index])
+    title = ('Confirma tu solicitud', 'Confirm your request', 'Confirme sua solicitação')[index]
+    intro = ('Usa este código para', 'Use this code to', 'Use este código para')[index]
+    expires = ('Válido por 5 minutos', 'Valid for 5 minutes', 'Válido por 5 minutos')[index]
+    note = ('No compartas este código ni lo escribas en el chat. Si no lo solicitaste, no lo uses.',
+            'Do not share this code or enter it in chat. If you did not request it, do not use it.',
+            'Não compartilhe este código nem o escreva no chat. Se não o solicitou, não o use.')[index]
+    footer = ('Contigo en cada paso.', 'With you at every step.', 'Com você em cada passo.')[index]
+    # Inline styles and text wordmark render without remote images or tracking.
+    message.add_alternative(f"""<!doctype html><html lang="{escape(locale)}"><body style="margin:0;background:#FFFCF9;color:#392C27;font-family:Arial,sans-serif">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:32px 16px">
+<table role="presentation" width="560" cellspacing="0" cellpadding="0" style="width:100%;max-width:560px;background:white;border:1px solid #E8D9D0;border-radius:16px">
+<tr><td style="padding:28px;background:#9A4B32;color:#FFFCF9;font-size:28px;font-weight:bold">nexqori.</td></tr>
+<tr><td style="padding:28px"><h1 style="font-size:24px;margin:0 0 20px">{escape(title)}</h1>
+<p style="font-size:16px;line-height:1.6">{escape(intro)} {escape(action)}.</p>
+<p style="padding:20px;background:#F2D8C8;color:#392C27;font-size:32px;letter-spacing:7px;font-weight:bold;text-align:center">{escape(code)}</p>
+<p style="text-align:center;font-size:14px">{escape(expires)}</p><p style="font-size:15px;line-height:1.6">{escape(note)}</p>
+</td></tr><tr><td style="padding:20px 28px;border-top:1px solid #E8D9D0;font-size:14px">Nexqori · {escape(footer)}</td></tr></table>
+</td></tr></table></body></html>""", subtype='html')
     try:
         mode = os.getenv('MAIL_SMTP_SECURITY', 'starttls')
         if mode not in ('ssl', 'starttls'):
