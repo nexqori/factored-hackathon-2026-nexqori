@@ -31,6 +31,7 @@ from .transaction_suggestions import (FINANCIAL_PROBLEMS, confirmation, choose, 
 from .prompt_guard import inspect_prompt, guard_message
 from .query_documents import can_document
 from .query_answers import query_answer
+from .case_followup import case_status_reply
 from .query_context import apply_query_context
 from .claim_summary import claim_preview, confirmation_text, preview_token, review_message, NEXT as CLAIM_NEXT
 from .payment_history import context_comparison, comparison_text
@@ -345,11 +346,13 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
         # unchanged. The Message table still records the navigation exchange.
         pass
     elif registered:
-        case = db.scalar(select(RequestCase).where(RequestCase.id == row.request_id, RequestCase.user_id == user.id))
-        text = ('Tu mensaje queda en esta conversación vinculada al reclamo {id}. Puedes revisar su evolución en Mis reclamos. Para otro tema, inicia una conversación nueva.',
-                'Your message is saved in this conversation linked to complaint {id}. Track its progress in My complaints. Start a new conversation for a different topic.',
-                'Sua mensagem fica nesta conversa vinculada à reclamação {id}. Acompanhe o andamento em Minhas reclamações. Para outro assunto, inicie uma nova conversa.')
-        state['context']['reply'] = text[('es','en','pt').index(body.locale)].format(id=case.id)
+        # Re-read the owned case on every new turn. Stored snapshots are not its current outcome.
+        evidence = reader.collect('request-status', {'owner_id': user.id, 'request_id': row.request_id}, body.locale, [])
+        status_read = next((r['data'] for r in evidence['reads'] if r['tool'] == 'read-request-status'), None)
+        if status_read is None:
+            raise HTTPException(503, 'bank_unavailable')
+        state['context']['bank_evidence'] = evidence
+        state['context']['reply'] = case_status_reply(status_read, body.locale)
     elif reviewing and not resume_review(state, message, execution.MAX_REPLIES):
         # Preserve the review and its limits. Starting the interpreter from
         # scratch here would silently lose the contract and reset the limit.
@@ -380,17 +383,18 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
                                          None if item['kind'] == 'navigate' else item['id'])
             ctx['reply'] = read_reply or (guided['text'] if ctx['intent']=='account-balance' else item['copy'][body.locale]['summary'])
         if ctx['intent'] == 'request-status':
-            statuses = [r['data']['request'] for r in evidence['reads'] if r['tool']=='read-request-status']
+            statuses = [r['data'] for r in evidence['reads'] if r['tool']=='read-request-status']
             if statuses:
-                labels = {'received': ('Recibido','Received','Recebido'), 'in_review': ('En revisión','Under review','Em análise'), 'handed_off': ('Derivado a atención','Referred to support','Encaminhado ao atendimento')}
-                ctx['reply'] = statuses[0]['id'] + ' · ' + labels[statuses[0]['status']][('es','en','pt').index(body.locale)]
+                ctx['reply'] = case_status_reply(statuses[0], body.locale)
             else:
                 ctx['reply'] = ('Abre Detalles, activa Un caso, elige el registro y pulsa Usar selección.',
                                 'Open Details, select A case, choose the record and press Use selection.',
                                 'Abra Detalhes, marque Um caso, escolha o registro e pressione Usar seleção.')[('es','en','pt').index(body.locale)]
             navigation = navigate_in_app('complaints','customer')
         selected_evidence = next((r['data'] for r in evidence['reads'] if r['tool']=='read-transaction-evidence'), None)
-        if selected_evidence:
+        if selected_evidence and ctx['intent'] == 'request-status' and statuses:
+            ctx['reply'] += '\n\n' + ('Movimiento: ', 'Transaction: ', 'Movimentação: ')[('es','en','pt').index(body.locale)] + selected_evidence['transaction']['id']
+        if selected_evidence and not (ctx['intent'] == 'request-status' and statuses):
             ctx['reply'] = transaction_reply(selected_evidence,body.locale)['text']
         apply_query_context(db, user.id, conv.id, state, body.locale)
         if 'navigation' in ctx: navigation = ctx['navigation']

@@ -8,8 +8,6 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from .transaction_context import transaction_evidence
-from sqlalchemy import select
-from .models import RequestCase, Refund
 
 
 def pick(locale, es, en, pt): return (es,en,pt)[('es','en','pt').index(locale)]
@@ -23,20 +21,15 @@ def money(value, currency, locale):
 
 
 def registered_summary(db, owner, identity, locale):
-    if not isinstance(identity,str) or not re.fullmatch(r'NQ-[A-F0-9]{10}',identity):return None
-    case=db.scalar(select(RequestCase).where(RequestCase.id==identity,RequestCase.user_id==owner))
-    if not case:return None
-    refund=db.scalar(select(Refund).where(Refund.request_id==identity,Refund.user_id==owner))
-    status=refund.status if refund else None
-    outcome=pick(locale,
-        {'approved':'La devolución está aprobada.', 'rejected':'La devolución fue rechazada.', 'pending':'La devolución sigue pendiente de aprobación.'},
-        {'approved':'The refund is approved.', 'rejected':'The refund was rejected.', 'pending':'The refund is awaiting approval.'},
-        {'approved':'A devolução foi aprovada.', 'rejected':'A devolução foi rejeitada.', 'pending':'A devolução aguarda aprovação.'}).get(status)
-    return pick(locale,f'Tu expediente {identity} está registrado. Puedes seguir su revisión en Mis reclamos.',
-                f'Case {identity} is registered. Track the review in My complaints.',
-                f'O protocolo {identity} está registrado. Acompanhe a análise em Minhas reclamações.')+' '+(outcome or pick(locale,
-                'El registro no confirma una devolución ni cancelación.', 'Registration does not confirm a refund or cancellation.',
-                'O registro não confirma devolução ou cancelamento.'))
+    if not isinstance(identity, str) or not re.fullmatch(r'NQ-[A-Za-z0-9-]{1,61}', identity): return None
+    from .case_followup import read_case_status, case_status_reply
+    from fastapi import HTTPException
+    try:
+        data = read_case_status(db, owner, identity)
+    except HTTPException as error:
+        if error.status_code == 404: return None
+        raise
+    return case_status_reply(data, locale, speech=True)
 
 
 def presentation(db, owner, reply, locale):
@@ -59,10 +52,10 @@ def presentation(db, owner, reply, locale):
             summary=language_reply(locale)['text']
         return {'summary':summary,'comparison':None}
     flow=reply.get('flow') or {}
-    if reply.get('guard',{}).get('status') in ('blocked','uncertain','unavailable'):
+    if reply.get('guard',{}).get('status') in ('blocked','off-topic','uncertain','unavailable'):
         from .prompt_guard import guard_message
         return {'summary':guard_message(reply['guard']['status'],locale),'comparison':None}
-    registered=registered_summary(db,owner,flow.get('requestId'),locale)
+    registered=registered_summary(db,owner,flow.get('requestId') or flow.get('selectedRequestId'),locale)
     if flow.get('state')=='provider_unavailable':return None
     proposed=flow.get('suggestedTransaction') or {}
     reference=proposed.get('id') or reply.get('conversation',{}).get('transactionId')
@@ -84,6 +77,12 @@ def presentation(db, owner, reply, locale):
     result={'summary':text,'transactionId':reference,'comparison':None}
     if proposed:
         result['summary']+=pick(locale,' ¿Es el que quieres revisar?',' Is that the payment you want to review?',' É esse que deseja analisar?')
+        return result
+    if c.get('recognizedException'):
+        result['summary']=pick(locale,
+            'Reconociste esta compra como excepcional. Queda en tus movimientos y no se usa para calcular tu gasto habitual.',
+            'You recognized this as an occasional purchase. It stays in your transactions and is excluded from your usual spending baseline.',
+            'Você reconheceu esta compra como excepcional. Ela permanece nas movimentações e não entra no cálculo dos gastos habituais.')
         return result
     agreement=c.get('serviceAgreement') or {}; comparison=None
     if agreement.get('status') in ('above-base','within-base'):

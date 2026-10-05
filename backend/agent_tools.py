@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from .agent_routing import TOOLS, tools_for
 from .catalog import SERVICES, service_view
-from .models import AuditEvent, CardProfile, Conversation, Product, Refund, RequestCase, Transaction
+from .models import AuditEvent, CardProfile, Conversation, Product, Transaction
 from .schemas import Locale
 from .security import customer, db_session
 from .transaction_context import transaction_evidence
@@ -91,12 +91,9 @@ def _read(db, owner, p):
         evidence = transaction_evidence(db, owner, p.referenceId)
         return evidence, {'transaction_id': p.referenceId, 'product_id': evidence['transaction']['productId'], 'request_id': evidence['request']['id'] if evidence['request'] else None}
     if p.tool == 'read-request-status':
-        case = db.scalar(select(RequestCase).where(RequestCase.id == p.referenceId, RequestCase.user_id == owner))
-        if not case:
-            raise HTTPException(404, 'not_found')
-        refund = db.scalar(select(Refund).where(Refund.request_id == case.id, Refund.user_id == owner))
-        return {'request': {'id': case.id, 'status': case.status, 'updatedAt': case.updated_at.isoformat()},
-                'refund': {'id': refund.id, 'status': refund.status, 'creditTransactionId': refund.credit_transaction_id} if refund else None}, {'request_id': case.id, 'transaction_id': case.transaction_id}
+        from .case_followup import read_case_status
+        data = read_case_status(db, owner, p.referenceId)
+        return data, {'request_id': data['request']['id'], 'transaction_id': data['transactionId']}
     if p.tool == 'read-service-info':
         return {'source': 'nexqori_catalog', 'service': service_view(SERVICES[p.intent], p.locale)}, {}
     if p.tool == 'read-problem-contract':

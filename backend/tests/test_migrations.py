@@ -34,7 +34,7 @@ def test_upgrade_preserves_old_messages_passwords_and_custom_accounts(tmp_path, 
     engine.dispose()
 
 
-@pytest.mark.parametrize('revision', ['f5a306c829d1', 'b37d1f4c9a20'])
+@pytest.mark.parametrize('revision', ['f5a306c829d1', 'b37d1f4c9a20', 'fb7208ea46c3', 'fb7218c04a63'])
 def test_merge_upgrades_both_contributors_without_losing_feedback(tmp_path, monkeypatch, revision):
     url = 'sqlite:///' + str(tmp_path / 'contributors.sqlite')
     monkeypatch.setenv('DATABASE_URL', url)
@@ -47,7 +47,7 @@ def test_merge_upgrades_both_contributors_without_losing_feedback(tmp_path, monk
             db.execute(text("INSERT INTO chat_feedback(id,user_id,submission_id,metric,score,locale,form_duration_ms,conversation_duration_ms,created_at) VALUES('old-score','feedback-owner','00000000-0000-0000-0000-000000000001','nps',9,'es',1200,2000,'2026-10-03 12:00:00')"))
     command.upgrade(config, 'head')
     with engine.connect() as db:
-        assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == ['fb7218c04a63']
+        assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == ['fc8319d05b74']
         assert len(inspect(db).get_check_constraints('service_agreements')) == 3
         assert len(inspect(db).get_check_constraints('chat_feedback')) == 5
         if revision == 'b37d1f4c9a20':

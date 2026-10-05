@@ -153,14 +153,15 @@ try{
   const previewResponse=page.waitForResponse(r=>r.url().includes('/claim-preview?')&&r.request().method()==='GET');
   await details.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
   const preview=await(await previewResponse).json();const review=page.locator('.chat-claim-review');
-  await expect(review.getByLabel(copy['chatClaim.summary'],{exact:true})).toHaveValue(preview.summary);
+  await expect(review.locator('.chat-claim-summary p')).toHaveText(preview.summary);
   assert(preview.summary.length>=10);assert(!preview.summary.includes('Verificación ['),'Claim starts from a server summary, not the transcript');
   assert.equal(preview.transactionId,person.intent==='unrecognized-charge'?person.alternateTransactionId:person.transactionId);
-  await expect(review.getByRole('button',{name:copy['chatClaim.register'],exact:true})).toBeDisabled();
-  await review.getByRole('checkbox').check();
+  await expect(review.getByRole('button',{name:copy['chatClaim.register'],exact:true})).toBeEnabled();
+  await expect(review.getByRole('checkbox')).toHaveCount(0);
+  await review.getByRole('button',{name:copy['chatClaim.edit'],exact:true}).click();
   const editedSummary=preview.summary+' '+{es:'Solicito revisar lo ocurrido.',en:'Please review what happened.',pt:'Peço a revisão do ocorrido.'}[person.locale];
-  await review.getByLabel(copy['chatClaim.summary'],{exact:true}).fill(editedSummary);await expect(review.getByRole('checkbox')).not.toBeChecked();
-  await review.getByRole('checkbox').check();await axe('claim-summary-'+person.locale+'-'+person.intent);
+  await review.getByLabel(copy['chatClaim.summary'],{exact:true}).fill(editedSummary);await expect(review.getByRole('checkbox')).toHaveCount(0);
+  await axe('claim-summary-'+person.locale+'-'+person.intent);
   if(person.intent==='unrecognized-charge')await page.screenshot({path:path.join(folder,'claim-summary-'+person.locale+'.png'),fullPage:true});
   let lostClaim;
   if(person.locale==='es'&&person.intent==='unrecognized-charge'){

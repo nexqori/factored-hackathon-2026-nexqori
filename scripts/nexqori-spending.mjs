@@ -43,6 +43,7 @@ try{
   const before=await(await context.request.get(origin+'/api/bootstrap')).json();page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
   await page.goto(origin+'/movements');await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();
   await expect(page.locator('.spending-highlight')).toHaveCount(2);await axe('overview-'+locale);
+  await page.locator('.movement-extra-filters summary').click();
   await page.getByLabel(t['spending.filter'],{exact:true}).selectOption('unusual');await expect(page.locator('.transaction-row')).toHaveCount(2);
   await page.getByRole('searchbox',{name:t.search,exact:true}).fill('Mercado del Barrio');await expect(page.locator('.transaction-row')).toHaveCount(1);
   await page.locator('.transaction-row').click();await expect(page.locator('.spending-detail')).toContainText('350');
@@ -62,6 +63,35 @@ try{
   await page.screenshot({path:path.join(folder,'mobile-'+locale+'.png'),fullPage:true});
   assert.deepEqual(await(await context.request.get(origin+'/api/bootstrap')).json(),before);
   report.cases.push({locale,filters:true,history:true,receipt:true,serviceConditions:true,readOnly:true});await context.close();
+ }
+
+ // A recognized one-off purchase persists; it remains a movement, never a refund.
+ for(const locale of ['es','en','pt']){
+  const t=JSON.parse(await fs.readFile('src/locales/'+locale+'.json','utf8'));
+  const context=await browser.newContext({viewport:{width:1366,height:768}});
+  const logged=await context.request.post(origin+'/api/auth/login',{headers:{Origin:origin},data:{identifier:person.email,password:person.password}});assert.equal(logged.status(),200);
+  const before=await(await context.request.get(origin+'/api/bootstrap')).json();
+  page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
+  await page.goto(origin+'/movements');await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();
+  const tx=before.transactions.find(r=>r.merchant==='Mercado del Barrio'&&r.amountMinor===-270000);assert(tx);
+  await page.locator('[data-transaction-id="'+tx.id+'"]').click();
+  const dialog=page.getByRole('dialog');
+  if(locale==='es'){
+   await dialog.getByRole('button',{name:t['spending.recognizeException'],exact:true}).click();
+   await expect(dialog).toContainText(t['spending.exceptionConfirm']);
+   await dialog.getByRole('button',{name:t['spending.confirmException'],exact:true}).click();
+  }
+  await expect(dialog).toContainText(t['spending.exceptionSaved']);
+  await expect(dialog).toContainText(t['spending.excluded']);
+  await axe('recognized-'+locale);await dialog.screenshot({path:path.join(folder,'recognized-'+locale+'.png')});
+  await dialog.getByRole('button',{name:t.close,exact:true}).click();
+  await page.locator('.movement-extra-filters summary').click();
+  await page.getByLabel(t['spending.filter'],{exact:true}).selectOption('exceptional');
+  await expect(page.locator('.transaction-row')).toHaveCount(1);
+  await expect(page.locator('.transaction-row')).toHaveAttribute('data-transaction-id',tx.id);
+  const after=await(await context.request.get(origin+'/api/bootstrap')).json();
+  for(const key of ['products','transactions','requests'])assert.deepEqual(after[key],before[key]);
+  report.cases.push({locale,exceptionRecognized:true,financialRecordsUnchanged:true,exceptionFilter:true});await context.close();
  }
  assert.deepEqual(report.errors,[]);report.passed=true;console.log(JSON.stringify({passed:true,cases:report.cases.length,accessibility:report.accessibility.length,report:path.join(folder,'report.json')}));
 }catch(e){if(page&&!page.isClosed()){await page.screenshot({path:path.join(folder,'failure.png')});await fs.writeFile(path.join(folder,'failure.html'),await page.content());}throw e;}finally{await browser?.close();server.kill();await fs.writeFile(path.join(folder,'report.json'),JSON.stringify(report,null,2));await fs.writeFile(path.join(folder,'server.private.log'),diagnostics);}

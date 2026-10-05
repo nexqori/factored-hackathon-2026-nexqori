@@ -7,3 +7,11 @@
 .spending-history{list-style:none;padding:0}.spending-history li{display:flex;justify-content:space-between;gap:1rem;padding:.5rem 0;border-bottom:1px solid #e6d4ca}
 .spending-detail .detail-list dd{overflow-wrap:anywhere}.spending-overview .text-link{margin-top:.6rem}
 .spending-source{border-top:1px solid #e4c6b4;margin-top:1rem;padding-top:.5rem}.spending-source h4{margin:.8rem 0}
+
+.spending-recognition{padding-top:16px;margin-top:16px;border-top:1px solid var(--nq-border)}
+.spending-recognized{padding:12px;background:var(--nq-soft);border-radius:10px;line-height:1.5}
+.movement-highlighted{animation:movement-focus 2s ease-out}
+@keyframes movement-focus{0%,35%{background:#F2D8C8;box-shadow:inset 0 0 0 2px #9A4B32,0 0 16px #9A4B3233}100%{background:transparent;box-shadow:inset 0 0 0 0 transparent,0 0 0 transparent}}
+@media(prefers-reduced-motion:reduce){.movement-highlighted{animation:none;outline:2px solid var(--nq-primary);outline-offset:-2px}}
+
+.movement-highlighted .transaction-name small,.movement-highlighted .movement-meta{color:var(--nq-text)}

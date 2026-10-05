@@ -21,12 +21,12 @@ type ClaimPreview = { summary: string; previewToken: string; intent: string; tra
 export function ChatFlow({ result, conversationId, onRegistered, readOnly = false, technical = false, actionsOnly = false }: { result: FlowResult; conversationId: string; text?: string; readOnly?: boolean; technical?: boolean; actionsOnly?: boolean; onRegistered: (claim: ClaimRegistration) => void }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
   const summaryLabelId = useId();
-  const [review, setReview] = useState(false); const [details, setDetails] = useState(''); const [confirmed, setConfirmed] = useState(false);
+  const [review, setReview] = useState(false); const [details, setDetails] = useState(''); const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [preview, setPreview] = useState<ClaimPreview | null>(null);
   const attempt = useRef<{signature:string; key:string} | null>(null);
   async function loadPreview() {
-    setReview(true); setBusy(true); setError(''); setConfirmed(false); setPreview(null);
+    setReview(true); setBusy(true); setError(''); setEditing(false); setPreview(null);
     try {
       const value = await api<ClaimPreview>('/conversations/' + conversationId + '/claim-preview?locale=' + locale);
       setPreview(value); setDetails(value.summary); attempt.current = null;
@@ -34,13 +34,13 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
     finally { setBusy(false); }
   }
   async function register() {
-    if (!confirmed || busy || !preview || details.trim().length < 10) return; setBusy(true); setError('');
+    if (busy || !preview || details.trim().length < 10) return; setBusy(true); setError('');
     const body = {details:details.trim(), confirmed:true, locale, previewToken:preview.previewToken};
     const signature = JSON.stringify(body);
     if (attempt.current?.signature !== signature) attempt.current = {signature, key:crypto.randomUUID()};
     try { const value = await api<ClaimRegistration>('/conversations/' + conversationId + '/claim', 'POST', {...body, requestKey:attempt.current.key}); setReview(false); onRegistered(value); }
     catch(e) {
-      if (e instanceof ApiError && e.code === 'claim_preview_outdated') { setPreview(null); setConfirmed(false); }
+      if (e instanceof ApiError && e.code === 'claim_preview_outdated') { setPreview(null); setEditing(false); }
       setError('error.' + (e instanceof ApiError ? e.code : 'generic'));
     } finally { setBusy(false); }
   }
@@ -57,13 +57,16 @@ export function ChatFlow({ result, conversationId, onRegistered, readOnly = fals
       {busy && !preview && <p role="status">{t('loading')}</p>}
       {preview && <>
         {preview.operationLabel && <p className="chat-claim-operation">{preview.operationLabel}</p>}
-        <label><span id={summaryLabelId}>{t('chatClaim.summary')}</span><textarea aria-labelledby={summaryLabelId} required minLength={10} maxLength={1000} rows={6} value={details} disabled={busy} onChange={e => { setDetails(e.target.value); setConfirmed(false); }}/></label>
+        {editing ? <label><span id={summaryLabelId}>{t('chatClaim.summary')}</span><textarea aria-labelledby={summaryLabelId} autoFocus required minLength={10} maxLength={1000} rows={5} value={details} disabled={busy} onChange={e => setDetails(e.target.value)}/></label>
+          : <section className="chat-claim-summary" aria-labelledby={summaryLabelId}><h3 id={summaryLabelId}>{t('chatClaim.summary')}</h3><p>{details}</p></section>}
         <p className="muted">{t('chatClaim.nextStep')} {preview.nextStep}</p>
-        <label className="checkbox-label"><input type="checkbox" checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)}/>{t('chatClaim.confirm')}</label>
       </>}
       {error && <p className="error-text" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}
       {!preview && !busy && <button type="button" className="button secondary" onClick={() => { void loadPreview(); }}>{t('chatClaim.reload')}</button>}
-      <button className="button primary" disabled={!confirmed || busy || !preview || details.trim().length < 10}>{t(busy ? 'loading' : 'chatClaim.register')}</button>
+      <div className="chat-claim-actions">
+        {preview&&<button type="button" className="button secondary" disabled={busy||details.trim().length<10} onClick={()=>setEditing(value=>!value)}>{t(editing?'chatClaim.doneEditing':'chatClaim.edit')}</button>}
+        <button className="button primary" disabled={busy || !preview || details.trim().length < 10}>{t(busy ? 'loading' : 'chatClaim.register')}</button>
+      </div>
     </form></Dialog>}
   </section>;
 }

@@ -49,7 +49,7 @@ export function VoiceCall({selection,onReply,onClose,onSession,onRegistered}:{se
   const running=state==='active'||state==='connecting';
   const status=!capability?(error?'voiceCall.unavailable':'loading'):!capability.enabled?'voiceCall.unavailable':
     state==='active'?(level>0?'voiceCall.speaking':muted?'voiceCall.muted':'voiceCall.active'):'voiceCall.'+state;
-  return <section className="voice-call" aria-label={t('voiceTitle')} data-speaking={level>0}>
+  return <section className="voice-call" aria-label={t('voiceTitle')} data-speaking={level>0} data-running={running}>
     <header className="voice-call-heading">
       <h3 ref={heading} tabIndex={-1}>{t('voiceTitle')}</h3>
       <div className="voice-agent-stage" aria-hidden="true" style={{'--voice-level':level} as CSSProperties}>
@@ -91,11 +91,13 @@ export function VoiceCall({selection,onReply,onClose,onSession,onRegistered}:{se
     </Dialog>}
     <audio ref={audio} aria-label={t('voiceCall.audio')}/>
     <footer className="voice-call-footer">
-      {bankReply&&<button className="button secondary voice-detail-button" onClick={()=>setBankResultOpen(true)}>{t('voiceCall.fullDetail')}</button>}
+      {bankReply?.flow?.canRegister&&<p className="voice-review-hint" role="status">{t('voiceCall.reviewBeforeSend')}</p>}
       {bankReply?.flow&&(bankReply.flow.canRegister||bankReply.flow.requestId)&&<ChatFlow actionsOnly result={bankReply.flow} conversationId={bankReply.conversation.id} onRegistered={claim=>{
         const updated={...bankReply,text:claim.message.text,flow:claim.flow,messages:[claim.message],voiceSummary:null,navigation:null,destination:null};
         setBankReply(updated);callback.current(updated);onRegistered(claim.id);
       }}/>}
+
+      {bankReply&&<button className="button secondary voice-detail-button" onClick={()=>setBankResultOpen(true)}>{t('voiceCall.fullDetail')}</button>}
 
       {error&&<p className="error-text" role="alert">{t('error.'+error,{defaultValue:t('error.voice_connection')})}</p>}
       {running&&error==='voice_playback'&&<button className="button secondary" onClick={()=>void resumeAudio()}><Volume2 size={16}/>{t('voiceCall.resumeAudio')}</button>}

@@ -100,3 +100,46 @@ def test_published_rate_is_context_not_a_decision_or_model_payload(setup,models,
     after=client.get('/api/bootstrap').json()
     assert after['products']==before['products'] and after['transactions']==before['transactions']
     assert 'Teléfono Esencial' not in json.dumps(calls) and '45900' not in json.dumps(calls)
+
+
+def test_exception_excludes_future_baseline_is_owned_confirmed_and_idempotent(setup):
+    from datetime import timedelta
+    from backend.models import SpendingException
+    from backend.payment_history import compare_payments, comparison_text
+    app,engine=setup;pack=manifest();person=manifest_plan(pack)[0]
+    with make_sessions(engine)() as db:
+        ensure_pack(db,pack);scenario=ensure_spending_cases(db,person);db.commit()
+        target=db.get(Transaction,scenario['transactionIds'][0])
+        later=Transaction(id='LATER-REGULAR',user_id=target.user_id,product_id=target.product_id,
+            merchant=target.merchant,category=target.category,amount_minor=-60000,currency='MXN',
+            occurred_at=target.occurred_at+timedelta(minutes=5),status='completed')
+        db.add(later);db.commit()
+        assert compare_payments(db,later)['averageMinor']==95000
+    client=TestClient(app)
+    auth=client.post('/api/auth/login',headers={'Origin':ORIGIN},json={'identifier':person['email'],'password':pack['passwords']['cargo']}).json()
+    client.headers.update({'Origin':ORIGIN,'X-CSRF-Token':auth['csrfToken']})
+    txid=scenario['transactionIds'][0];path='/api/movements/'+txid+'/recognize-exception'
+    initial=client.get('/api/bootstrap').json()
+    assert client.post(path,json={'confirmed':False}).status_code==400
+    assert client.post(path,json={'confirmed':'true'}).status_code==422
+    other,_=login(app,'mateo');assert other.post(path,json={'confirmed':True}).status_code==404
+    admin,_=login(app,'nora');assert admin.post(path,json={'confirmed':True}).status_code==403
+    assert TestClient(app).post(path,json={'confirmed':True},headers={'Origin':ORIGIN}).status_code in (401,403)
+    assert client.post('/api/movements/'+scenario['transactionIds'][1]+'/recognize-exception',json={'confirmed':True}).status_code==409
+    result=client.post(path,json={'confirmed':True});assert result.status_code==200,result.text
+    assert result.json()['classification']=='exceptional'
+    assert result.json()['comparison']['recognizedException']
+    assert not result.json()['comparison']['unusualIncrease']
+    assert client.post(path,json={'confirmed':True}).json()==result.json()
+    assert client.get('/api/movements/'+txid+'/trend').json()==result.json()
+    after=client.get('/api/bootstrap').json()
+    for key in ('products','transactions','requests'):assert after[key]==initial[key]
+    with make_sessions(engine)() as db:
+        following=compare_payments(db,db.get(Transaction,'LATER-REGULAR'))
+        assert following['count']==5 and following['averageMinor']==60000
+        assert following['minMinor']==58000 and following['maxMinor']==62000
+        assert txid not in [r['transactionId'] for r in following['samples']]
+        assert len(db.scalars(select(SpendingException).where(SpendingException.transaction_id==txid)).all())==1
+        assert len(db.scalars(select(AuditEvent).where(AuditEvent.transaction_id==txid,AuditEvent.action=='spending_exception_confirmed')).all())==1
+        for locale in ('es','en','pt'):
+            assert comparison_text(result.json()['comparison'],locale)

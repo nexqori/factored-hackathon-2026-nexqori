@@ -22,3 +22,30 @@
 .movement-filters label{display:grid;gap:.4rem;min-width:0}.movement-filters input,.movement-filters select{width:100%;min-height:44px}
 .movement-filters .search-field{display:flex;align-items:center}
 @media(max-width:700px){.movement-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.movement-filters .search-field{grid-column:1/-1}}
+
+/* Keep the selected movement ahead of optional analysis and date filters. */
+.movement-extra-filters{margin:0 0 12px;border-bottom:1px solid var(--nq-border)}
+.movement-extra-filters summary{cursor:pointer;min-height:44px;padding:8px 0;display:list-item;list-style-position:inside;color:var(--nq-primary);font-weight:600}
+.movement-extra-filters summary .badge{margin-left:10px}
+.movement-extra-filters .movement-filters{padding-top:10px}
+.movement-results-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.movement-results-bar p{margin:0}
+.transaction-panel+.spending-overview{margin-top:24px}
+.spending-overview>summary{cursor:pointer;min-height:44px;font-weight:600;line-height:1.5;padding:8px 0}
+@media(max-width:700px){.movement-filters{gap:10px}.movement-results-bar{flex-wrap:wrap}}
+
+.movements-page .page-heading{margin-bottom:16px}
+.movements-page .page-heading h1{font-size:1.7rem;margin-bottom:0}
+.movements-page>.notice{font-size:.82rem;line-height:1.5;margin:0 0 12px}
+.movements-page .movement-filters{gap:10px;margin-bottom:6px}
+.movements-page .movement-filters label{font-size:.78rem;gap:4px}
+.movements-page .movement-filters input,.movements-page .movement-filters select{min-height:44px;height:44px;padding:8px 10px;font-size:.82rem}
+.movements-page .movement-filters .search-field{height:44px;padding:0 10px;gap:6px}
+.movements-page .movement-filters .search-field input{padding:8px 0}
+.movements-page .movement-extra-filters summary{font-size:.8rem;padding:10px 0}
+.movements-page .movement-results-bar{font-size:.8rem;margin-bottom:8px}
+.movements-page .spending-overview{padding:4px 12px;border-radius:12px;margin-top:16px;margin-bottom:0}
+.movements-page .spending-overview>summary{font-size:.85rem;min-height:44px;padding:10px 0}
+.movements-page .spending-overview[open]{padding-bottom:12px}
+.movements-page .spending-overview p,.movements-page .spending-highlight{font-size:.8rem}
+.movements-page .spending-highlight{padding:12px;gap:6px}

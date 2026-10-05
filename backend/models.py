@@ -145,6 +145,16 @@ class Transaction(Base):
     status: Mapped[str] = mapped_column(String(16))
     __table_args__ = (UniqueConstraint("id","user_id"), ForeignKeyConstraint(["product_id","user_id"], ["products.id","products.user_id"]), CheckConstraint("status IN ('completed','pending','declined')"), CheckConstraint("currency = 'MXN'"))
 
+class SpendingException(Base):
+    """Owner-confirmed exceptional purchase, excluded only from trend baselines."""
+    __tablename__ = "spending_exceptions"
+    transaction_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        ForeignKeyConstraint(["transaction_id", "user_id"], ["transactions.id", "transactions.user_id"]),
+    )
+
 class RequestCase(Base):
     __tablename__ = "requests"
     handling: Mapped["ClaimReview | None"] = relationship(lazy="selectin", uselist=False)
