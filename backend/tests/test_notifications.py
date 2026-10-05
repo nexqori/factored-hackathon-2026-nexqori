@@ -43,6 +43,9 @@ def test_email_verified_separately_from_login_and_no_secret_in_audit(setup, deli
     client, _ = login(app)
     other, _ = login(app, 'mateo')
     admin, _ = login(app, 'nora')
+    initial = client.get('/api/profile/notifications').json()
+    assert initial['suggestedEmail'] == 'andrea@nexqori.com'
+    assert initial['email'] is None and initial['verified'] is False
     assert admin.get('/api/profile/notifications').status_code == 403
     assert client.post('/api/profile/notifications/code', json={'email':'x@example.com\nBCC:y@example.com','password':PASSWORDS[0]}).status_code == 422
     assert client.post('/api/profile/notifications/code', json={'email':'x@example.com','password':'wrong'}).status_code == 403

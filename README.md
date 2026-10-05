@@ -8,7 +8,7 @@ Para incorporarte al desarrollo, comienza por [INICIO-EQUIPO.md](INICIO-EQUIPO.m
 
 Para probar acciones completas, usa la [guía de tres casos reproducibles](docs/pruebas-tres-casos.md): `npm run test:cases` verifica bloqueo, devolución aprobada y derivación en ES/EN/PT; `npm run test:cases:prepare` deja usuarios nuevos para repetirlos manualmente.
 
-La base tiene autenticación y persistencia en PostgreSQL local. Los pagos, transferencias, bloqueos y devoluciones tienen efectos en sus registros ficticios; no hay liquidación externa. El chat conecta Jev y Luna cuando se configuran sus claves privadas; conserva un recorrido guiado si esa conexión no está disponible. No hay operador humano conectado ni audio activo.
+La base tiene autenticación y persistencia en PostgreSQL local. Los pagos, transferencias, bloqueos y devoluciones tienen efectos en sus registros ficticios; no hay liquidación externa. El chat conecta Jev y Luna cuando se configuran sus claves privadas; conserva un recorrido guiado si esa conexión no está disponible. No hay operador humano conectado. Las llamadas requieren claves propias y arranque explícito con `compose.voice.yaml`; consulta [voz y límites](docs/voz-gpt-live.md).
 
 El [LAB independiente](experiments/intent-lab/README.md), en localhost:5190, sí conecta Jev y GPT-6 Luna high para comparar clasificación y probar respuestas guiadas por contrato. La base del banco incorpora registro adulto, preferencias de experiencia, auditoría administrativa, texto pegado y presentación visual de llamada. Consulta la [guía de estos recorridos](docs/registro-auditoria-y-conversacion.md).
 
@@ -45,6 +45,21 @@ npm run docker:down
 ```
 
 Detener contenedores conserva el volumen PostgreSQL. No uses opciones que borren volúmenes si quieres conservar solicitudes y conversaciones. Si el puerto 5180 está ocupado, libera el proceso correspondiente o cambia conjuntamente el puerto y los orígenes permitidos.
+
+## Bryan y administración para la demo
+
+Los usuarios y casos se guardan en PostgreSQL. El código compartido prepara a Bryan con pesos mexicanos, un recibo de 459 MXN frente a un plan de 299 MXN y una compra de 2.700 MXN frente a un promedio de 600 MXN. No copia conversaciones ni reclamos de Camila.
+
+Con Docker iniciado y la API actualizada:
+
+```sh
+node scripts/prepare-bryan-demo.mjs --confirm-local
+node scripts/demo-access.mjs --confirm-local
+```
+
+Abre `.local/ux-users/bryan-demo/ACCESOS.private.md`: contiene el correo, documento y contraseña de Bryan y de `admin@nexqori.com` (documento `00000002`). El exportador verifica las contraseñas contra la base sin cambiarlas. Cada instalación conserva claves propias; la guía y `.env` quedan fuera de Git. Si una contraseña cambió después del setup, el comando informa la diferencia y no sobrescribe el acceso.
+
+La preparación repetida conserva el correo personalizado y la actividad de Bryan. No reinicia pagos ni reclamos. Usa otro perfil del navegador para entrar al [panel administrativo](http://localhost:5180/admin/complaints) mientras pruebas como cliente. Mensajes y pasos: [demo de Bryan](docs/demo-bryan.md). La devolución requiere un cargo completado, confirmación del cliente y aprobación administrativa; un pago pendiente no se devuelve ni cancela automáticamente.
 
 ## Recorridos disponibles
 

@@ -2,6 +2,9 @@
 
 El remitente de Gmail pertenece a la configuración del servidor. Cada cliente elige su propio destinatario en **Configuración → Correo de notificaciones**. Puede usar una dirección distinta de su correo de acceso; debe verificar que la controla.
 
+Si aún no tiene un destinatario verificado, el formulario sugiere el correo del
+perfil. Esa sugerencia no lo marca como verificado ni habilita envíos por sí sola.
+
 ## Configurar Gmail localmente
 
 1. Activa la verificación en dos pasos de la cuenta remitente y crea una contraseña de aplicación, si la cuenta lo permite. No uses la contraseña habitual ni una clave de OpenAI. [Guía oficial de Google](https://support.google.com/accounts/answer/185833?hl=es).
@@ -15,7 +18,7 @@ MAIL_SMTP_USER=tu-cuenta@gmail.com
 MAIL_SMTP_PASSWORD=contraseña-de-aplicación
 ```
 
-3. Ejecuta `docker compose up -d --force-recreate api web` después de guardar. No uses `docker compose config` para compartir la configuración: puede mostrar secretos resueltos.
+3. Después de guardar y terminar las llamadas abiertas, ejecuta `docker compose -f compose.yaml -f compose.voice.yaml up -d --force-recreate api web` si estás probando voz, como en el banco local actual. Para la base sin voz, omite `-f compose.voice.yaml`. No uses `docker compose config` para compartir la configuración: puede mostrar secretos resueltos.
 4. Inicia sesión como el cliente de la prueba y abre Configuración. Escribe el destinatario deseado y tu contraseña de Nexqori. Solicita el código y escríbelo en el formulario. El correo de acceso no cambia.
 5. En **Tarjetas → Bloquear tarjeta**, confirma tu contraseña de Nexqori, solicita el código, revisa la terminación de la tarjeta en el correo y confirma el bloqueo con el código recibido.
 

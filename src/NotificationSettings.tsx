@@ -20,8 +20,8 @@ export function NotificationSettings() {
   const [reload, setReload] = useState(0);
   useEffect(() => {
     const abort = new AbortController(); setReady(false); setError('');
-    void api<{email:string|null;mailAvailable:boolean}>('/profile/notifications', 'GET', undefined, abort.signal).then(result => {
-      setCurrent(result.email); setEmail(result.email || ''); setAvailable(result.mailAvailable); setReady(true);
+    void api<{email:string|null;suggestedEmail?:string;mailAvailable:boolean}>('/profile/notifications', 'GET', undefined, abort.signal).then(result => {
+      setCurrent(result.email); setEmail(result.email || result.suggestedEmail || ''); setAvailable(result.mailAvailable); setReady(true);
     }).catch(e => { if (!abort.signal.aborted) setError('error.' + (e instanceof ApiError ? e.code : 'generic')); });
     return () => abort.abort();
   }, [reload]);

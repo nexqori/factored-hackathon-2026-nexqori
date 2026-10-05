@@ -140,7 +140,8 @@ def notifications_router():
     @router.get('/profile/notifications')
     def settings(user=Depends(customer_read), db=Depends(db_session)):
         setting = db.get(NotificationPreference, user.id)
-        return {'email': setting.email if setting else None, 'verified': bool(setting), 'mailAvailable': mail_ready(),
+        return {'email': setting.email if setting else None, 'suggestedEmail': user.email,
+                'verified': bool(setting), 'mailAvailable': mail_ready(),
                 'blockRequiresEmail': email_required()}
 
     @router.post('/profile/notifications/code')

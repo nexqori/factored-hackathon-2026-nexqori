@@ -92,7 +92,12 @@ def other_records_hash(db, owners):
 
 def ensure_pack(db, manifest):
     """One atomic insertion or a read-only repeat. The caller commits/rolls back."""
-    plan = manifest_plan(manifest); owners = [p['userId'] for p in plan]
+    return ensure_profiles(db, manifest, manifest_plan(manifest))
+
+
+def ensure_profiles(db, manifest, plan):
+    """Persist a validated fixture plan. Only local preparation commands call this."""
+    owners = [p['userId'] for p in plan]
     before = other_records_hash(db, owners)
     existing = db.scalars(select(User).where(User.id.in_(owners))).all()
     if existing:
