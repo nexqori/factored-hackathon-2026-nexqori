@@ -272,6 +272,7 @@ def test_voice_suggests_then_browses_without_repeating_date_or_leaking_bank_valu
 
 def test_spoken_close_reaches_remote_provider_after_farewell(voice, monkeypatch):
     monkeypatch.setattr('backend.voice.classify_action',lambda *a:'end-call')
+    monkeypatch.setattr('backend.voice.inspect_prompt',lambda *a:{'status':'uncertain'})
     app,engine,provider=voice;client,_=login(app)
     identity=client.post('/api/voice/sessions',json=start_body(locale='pt')).json()['id']
     provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'end','delta':'Encerre a chamada','start_ms':0,'end_ms':100})

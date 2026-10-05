@@ -186,7 +186,9 @@ class VoiceRuntime:
                 previous = row.state.get('reply') or {}
                 return safe_spoken_result(previous, row.locale, previous.get('voiceSummary'))
             action = classify_action(text, row.locale)
-            if action == 'end-call' and inspect_prompt(text, row.locale)['status'] == 'allowed':
+            # Ending media is not a bank operation. A banking content guard
+            # must never trap a customer in a billed call they asked to end.
+            if action == 'end-call':
                 farewell = ('Gracias por llamar. Que tengas un buen día.', 'Thank you for calling. Have a good day.',
                             'Obrigado por ligar. Tenha um bom dia.')[('es','en','pt').index(row.locale)]
                 row.state = {**row.state, 'end_requested': True, 'last_action':action}
