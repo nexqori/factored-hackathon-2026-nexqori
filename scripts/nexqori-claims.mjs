@@ -73,11 +73,9 @@ try {
   await page.locator('.claim-choice').click();
   await page.locator('[data-trace-ready=true]').waitFor();
   await expect(page.locator('.trace-current')).toContainText(copy.es['trace.outcome.refund_pending']);
-  await page.getByRole('button', { name: copy.es['claims.manage'], exact: true }).click();
-  await page.locator('dialog [data-trace-ready=true]').waitFor();
-  await expect(page.getByRole('dialog').getByRole('heading', { name: copy.es.requestTitle, exact: true })).toBeVisible();
-  await expect(page.getByRole('dialog').getByRole('button', { name: copy.es.startReview, exact: true })).toBeVisible();
-  await page.getByRole('dialog').getByRole('button', { name: copy.es.close, exact: true }).click();
+  await expect(page.locator('.admin-case-decision')).toBeVisible();
+  await expect(page.locator('.admin-case-decision').getByRole('button', { name: copy.es['caseDecision.start'], exact: true })).toBeDisabled();
+  await expect(page.locator('.admin-case-decision .refund-panel select')).toBeVisible();
   await page.reload(); await page.locator('[data-trace-ready=true]').waitFor();
   await expect(page.locator('.trace-current')).toContainText(copy.es['trace.outcome.refund_pending']);
   const dossier = await (await admin.context.request.get(origin + '/api/admin/users/' + pack.cases[0].userId + '/requests/' + report.cases[0].requestId + '/trace')).json();

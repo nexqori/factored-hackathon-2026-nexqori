@@ -11,3 +11,4 @@
 .attention-review .survey-scale-csat { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .attention-review .survey-scale-csat .survey-score { min-width: 0; min-height: 90px; padding: .3rem .15rem; }
 .attention-review .survey-scale-nps small, .attention-review .survey-scale-ces small { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.attention-review .survey-score:has(input:checked) small { color: var(--nq-text); }

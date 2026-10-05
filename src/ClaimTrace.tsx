@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Check, Clock3, FileText, MessageCircle, RefreshCw } from 'lucide-react';
 import { api } from './api';
 import { Badge, formatMoney } from './components';
 import { ChatFlow } from './ChatFlow';
 import { AdminCaseDocuments } from './AdminCaseDocuments';
 import { AttentionReview } from './AttentionReview';
+import { AdminCaseDecision } from './AdminCaseDecision';
 import { RequestStatus } from './RequestProgress';
 import type { Locale } from './i18n';
 import type { AuditEvent, Conversation, ConversationPage, RequestCase } from './types';
@@ -18,17 +20,21 @@ type Trace = {
   product: { id: string; type: string; last4: string; status: string | null } | null;
   refund: { id: string; status: string; amountMinor: number; currency: string; destinationLast4: string; decisionNote: string | null; decidedAt: string | null; decidedBy: { id: string; name: string } | null; creditTransactionId: string | null } | null;
   documentCount: number | null;
+  reviewContext?: { summary: Record<Locale, string>; missingEvidence: string[]; canStartReview: boolean; canDecideRefund: boolean; financialEffect: 'credited' | 'none' };
   events: (AuditEvent & { relation: Relation })[]; before: string | null; eventCount: number;
   conversations: (Conversation & { messageCount: number; relation: Relation })[]; conversationCount: number; nextConversationOffset: number | null;
 };
 
-export function ClaimTrace({ request, admin = false, compact = false }: { request: RequestCase; admin?: boolean; compact?: boolean }) {
+export function ClaimTrace({ request, admin = false, compact = false, onChanged, refreshVersion = 0 }: { request: RequestCase; admin?: boolean; compact?: boolean; onChanged?: () => Promise<unknown>; refreshVersion?: number }) {
   const { t, i18n } = useTranslation(); const locale = i18n.language as Locale;
+  const navigate = useNavigate();
+  const [openingCredit, setOpeningCredit] = useState(false);
   const [trace, setTrace] = useState<Trace | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(false);
   const [tab, setTab] = useState<'detail' | 'conversations' | 'documents' | 'activity' | 'json'>('detail');
   const [conversation, setConversation] = useState<ConversationPage | null>(null); const [conversationBusy, setConversationBusy] = useState(false); const [conversationError, setConversationError] = useState(false);
   const controller = useRef<AbortController | null>(null); const messageController = useRef<AbortController | null>(null);
   const path = admin ? `/admin/users/${encodeURIComponent(request.userId)}/requests/${encodeURIComponent(request.id)}/trace` : `/requests/${encodeURIComponent(request.id)}/trace`;
+  const loadedPath = useRef(path);
   const timestamp = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'medium' }).format(new Date(value));
   async function load(mode: 'replace' | 'events' | 'conversations' = 'replace') {
     controller.current?.abort(); const control = new AbortController(); controller.current = control;
@@ -44,7 +50,11 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
     } catch { if (!control.signal.aborted) setError(true); }
     finally { if (!control.signal.aborted) setBusy(false); }
   }
-  useEffect(() => { setTrace(null); setConversation(null); void load(); return () => { controller.current?.abort(); messageController.current?.abort(); }; }, [path, request.updatedAt, request.refund?.status]);
+  useEffect(() => {
+    if (loadedPath.current !== path) { setTrace(null); setConversation(null); loadedPath.current = path; }
+    void load();
+    return () => { controller.current?.abort(); messageController.current?.abort(); };
+  }, [path, request.updatedAt, request.refund?.status, refreshVersion]);
   async function viewConversation(id: string, before?: string) {
     messageController.current?.abort(); const control = new AbortController(); messageController.current = control;
     setConversationBusy(true); setConversationError(false); if (!before) setConversation(null);
@@ -55,6 +65,14 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
     finally { if (!control.signal.aborted) setConversationBusy(false); }
   }
   const showSummary = !admin || tab === 'detail';
+  async function changed() { await load(); await onChanged?.(); }
+  async function openCredit(reference: string) {
+    if (openingCredit) return;
+    setOpeningCredit(true); setError(false);
+    try { await onChanged?.(); navigate('/movements?transaction=' + encodeURIComponent(reference)); }
+    catch { setError(true); }
+    finally { setOpeningCredit(false); }
+  }
   const showConversations = !admin || tab === 'conversations';
   const showActivity = !admin || tab === 'activity';
   const visibleEvents = trace?.events.filter(event => admin || ['created','reviewed','handed_off','refund_requested','refund_approved','refund_rejected','card_blocked','conversation_linked','attention_resolved','attention_closed_by_timer','attention_closure_stopped','attention_reopened','feedback_submitted','feedback_draft_saved'].includes(event.action)) || [];
@@ -72,7 +90,6 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
     {trace && (admin && tab === 'json' ? <pre className="trace-json" tabIndex={0} aria-label={t('trace.json')}>{JSON.stringify(trace, null, 2)}</pre> : <>
       <div className="trace-current"><div><span className="eyebrow">{t('trace.now')}</span><h3>{t('trace.outcome.' + trace.outcome)}</h3><p>{t('trace.next.' + trace.outcome)}</p></div>{!compact && <RequestStatus request={trace.request} />}</div>
       {showSummary && <>
-      <AttentionReview source="requests" identity={request.id} admin={admin} onChange={() => void load()}/>
       <dl className="trace-facts"><div><dt>{t('reference')}</dt><dd><code>{request.id}</code></dd></div><div><dt>{t('customer')}</dt><dd>{trace.customer.name}</dd></div><div><dt>{t('trace.receivedAt')}</dt><dd>{timestamp(trace.request.createdAt)}</dd></div><div><dt>{t('trace.updatedAt')}</dt><dd>{timestamp(trace.request.updatedAt)}</dd></div></dl>
       {!compact && <section className="trace-section"><h3><FileText size={18} />{t('trace.report')}</h3><p className="trace-text">{trace.request.details}</p></section>}
       <section className="trace-section"><h3>{t('trace.evidence')}</h3><p className="muted">{t('trace.evidenceHint')}</p>{trace.transaction ? <dl className="trace-facts">
@@ -80,9 +97,12 @@ export function ClaimTrace({ request, admin = false, compact = false }: { reques
         <div><dt>{t('amount')}</dt><dd>{formatMoney(trace.transaction.amountMinor, locale, trace.transaction.currency)}</dd></div><div><dt>{t('status')}</dt><dd><Badge status={trace.transaction.status} /></dd></div>
         <div><dt>{t('date')}</dt><dd>{timestamp(trace.transaction.date)}</dd></div>{trace.product && <div><dt>{t('product')}</dt><dd>{t(trace.product.type)} · •••• {trace.product.last4}{trace.product.status && <span> · {t(trace.product.status)}</span>}</dd></div>}
       </dl> : <p>{t('trace.noMovement')}</p>}</section>
+      {admin && trace.reviewContext && <section className="trace-section case-review-context"><h3>{t('caseDecision.context')}</h3><p className="trace-text">{trace.reviewContext.summary[locale] || t('caseDecision.noContext')}</p>{trace.reviewContext.missingEvidence.length > 0 && <><h4>{t('caseDecision.missing')}</h4><ul>{trace.reviewContext.missingEvidence.map(item => <li key={item}>{t('caseDecision.missing.' + item)}</li>)}</ul></>}<p className="muted">{t('caseDecision.evidenceLimit')}</p></section>}
+      {admin && !compact && <AdminCaseDecision request={trace.request} canStartReview={!!trace.reviewContext?.canStartReview} onChanged={changed}/>}
       {!compact && trace.refund && <section className="trace-section"><h3>{t('trace.decision')}</h3><dl className="trace-facts"><div><dt>{t('operationId')}</dt><dd><code>{trace.refund.id}</code></dd></div><div><dt>{t('status')}</dt><dd>{t('refundStatus.' + trace.refund.status)}</dd></div><div><dt>{t('amount')}</dt><dd>{formatMoney(trace.refund.amountMinor, locale, trace.refund.currency)}</dd></div><div><dt>{t('refundDestination')}</dt><dd>•••• {trace.refund.destinationLast4}</dd></div>
         {trace.refund.decidedBy && <div><dt>{t('auditActor')}</dt><dd>{trace.refund.decidedBy.name}</dd></div>}{trace.refund.decidedAt && <div><dt>{t('date')}</dt><dd>{timestamp(trace.refund.decidedAt)}</dd></div>}{trace.refund.creditTransactionId && <div><dt>{t('refundCreditReference')}</dt><dd><code>{trace.refund.creditTransactionId}</code></dd></div>}</dl>
-        {trace.refund.decisionNote && <div className="trace-decision"><strong>{t('refundEvidence')}</strong><p className="trace-text">{trace.refund.decisionNote}</p></div>}<p className="muted">{t('trace.separateStatus', { status: t(trace.request.status) })}</p></section>}
+        {trace.refund.decisionNote && <div className="trace-decision"><strong>{t('refundEvidence')}</strong><p className="trace-text">{trace.refund.decisionNote}</p></div>}{!admin && trace.refund.creditTransactionId && <button className="button secondary case-credit-link" disabled={openingCredit} onClick={() => void openCredit(trace.refund!.creditTransactionId!)}>{t('caseDecision.viewCredit')}</button>}<p className="muted">{t('trace.separateStatus', { status: t(trace.request.status) })}</p></section>}
+      <AttentionReview refreshKey={trace.observedAt} source="requests" identity={request.id} admin={admin} onChange={() => void load()}/>
       </>}
       {admin && tab === 'documents' && <AdminCaseDocuments userId={request.userId} requestId={request.id} />}
       {showConversations && <section className="trace-section"><h3><MessageCircle size={18} />{t('trace.conversations')} <span className="trace-count">{trace.conversationCount}</span></h3><p className="muted">{t('trace.conversationHint')}</p>

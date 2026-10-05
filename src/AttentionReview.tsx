@@ -8,14 +8,14 @@ import './attention-review.css';
 type Scores = { nps: number | null; csat: number | null; ces: number | null; comment: string; locale?: Locale };
 type Review = { id: string; status: 'scheduled' | 'closed' | 'reopened'; summary: string; dueAt: number; closedAt: number | null; answers: Partial<Scores>; revision: number; submittedAt: number | null; snapshots: { processedAt: number; feedback: string; missing: string[] }[] };
 type Result = { review: Review | null; pending: boolean; canResolve: boolean; serverTime: number };
-type Props = { source: 'requests' | 'conversations'; identity: string; admin?: boolean; onChange?: () => void };
+type Props = { source: 'requests' | 'conversations'; identity: string; admin?: boolean; onChange?: () => void; refreshKey?: string };
 const blank: Scores = { nps: null, csat: null, ces: null, comment: '' };
 
 export function AttentionReview(props: Props) {
   return <ReviewPanel key={`${props.admin}:${props.source}:${props.identity}`} {...props} />;
 }
 
-function ReviewPanel({ source, identity, admin = false, onChange }: Props) {
+function ReviewPanel({ source, identity, admin = false, onChange, refreshKey }: Props) {
   const { t, i18n } = useTranslation(); const id = useId();
   const [data, setData] = useState<Result | null>(null);
   const [answers, setAnswers] = useState<Scores>(blank);
@@ -23,29 +23,45 @@ function ReviewPanel({ source, identity, admin = false, onChange }: Props) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [form, setForm] = useState(false); const [dirty, setDirty] = useState(false); const [saved, setSaved] = useState(false);
   const dirtyRef = useRef(false); dirtyRef.current = dirty;
+  const busyRef = useRef(false); busyRef.current = busy;
+  const actionEpoch = useRef(0);
   const path = `${admin ? '/admin' : ''}/attention/${source}/${encodeURIComponent(identity)}`;
   const control = useRef<AbortController | null>(null);
+  const actionControl = useRef<AbortController | null>(null);
   function accept(value: Result) { setData(value); setAnswers({ ...blank, ...value.review?.answers }); setDirty(false); }
   useEffect(() => {
-    const c = new AbortController(); control.current = c;
-    void api<Result>(path, 'GET', undefined, c.signal).then(accept).catch(e => { if (!c.signal.aborted) setError(e instanceof ApiError ? e.code : 'generic'); });
+    const c = new AbortController(); actionControl.current = c;
     return () => c.abort();
   }, [path]);
   useEffect(() => {
+    const c = new AbortController(); control.current = c;
+    const epoch = actionEpoch.current;
+    void api<Result>(path, 'GET', undefined, c.signal).then(value => {
+      if (c.signal.aborted || epoch !== actionEpoch.current || busyRef.current) return;
+      if (dirtyRef.current) setData(value); else accept(value);
+    }).catch(e => { if (!c.signal.aborted && epoch === actionEpoch.current) setError(e instanceof ApiError ? e.code : 'generic'); });
+    return () => c.abort();
+  }, [path, refreshKey]);
+  useEffect(() => {
     if (data?.review?.status !== 'scheduled') return;
     const c = new AbortController();
-    const timer = setInterval(() => { void api<Result>(path, 'GET', undefined, c.signal).then(value => {
+    const timer = setInterval(() => { const epoch = actionEpoch.current; void api<Result>(path, 'GET', undefined, c.signal).then(value => {
+      if (c.signal.aborted || epoch !== actionEpoch.current || busyRef.current) return;
       if (!dirtyRef.current) accept(value); else setData(value);
     }).catch(() => {}); }, 30000);
     return () => { clearInterval(timer); c.abort(); };
   }, [path, data?.review?.status]);
   async function act(action: string, body: unknown, method = 'POST') {
+    if (busyRef.current) return;
+    const operation = actionControl.current;
+    busyRef.current = true; actionEpoch.current += 1;
     setBusy(true); setError(''); setSaved(false);
     try {
-      const value = await api<Result>(path + action, method, body, control.current?.signal);
+      const value = await api<Result>(path + action, method, body, operation?.signal);
+      if (operation?.signal.aborted) return;
       accept(value); onChange?.(); if (action === '/feedback') setSaved(true);
-    } catch (e) { if (!control.current?.signal.aborted) setError(e instanceof ApiError ? e.code : 'generic'); }
-    finally { if (!control.current?.signal.aborted) setBusy(false); }
+    } catch (e) { if (!operation?.signal.aborted) setError(e instanceof ApiError ? e.code : 'generic'); }
+    finally { actionEpoch.current += 1; busyRef.current = false; if (!operation?.signal.aborted) setBusy(false); }
   }
   const review = data?.review;
   const time = (n: number) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(n * 1000));

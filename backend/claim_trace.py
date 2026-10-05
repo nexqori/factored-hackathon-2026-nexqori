@@ -7,6 +7,7 @@ from sqlalchemy import and_, func, or_, select
 from .models import AuditEvent, CardProfile, ChatDocument, Conversation, Message, Product, Refund, RequestCase, Transaction, User, now
 from .operations import iso_utc, refund_view
 from .query_documents import document_view
+from .payment_history import compare_payments, comparison_text
 from .security import admin, customer_read, db_session
 
 
@@ -74,6 +75,18 @@ def trace_router(request_view, audit_view, conversation_view):
                          for c in conv_rows[:20]]
         decision_actor = db.get(User, refund.decided_by) if refund and refund.decided_by else None
         outcome = "refund_" + refund.status if refund else case.status
+        financial_case = case.reason in {'unknown', 'amount', 'payment'} or case.catalog_service_id in {
+            'unrecognized-charge', 'incorrect-charge', 'payment-status'}
+        comparison = compare_payments(db, transaction) if transaction and financial_case else None
+        missing = []
+        if financial_case and not transaction:
+            missing.append('movement')
+        elif financial_case and transaction and transaction.status == 'pending':
+            missing.append('payment_confirmation')
+        if comparison and comparison.get('status') != 'sufficient':
+            missing.append('comparable_history')
+        if comparison and not comparison.get('serviceAgreement'):
+            missing.append('contract_if_applicable')
         result = {
             "request": request_view(case, customer.name, refund),
             "customer": {"id": customer.id, "name": customer.name},
@@ -91,6 +104,13 @@ def trace_router(request_view, audit_view, conversation_view):
             "conversationCount": db.scalar(select(func.count()).select_from(Conversation).where(Conversation.id.in_(conversation_ids))),
             "nextConversationOffset": conversation_offset + 20 if len(conv_rows) > 20 else None,
             "documentCount": db.scalar(select(func.count()).select_from(ChatDocument).where(case_documents(case))) if reader.role == 'admin' else None,
+            "reviewContext": {
+                "summary": {locale: comparison_text(comparison, locale) for locale in ('es', 'en', 'pt')},
+                "missingEvidence": missing,
+                "canStartReview": reader.role == 'admin' and case.status == 'received',
+                "canDecideRefund": reader.role == 'admin' and bool(refund and refund.status == 'pending'),
+                "financialEffect": ('credited' if refund and refund.status == 'approved' else 'none'),
+            },
             "source": "nexqori_records", "externalProcessorLogs": False,
         }
         # Viewing a dossier is itself auditable, without persisting its contents.
