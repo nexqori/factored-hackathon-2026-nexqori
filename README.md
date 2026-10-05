@@ -117,3 +117,7 @@ La skill se descubre desde `.agents/skills/nexqori-brand/`. Para usarla en otro 
 Repositorio privado: [nexqori/nexqori](https://github.com/nexqori/nexqori). `.gitignore` y `.dockerignore` excluyen credenciales, dataset, documentos originales, entornos, dependencias y artefactos locales. Se comparten código, documentación, skill y agregados sin identificadores. La app utiliza fixtures propios; no carga las relaciones inconsistentes del dataset en cuentas de usuario.
 
 No se añadió una licencia pública. Compartir dentro de la organización no cambia los permisos de uso del dataset del organizador. Antes de otro entorno se necesitan servicios de identidad, TLS, copias/restauración, observabilidad, políticas operativas e integraciones verificadas.
+
+## AWS y HTTPS
+
+Para una instancia EC2 con Docker Compose y subdominio, usa la [guía de despliegue](docs/despliegue-aws-compose.md). `compose.cloud.yaml` añade certificado automático, origen HTTPS y cookies seguras; combina `compose.voice.yaml` para conservar las llamadas. La configuración y los datos privados se preparan en el servidor.

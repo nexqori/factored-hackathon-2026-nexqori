@@ -33,8 +33,8 @@ services:
       CUSTOMER_PASSWORD: ${CUSTOMER_PASSWORD:?Run npm run setup}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run npm run setup}
       SECOND_CUSTOMER_PASSWORD: ${SECOND_CUSTOMER_PASSWORD:?Run npm run setup}
-      APP_ORIGINS: http://localhost:5180,http://127.0.0.1:5180
-      COOKIE_SECURE: "false"
+      APP_ORIGINS: ${APP_ORIGINS:-http://localhost:5180,http://127.0.0.1:5180}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       CARD_PROVIDER: local_fixture
       BANK_ASSISTANT_FLOW: "true"
       BANK_VOICE_ENABLED: "false"

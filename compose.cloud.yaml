@@ -1,0 +1,27 @@
+# AWS EC2 (one host). Requires PUBLIC_DOMAIN in the server's private .env.
+# Keep this override last, including when compose.voice.yaml is used.
+services:
+  api:
+    environment:
+      APP_ORIGINS: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN to your subdomain without https or paths}
+      COOKIE_SECURE: "true"
+  https:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN to your subdomain without https or paths}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+volumes:
+  caddy_data:
+  caddy_config:

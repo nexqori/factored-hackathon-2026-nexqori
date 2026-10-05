@@ -1,6 +1,6 @@
 # Arquitectura de Nexqori
 
-Integración del 2 de octubre: [pagos y transferencias](pagos-y-transferencias.md), [consultas y PDF](consultas-y-documentos.md) y [continuidad de conversación](contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos y trámites, en Mis solicitudes; problemas, en Mis reclamos.
+Integración del 2 de octubre: [pagos y transferencias](pagos-y-transferencias.md), [consultas y PDF](consultas-y-documentos.md) y [continuidad de conversación](contexto-conversacion.md). Pagos y transferencias se guardan en Movimientos; documentos pedidos, en Mis documentos; trámites, en Mis solicitudes; problemas, en Mis reclamos.
 
 Stack elegido por Bryan: **React + FastAPI + PostgreSQL**. TypeScript, Vite y react-i18next en interfaz; SQLAlchemy y Alembic en API. Las versiones efectivas están fijadas en `package-lock.json` y `backend/requirements.lock`.
 
@@ -35,7 +35,7 @@ Sólo web publica un puerto, enlazado a 127.0.0.1. API y base son internas a Com
 | conversation_flows | Checkpoint del flujo y memoria segura por conversación. |
 | phone_bills / bill_payments | Recibos por servicio/referencia/período, pagos parciales y comprobantes inmutables. |
 | transfer_quotes / bank_transfers | Destinatario validado temporalmente y débito/crédito atómico con idempotencia. |
-| chat_documents | PDF persistente, resumen, titular y mensaje; lista propia en Mis solicitudes. |
+| chat_documents | PDF persistente, resumen, titular y mensaje; lista propia en Mis documentos. |
 | chat_feedback | Métrica NPS/CSAT/CES, puntuación, idioma, tiempos de conversación/formulario y clave idempotente; acceso de lectura sólo agregado en administración. |
 
 Las transferencias conservan dinero con un débito y un crédito en una transacción de base de datos. No hay libro contable bancario completo, liquidación ni conciliación externa. Las devoluciones aprobadas sí generan un movimiento de abono y actualizan el saldo local atómicamente. El saldo inicial del seed es ilustrativo y no se calcula sumando el historial de ejemplo. Moneda y fecha de presentación pertenecen al escenario de México; elegir portugués o inglés no convierte MXN.
@@ -82,6 +82,6 @@ Las pruebas API usan SQLite temporal para aislar casos y validar reglas; la ejec
 
 Para producción se necesitan decisiones y servicios específicos: identidad/MFA y recuperación, TLS, gestión de secretos, límites distribuidos, copias/restauración, trazas y alertas, auditoría protegida, integraciones y políticas operativas. Los proveedores de IA usan el [contrato de agente](agente.md) y configuración privada del servidor, sin cambiar la autorización de las APIs.
 
-El catálogo versionado en `backend/service_catalog.json` es compartido por API y validación de navegación del cliente. Cambiarlo requiere validación y reconstrucción; no es un CMS. La búsqueda tolera acentos, nombres y sinónimos ES/EN/PT. La documentación de [catálogo](catalogo-servicios.md) conserva la procedencia y los límites. La voz no forma parte de esta implementación.
+El catálogo versionado en `backend/service_catalog.json` es compartido por API y validación de navegación del cliente. Cambiarlo requiere validación y reconstrucción; no es un CMS. La búsqueda tolera acentos, nombres y sinónimos ES/EN/PT. La documentación de [catálogo](catalogo-servicios.md) conserva la procedencia y los límites. La voz es opcional mediante `compose.voice.yaml`; ver [llamadas](voz-gpt-live.md). El despliegue con subdominio usa [Compose y HTTPS en AWS](despliegue-aws-compose.md).
 
 Tarjetas: [contratos, procedencia y límites del proveedor local](tarjetas-y-dataset.md). Procedimientos: [tabla y contratos de atención](contratos-atencion.md). Bloqueo, devolución y consultas separadas: [acciones de problemas](acciones-problemas.md).
