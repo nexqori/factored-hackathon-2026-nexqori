@@ -23,8 +23,26 @@ NO = {'no', 'no es ese', 'no es otro', 'es otro', 'otro', 'no es este', 'no not 
       'not that one', 'nao', 'nao e esse', 'nao e outro', 'outro', 'e outro'}
 
 
+def submit_review(message):
+    """Explicit spoken assent, scoped later to a displayed current draft.
+
+    Bare yes selects a movement, never submits. No substring/fuzzy matching.
+    A comma after No answers the prior extras question; without it we refuse.
+    """
+    text = normalize(message).strip()
+    text = re.sub(r'^no,\s*', '', text)
+    text = ' '.join(re.findall(r'\w+', text))
+    return bool(re.fullmatch(
+        r'(?:(?:si|correcto|ok|yes|sim) )?'
+        r'(?:confirmar y enviar|confirmo el envio|confirma y envia|envialo|enviemoslo(?: a revision)?|'
+        r'envia (?:el|mi) reclamo|send it|confirm and send|submit (?:the|my) complaint|'
+        r'confirmar e enviar|confirmo o envio|envie a reclamacao)'
+        r'(?: por favor| please)?', text))
+
+
 def review_requested(message):
     """Request a review form only; never authorization to register or pay."""
+    if submit_review(message): return True
     text = ' '.join(re.findall(r'\w+', normalize(message)))
     if re.search(r"\b(?:no|not|nao|never|don t|do not)\s+(?:quiero|deseo|necesito|quero|want|prepare|file|submit|request|hagas|prepares|registre|registres|solicites|pidas|pongas)\b", text):
         return False
@@ -36,6 +54,7 @@ def review_requested(message):
 
 def review_only(message):
     """Opening the current review is not a new extraction of known details."""
+    if submit_review(message): return True
     value = ' '.join(re.findall(r'\w+', normalize(message)))
     return bool(re.fullmatch(
         r"(?:(?:por favor|please|por favor) )?(?:(?:puedes|podrias|quiero|quisiera|necesito|can you|could you|i want to|pode|quero) )?"

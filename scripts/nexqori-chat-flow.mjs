@@ -94,6 +94,8 @@ try{
    if(person.locale==='pt'){await panel.locator('.paste-composer textarea').fill(copy['chatSending.confirmMessage']);await panel.locator('.paste-entry button').click();}
    else await panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true}).click();
    result=await(await confirmation).json();assert.equal(result.conversation.transactionId,person.transactionId);assert.equal(result.flow.canRegister,true);
+   await expect(page.locator('.chat-claim-review')).toContainText(person.transactionId);
+   await expect(page).toHaveURL(/\/complaints$/);await page.keyboard.press('Escape');
    await expect(panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true})).toHaveCount(0);
    // Rebinding is explicit and persisted: selecting an option alone has no
    // effect, while applying asks the server to invalidate old evidence.
@@ -101,7 +103,7 @@ try{
    await panel.locator('.paste-composer textarea').fill('Borrador que se conserva');
    await expect(panel.getByRole('button',{name:copy['chatMovement.change'],exact:true})).toHaveCount(0);
    await expect(panel.getByRole('button',{name:copy['chatMovement.choose'],exact:true})).toHaveCount(0);
-   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText(person.transactionId);
+   assert(result.flow.reviewRequestKey);
    await panel.getByRole('button',{name:copy['chatDetails.open'],exact:true}).click();
    await details.getByLabel(copy.chooseTransaction,{exact:true}).selectOption(person.alternateTransactionId);
    const unchanged=await(await context.request.get(origin+'/api/conversations/'+cid)).json();assert.equal(unchanged.conversation.transactionId,person.transactionId);
@@ -120,7 +122,7 @@ try{
    assert.equal(result.flow.jev.intent,person.intent);assert(!JSON.stringify(result.flow.verified_facts).includes(person.transactionId));
    await expect(panel.locator('.paste-composer textarea')).toHaveValue('Borrador que se conserva');
    await expect(panel.locator('[data-chat-movement]')).toHaveCount(0);
-   await expect(panel.locator('.chat-bubble.assistant').last()).toContainText(person.alternateTransactionId);
+   await expect(page.locator('.chat-claim-review')).toContainText(person.alternateTransactionId);await page.keyboard.press('Escape');
    const following=await(await context.request.get(origin+'/api/verification/summary')).json();
    assert.equal(following.counts.triage,prior.counts.triage);assert.equal(following.counts.jev,prior.counts.jev);
   }
@@ -139,20 +141,16 @@ try{
    }
    const next=page.waitForResponse(r=>r.url().endsWith('/api/assistant/flow')&&r.request().method()==='POST');
    await panel.locator('.paste-composer textarea').fill('100 MXN');await panel.locator('.paste-entry button').click();result=await(await next).json();assert(result.flow.canRegister);
-   assert(result.text.includes('100') && result.text.includes('85.0'));
+   await expect(page.locator('.chat-claim-review')).toContainText('100');await page.keyboard.press('Escape');
   }
   await expect(panel.locator(':scope > .chat-flow')).toHaveCount(0);await expect(panel.locator('pre')).toHaveCount(0);
   assert(await panel.locator('.chat-messages').evaluate(el=>el.clientHeight>300));await axe(person.locale+'-'+person.intent);
   if(person.intent==='incorrect-charge')await page.screenshot({path:path.join(folder,'chat-clean-'+person.locale+'.png'),fullPage:true});
   const before=await(await context.request.get(origin+'/api/verification/summary')).json();
   await page.reload();await panel.locator('.conversation-toolbar button').nth(1).click();await page.locator('.conversation-list button').first().click();
-  await expect(panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true})).toBeVisible();assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),before);
-  await panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
-  await expect(details).toContainText(copy['chatFlow.state.review_in_bank']);await expect(details.locator('pre')).toHaveCount(0);
-  await expect(details).not.toContainText('needs-clarification');await expect(details).not.toContainText(' ms');
-  const previewResponse=page.waitForResponse(r=>r.url().includes('/claim-preview?')&&r.request().method()==='GET');
-  await details.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
-  const preview=await(await previewResponse).json();const review=page.locator('.chat-claim-review');
+  const preview=await(await context.request.get(origin+'/api/conversations/'+cid+'/claim-preview?locale='+person.locale)).json();
+  const review=page.locator('.chat-claim-review');await expect(review).toBeVisible();
+  assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),before);
   await expect(review.locator('.chat-claim-summary p')).toHaveText(preview.summary);
   assert(preview.summary.length>=10);assert(!preview.summary.includes('Verificación ['),'Claim starts from a server summary, not the transcript');
   assert.equal(preview.transactionId,person.intent==='unrecognized-charge'?person.alternateTransactionId:person.transactionId);

@@ -130,7 +130,9 @@ def test_audited_chat_comparison_is_read_only_and_not_sent_to_models(setup,model
     assert '299' in first['text'] and first['flow']['missing_fields']==['difference']
     cid=first['conversation']['id']
     second=client.post('/api/assistant/flow',json=message(locale=locale,conversationId=cid,message='Esperaba 100 MXN')).json()
-    assert second['flow']['canRegister'] and '53.5' in second['text']
+    assert second['flow']['canRegister']
+    preview=client.get('/api/conversations/'+cid+'/claim-preview?locale='+locale).json()
+    assert '53.5' in preview['summary']
     assert '299' in second['text'] and '160' in second['text']
     assert 'history-' not in json.dumps(calls) and 'Historial de teléfono' not in json.dumps(calls)
     assert '299' not in json.dumps(calls)

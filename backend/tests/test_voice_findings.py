@@ -165,3 +165,53 @@ def test_resuming_refunded_case_announces_and_opens_existing_credit(voice, model
     assert 'reembolso realizado' in result['voiceSummary']['summary']
     assert customer.get('/api/bootstrap').json()['transactions']==before['transactions']
     customer.post('/api/voice/sessions/'+started['id']+'/close',json={})
+
+
+@pytest.mark.parametrize('phrase', ['No, enviémoslo a revisión', 'Confirmar y enviar'])
+def test_real_reported_sequence_submits_displayed_draft_once(voice, models, phrase):
+    app, engine, _ = voice; client, _ = login(app)
+    _, control = models; control['intent'] = 'unrecognized-charge'
+    started = client.post('/api/voice/sessions', json=start_body()).json()
+    runtime = app.state.voice; identity = started['id']; cid = started['conversationId']
+    runtime.turn(identity, 'proposal', 'Tengo un problema con un cargo no reconocido de Stream Plus')
+    speech = runtime.turn(identity, 'selection', 'Sí, ese es el que quiero revisar')
+    reply = client.post(f'/api/voice/sessions/{identity}/heartbeat', json={}).json()['reply']
+    assert reply['navigation']['route'] == '/complaints'
+    assert reply['flow']['canRegister'] and reply['flow']['reviewRequestKey']
+    before = client.get('/api/bootstrap').json()
+    # Saying send without a displayed draft may only open the draft.
+    runtime.turn(identity, 'not-shown', phrase)
+    assert client.get('/api/bootstrap').json()['requests'] == before['requests']
+    preview = client.get(f'/api/conversations/{cid}/claim-preview?locale=es').json()
+    ack = client.post(f'/api/conversations/{cid}/claim-review', json={
+        'previewToken':preview['previewToken'], 'details':preview['summary'], 'ready':True, 'locale':'es'})
+    assert ack.status_code == 200, ack.text
+    speech = runtime.turn(identity, 'submit', phrase)
+    reply = client.post(f'/api/voice/sessions/{identity}/heartbeat', json={}).json()['reply']
+    rid = reply['flow']['requestId']; assert rid
+    assert reply['navigation']['route'] == '/complaints?case='+rid
+    assert 'Gracias por avisarnos' in speech and 'promedio' not in speech
+    assert runtime.registration_notice(identity) is None
+    runtime.turn(identity, 'submit', phrase)
+    after = client.get('/api/bootstrap').json()
+    assert len(after['requests']) == len(before['requests']) + 1
+    assert after['transactions'] == before['transactions']
+    assert after['products'] == before['products']
+    assert client.get(f'/api/requests/{rid}/trace').json()['request']['status'] == 'received'
+    client.post(f'/api/voice/sessions/{identity}/close',json={})
+
+
+def test_editing_draft_revokes_voice_submission(voice, models):
+    app, _, _ = voice; client, _ = login(app)
+    _, control = models; control['intent'] = 'unrecognized-charge'
+    started = client.post('/api/voice/sessions', json=start_body(transactionId='TX-1002')).json()
+    identity, cid = started['id'], started['conversationId']; runtime=app.state.voice
+    runtime.turn(identity, 'prepare', 'No reconozco ese cargo')
+    preview = client.get(f'/api/conversations/{cid}/claim-preview?locale=es').json()
+    for ready in (True,False):
+        assert client.post(f'/api/conversations/{cid}/claim-review', json={
+            'previewToken':preview['previewToken'],'details':preview['summary'],'ready':ready,'locale':'es'}).status_code == 200
+    before=client.get('/api/bootstrap').json()['requests']
+    runtime.turn(identity,'send-while-editing','Confirmar y enviar')
+    assert client.get('/api/bootstrap').json()['requests']==before
+    client.post(f'/api/voice/sessions/{identity}/close',json={})

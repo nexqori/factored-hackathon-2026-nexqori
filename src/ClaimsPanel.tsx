@@ -19,9 +19,14 @@ export function ClaimsPanel({ users, requests, onRequest, admin = true, onCreate
   const focusedCase = useRef('');
   useEffect(() => {
     if (!admin && caseId && requests.some(r => r.id === caseId && r.kind === 'claim') && focusedCase.current !== caseId) {
-      focusedCase.current = caseId;
-      detail.current?.focus({ preventScroll: true });
-      detail.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      // Wait for the submitted draft dialog to release its scroll lock.
+      let second = 0;
+      const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => {
+        focusedCase.current = caseId;
+        detail.current?.focus({ preventScroll: true });
+        detail.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }); });
+      return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
     }
   }, [admin, caseId, requests]);
   const owned = requests.filter(r => r.kind === 'claim' && (!userId || r.userId === userId));

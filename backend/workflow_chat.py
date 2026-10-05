@@ -16,7 +16,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import Field
 from .models import User, Product, Conversation, Message, ConversationFlow, AssistantTurn, RequestCase, AuditEvent, now
-from .schemas import ChatInput, ConfirmInput, Locale
+from .schemas import ChatInput, ConfirmInput, Locale, StrictModel
 from .security import customer, customer_read, db_session
 from .agent_tools import read_tool, ReadToolInput
 from .catalog import SERVICES
@@ -50,6 +50,13 @@ class FlowMessage(ChatInput):
     requestId: str | None = Field(default=None, min_length=1, max_length=64)
     replaceTransaction: bool = False
     updateSelection: bool = False
+
+
+class ShownClaim(StrictModel):
+    previewToken: str = Field(pattern=r"^[a-f0-9]{64}$")
+    details: str = Field(min_length=10, max_length=1000)
+    ready: bool
+    locale: Locale
 
 
 class RegisterClaim(ConfirmInput):
@@ -147,71 +154,27 @@ def chat_router(conversation_view, message_view):
         db.commit()
         return value
 
+    @router.post('/api/conversations/{conversation_id}/claim-review')
+    def shown_claim(conversation_id: str, body: ShownClaim, user=Depends(customer), db=Depends(db_session)):
+        db.scalar(select(User).where(User.id == user.id).with_for_update())
+        conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == user.id))
+        row = db.get(ConversationFlow, conversation_id)
+        if not conv or not row: raise HTTPException(404, 'not_found')
+        require_open(db, conv)
+        if not flow_view(row)['canRegister']: raise HTTPException(409, 'flow_not_ready')
+        if body.previewToken != preview_token(conv, row.state, body.locale):
+            raise HTTPException(409, 'claim_preview_outdated')
+        # Browser acknowledgment of the displayed, unedited draft. Editing or
+        # closing revokes speech submission; registration still needs assent.
+        row.state = {**row.state, 'shown_claim': {
+            'token': body.previewToken, 'details': body.details.strip(),
+            'locale': body.locale, 'ready': body.ready, 'at': now().timestamp()}}
+        db.commit()
+        return {'ready': body.ready}
+
     @router.post('/api/conversations/{conversation_id}/claim')
     def register_claim(conversation_id: str, body: RegisterClaim, user=Depends(customer), db=Depends(db_session)):
-        if len(body.details.strip()) < 10: raise HTTPException(422, 'details')
-        db.scalar(select(User).where(User.id == user.id).with_for_update())
-        conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == user.id).with_for_update())
-        if not conv: raise HTTPException(404, 'not_found')
-        row = db.scalar(select(ConversationFlow).where(ConversationFlow.conversation_id == conversation_id, ConversationFlow.user_id == user.id).with_for_update())
-        if not row: raise HTTPException(404, 'not_found')
-        fingerprint = hashlib.sha256(json.dumps(body.model_dump(exclude={'requestKey'}), sort_keys=True).encode()).hexdigest()
-        cached = row.state.get('claim_registration')
-        if cached:
-            if cached['request_key'] == body.requestKey and cached['fingerprint'] != fingerprint:
-                raise HTTPException(409, 'conflict')
-            return cached['response']
-        # Old registered conversations may have no confirmation message yet.
-        # A new explicit request backfills it once, without creating another case.
-        if not row.request_id and not flow_view(row)['canRegister']: raise HTTPException(409, 'flow_not_ready')
-        locale = body.locale or row.state['language']
-        if not row.request_id and (body.previewToken is not None or row.state.get('claim_preview_required')):
-            if body.previewToken != preview_token(conv, row.state, locale):
-                raise HTTPException(409, 'claim_preview_outdated')
-        intent = row.state['context']['intent']; item = SERVICES[intent]
-        tx = row.state['bank_binding'].get('transaction_id')
-        if tx != conv.transaction_id: raise HTTPException(409, 'flow_not_ready')
-        if intent in ('unrecognized-charge','incorrect-charge','payment-status') and not tx: raise HTTPException(422, 'tool_reference_required')
-        if tx: transaction_evidence(db, user.id, tx)
-        existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.id == row.request_id)) if row.request_id else None
-        if row.request_id and not existing: raise HTTPException(404, 'not_found')
-        if not existing:
-            reused_key = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.request_key == body.requestKey))
-            if reused_key: raise HTTPException(409, 'conflict')
-            existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.transaction_id == tx)) if tx else None
-        linked = existing is not None
-        if not existing:
-            existing = RequestCase(id='NQ-'+uuid4().hex[:10].upper(), user_id=user.id, transaction_id=tx, request_key=body.requestKey,
-                                   catalog_service_id=intent, service=item['category'], reason=item['reason'], details=body.details.strip(),
-                                   service_data={'provider':None,'reference':'','beneficiary':'','amountMinor':None,'currency':None,'accountLast4':None,
-                                                 'notes':body.details.strip(), 'workflow':{'id':row.state['record']['id'], 'version':row.state['record']['revision']}})
-            db.add(existing); db.flush()
-            action = 'created'
-        else: action = 'conversation_linked'
-        was_registered = bool(row.request_id)
-        row.request_id = existing.id
-        if not was_registered:
-            db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, request_id=existing.id, conversation_id=conversation_id, transaction_id=tx, action=action))
-        # Linking another conversation does not overwrite the original case.
-        # Its confirmation still describes the newly reviewed summary, not an
-        # old transcript that may have been stored by an earlier application.
-        summary = claim_preview(db, conv, row.state, locale)['summary'] if was_registered else body.details.strip()
-        reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conversation_id, role='assistant',
-                        content=confirmation_text(existing.id, summary, locale, linked), locale=locale)
-        db.add(reply)
-        db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, request_id=existing.id,
-                          conversation_id=conversation_id, transaction_id=tx, action='assistant_replied'))
-        conv.updated_at = now()
-        db.flush()
-        response = {'id': existing.id, 'message': message_view(reply), 'summary': summary,
-                    'nextStep': CLAIM_NEXT[('es','en','pt').index(locale)], 'flow': flow_view(row)}
-        # This bank-enriched response is durable but never joins provider messages.
-        state = copy.deepcopy(row.state)
-        state['claim_registration'] = {'request_key': body.requestKey, 'fingerprint': fingerprint, 'response': response}
-        row.state = state
-        flag_modified(row, 'state')
-        db.commit()
-        return response
+        return register_reviewed_claim(conversation_id, body, user, db, message_view)
 
     return router
 
@@ -422,7 +385,10 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
                              'Your case needs a review by customer support. Review the details and confirm the complaint to request it.',
                              'Seu caso precisa de análise do atendimento. Revise o relato e confirme a reclamação para solicitá-la.'),
         }
-        ctx['reply'] = review_message(db, conv, state, body.locale)
+        ctx['reply'] = (('El borrador está listo. Revisa los datos y confirma el envío.',
+                        'The draft is ready. Review the details and confirm submission.',
+                        'O rascunho está pronto. Revise os dados e confirme o envio.')[('es','en','pt').index(body.locale)]
+                        if reviewing else review_message(db, conv, state, body.locale))
         remember_safe_reply(state, replies[ctx['state']][('es','en','pt').index(body.locale)])
     for question in ctx.get('questions', []):
         if question['field'] in ('transaction_id','request_id'):
@@ -459,6 +425,9 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
         navigation = navigate_in_app('movements','customer',filters={'transaction':conv.transaction_id})
     if registered:
         navigation = case_status_navigation(status_read)
+    if not registered and flow_view(row)['canRegister'] and not state.get('transaction_suggestion'):
+        state['claim_review_requested'] = state.get('claim_review_requested') or body.requestKey
+        navigation = navigate_in_app('complaints', 'customer')
     row.state = copy.deepcopy(state)
     # Read tools can autoflush the row before query evidence/reply is attached.
     # Explicitly mark the JSON snapshot so the restored result matches this turn.
@@ -473,5 +442,71 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     response = {'text': reply.content, 'destination': navigation['destination'] if navigation else None, 'navigation': navigation,
                 'conversation': conversation_view(conv), 'messages': [message_view(user_message), message_view(reply)], 'flow': flow_view(row)}
     db.add(AssistantTurn(user_id=user.id, request_key=body.requestKey, fingerprint=fingerprint, response=response))
+    db.commit()
+    return response
+
+
+def register_reviewed_claim(conversation_id, body, user, db, message_view):
+    if len(body.details.strip()) < 10: raise HTTPException(422, 'details')
+    db.scalar(select(User).where(User.id == user.id).with_for_update())
+    conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id, Conversation.user_id == user.id).with_for_update())
+    if not conv: raise HTTPException(404, 'not_found')
+    row = db.scalar(select(ConversationFlow).where(ConversationFlow.conversation_id == conversation_id, ConversationFlow.user_id == user.id).with_for_update())
+    if not row: raise HTTPException(404, 'not_found')
+    fingerprint = hashlib.sha256(json.dumps(body.model_dump(exclude={'requestKey'}), sort_keys=True).encode()).hexdigest()
+    cached = row.state.get('claim_registration')
+    if cached:
+        if cached['request_key'] == body.requestKey and cached['fingerprint'] != fingerprint:
+            raise HTTPException(409, 'conflict')
+        return cached['response']
+    # Old registered conversations may have no confirmation message yet.
+    # A new explicit request backfills it once, without creating another case.
+    if not row.request_id and not flow_view(row)['canRegister']: raise HTTPException(409, 'flow_not_ready')
+    locale = body.locale or row.state['language']
+    if not row.request_id and (body.previewToken is not None or row.state.get('claim_preview_required')):
+        if body.previewToken != preview_token(conv, row.state, locale):
+            raise HTTPException(409, 'claim_preview_outdated')
+    intent = row.state['context']['intent']; item = SERVICES[intent]
+    tx = row.state['bank_binding'].get('transaction_id')
+    if tx != conv.transaction_id: raise HTTPException(409, 'flow_not_ready')
+    if intent in ('unrecognized-charge','incorrect-charge','payment-status') and not tx: raise HTTPException(422, 'tool_reference_required')
+    if tx: transaction_evidence(db, user.id, tx)
+    existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.id == row.request_id)) if row.request_id else None
+    if row.request_id and not existing: raise HTTPException(404, 'not_found')
+    if not existing:
+        reused_key = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.request_key == body.requestKey))
+        if reused_key: raise HTTPException(409, 'conflict')
+        existing = db.scalar(select(RequestCase).where(RequestCase.user_id == user.id, RequestCase.transaction_id == tx)) if tx else None
+    linked = existing is not None
+    if not existing:
+        existing = RequestCase(id='NQ-'+uuid4().hex[:10].upper(), user_id=user.id, transaction_id=tx, request_key=body.requestKey,
+                               catalog_service_id=intent, service=item['category'], reason=item['reason'], details=body.details.strip(),
+                               service_data={'provider':None,'reference':'','beneficiary':'','amountMinor':None,'currency':None,'accountLast4':None,
+                                             'notes':body.details.strip(), 'workflow':{'id':row.state['record']['id'], 'version':row.state['record']['revision']}})
+        db.add(existing); db.flush()
+        action = 'created'
+    else: action = 'conversation_linked'
+    was_registered = bool(row.request_id)
+    row.request_id = existing.id
+    if not was_registered:
+        db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, request_id=existing.id, conversation_id=conversation_id, transaction_id=tx, action=action))
+    # Linking another conversation does not overwrite the original case.
+    # Its confirmation still describes the newly reviewed summary, not an
+    # old transcript that may have been stored by an earlier application.
+    summary = claim_preview(db, conv, row.state, locale)['summary'] if was_registered else body.details.strip()
+    reply = Message(id=str(uuid4()), user_id=user.id, conversation_id=conversation_id, role='assistant',
+                    content=confirmation_text(existing.id, summary, locale, linked), locale=locale)
+    db.add(reply)
+    db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, request_id=existing.id,
+                      conversation_id=conversation_id, transaction_id=tx, action='assistant_replied'))
+    conv.updated_at = now()
+    db.flush()
+    response = {'id': existing.id, 'message': message_view(reply), 'summary': summary,
+                'nextStep': CLAIM_NEXT[('es','en','pt').index(locale)], 'flow': flow_view(row)}
+    # This bank-enriched response is durable but never joins provider messages.
+    state = copy.deepcopy(row.state)
+    state['claim_registration'] = {'request_key': body.requestKey, 'fingerprint': fingerprint, 'response': response}
+    row.state = state
+    flag_modified(row, 'state')
     db.commit()
     return response

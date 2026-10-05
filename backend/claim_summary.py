@@ -104,7 +104,7 @@ def confirmation_text(case_id, summary, locale, linked=False):
     i = ('es', 'en', 'pt').index(locale)
     heading = (('Esta conversación quedó vinculada al caso {id}.', 'This conversation is now linked to case {id}.', 'Esta conversa foi vinculada ao caso {id}.')
                if linked else ('Registré tu reclamo con el número de caso {id}.', 'I registered your complaint with case number {id}.', 'Registrei sua reclamação com o número de caso {id}.'))
-    return heading[i].format(id=case_id) + '\n\n' + summary + '\n\n' + NEXT[i]
+    return heading[i].format(id=case_id) + '\n\n' + NEXT[i]
 
 
 def review_message(db, conversation, state, locale):
@@ -119,14 +119,20 @@ def review_message(db, conversation, state, locale):
         'branch-support': ('Reportaste un problema en una sucursal.', 'You reported a problem at a branch.', 'Você relatou um problema em uma agência.'),
         'service-feedback': ('Reportaste un problema con la atención recibida.', 'You reported a problem with the service you received.', 'Você relatou um problema com o atendimento recebido.'),
     }
-    lines = [('Esto es lo que encontré:', 'Here is what I found:', 'Veja o que encontrei:')[i],
-             problems[preview['intent']][i], *preview['summary'].split('\n\n')[1:]]
     comparison = context_comparison(state, conversation.transaction_id)
-    if comparison and comparison.get('unusualIncrease'):
-        lines.append(('¿Hubo un cambio de plan o un cargo adicional que esperabas? Puedes aclararlo antes de confirmar.',
-                      'Was there a plan change or an extra charge you expected? You can clarify this before confirming.',
-                      'Houve uma mudança de plano ou uma cobrança adicional que você esperava? Você pode esclarecer antes de confirmar.')[i])
-    lines.append(('¿Todo está correcto? Revisa y confirma el resumen para registrar el reclamo. Quedará pendiente de revisión por el equipo de atención y podrás seguirlo en Mis reclamos.',
-                  'Is everything correct? Review and confirm the summary to register the complaint. It will await review by the support team, and you can track it in My complaints.',
-                  'Está tudo correto? Revise e confirme o resumo para registrar a reclamação. Ela ficará aguardando análise da equipe de atendimento e você poderá acompanhá-la em Minhas reclamações.')[i])
+    lines = [problems[preview['intent']][i]]
+    if comparison and comparison.get('status') == 'sufficient':
+        avg = comparison['averageMinor'] / 100
+        delta = comparison['differenceMinor'] / 100
+        current = avg + delta
+        lines.append((f'Promedio de {comparison["count"]} pagos anteriores: {avg:.2f} {comparison["currency"]}.',
+                      f'Average of {comparison["count"]} previous payments: {avg:.2f} {comparison["currency"]}.',
+                      f'Média de {comparison["count"]} pagamentos anteriores: {avg:.2f} {comparison["currency"]}.')[i])
+    if comparison and comparison.get('status') == 'sufficient':
+        lines.append((f'Este cargo: {current:.2f}; diferencia: {delta:.2f} {comparison["currency"]}.',
+                      f'This charge: {current:.2f}; difference: {delta:.2f} {comparison["currency"]}.',
+                      f'Esta cobrança: {current:.2f}; diferença: {delta:.2f} {comparison["currency"]}.')[i])
+    lines.append(('El borrador está listo en Mis reclamos. Puedes corregirlo antes de confirmar el envío.',
+                  'The draft is ready in My complaints. You can edit it before confirming submission.',
+                  'O rascunho está pronto em Minhas reclamações. Pode corrigir antes de confirmar o envio.')[i])
     return '\n\n'.join(lines)
