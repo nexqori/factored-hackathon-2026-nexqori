@@ -584,3 +584,20 @@
 - Límites: números y CVV corresponden al proveedor local de prueba, no a una integración con emisor real. Los PDF históricos conservan su contenido original; la separación se aplica a nuevas generaciones. Órdenes explícitas ES/EN/PT, sin reconocimiento semántico ilimitado. Voz aplazada.
 - Último avance: implementado, validado y desplegado localmente; pendiente publicación mediante PR. Otros frentes y datos privados preservados.
 - Siguiente paso: recargar el banco para probar datos de tarjeta y bloqueo desde el chat; revisar el PR antes de fusionar.
+
+## Frente: Nexqori — preferencias, tarjetas y cierre del chat
+- Fecha: 2026-10-04, America/Lima. Rama santiago en la raíz principal; cambios recuperados de codex/chat-profile-and-followup.
+- Pedido vigente: extender el chat existente con selector de tarjeta, preferencias confirmadas, separación de textos de solicitudes/reclamos, filtro de estado, cierre tras PDF y comandos ES/EN/PT según el idioma activo.
+- [x] Implementar selector dentro del diálogo de contraseña; selección por terminación/nombre único o única tarjeta disponible. Mantener contraseña, ocultamiento de datos, CVV y bloqueo existentes.
+- [x] Retirar Documentos solicitados de Mis solicitudes, conservar servicios y añadir filtro de estado. Separar textos de seguimiento y alcance PDF; cerrar conversación al preparar PDF, conservando recuperación idempotente.
+- [x] Incorporar formularios confirmados para nacimiento, frecuencia bancaria, experiencia digital, acompañamiento y tres tamaños. Completar perfiles antiguos con el formulario existente; persistencia, CSRF, autorización del titular y auditoría en servidor.
+- [x] Verificar comandos ES/EN/PT y excepción transversal para cambiar idioma. Mantener flujo y registros fuera de modelos. Detección local por vocabulario revisado, no detector semántico general; tarjetas sin alias propios requieren terminación cuando el nombre es ambiguo.
+- [x] Desplegar API y web desde el checkout aislado en Docker localhost:5180; api/web/db saludables. Conservar PostgreSQL y perfiles manuales.
+- [x] Validar frontend: 30 pruebas y compilación; recorridos de perfil/tarjetas en tres idiomas (chat-profile-obThCJ, 30 axe), chat conectado (bank-chat-hC8Fj8, nueve conversaciones/47 axe), documentos (document-context-70aMIY, nueve PDF/18 axe), tarjetas/CVV/ocultamiento, pagos, navegación, experiencia y servicios. Informes privados en .local/verification; sin errores en los informes finales.
+- [x] Validar 503 pruebas backend, incluidas las regresiones de orden cronológico con reloj fijo. Evidencia: .local/verification/profile-complete2.txt. Dos avisos existentes de Alembic sobre CHECK sin nombre; sin fallos. Temporal aislado tras denegación de acceso al temporal habitual de Windows.
+- [ ] Publicar rama mediante PR y comprobar CI antes de fusionar.
+- [x] A pedido del usuario, resolver los conflictos de santiago y avanzar hasta bd85708 conservando los tres commits: 11366b0, 1d31042 y bd85708. Verificar las etapas de conflicto contra el respaldo original; no había trabajo independiente pendiente. Respaldo de archivos, índice y diferencias en .local/backups/santiago-integration-20261004-225801.
+- [x] Conservar el estado canónico y las entradas de los frentes anteriores; código idéntico a bd85708. Frontend y compilación repetidos en la raíz: correctos (Vitest descubre también la copia del worktree y reporta 60 ejecuciones). Evidencia: .local/verification/santiago-frontend.txt y santiago-build.txt. Sin entradas de conflicto en el índice. Guía: docs/chat-preferencias-y-cierre.md.
+- Límite de publicación: git ls-remote devuelve Repository not found para origin con las credenciales de terminal. No se realizó push ni se cambiaron credenciales/remotos; publicar desde una sesión autorizada de GitHub Desktop.
+- Último avance: implementado, desplegado localmente y validado; santiago contiene todos los cambios verificados y está preparada para publicación.
+- Siguiente paso: publicar santiago desde GitHub Desktop y crear PR; comprobar CI antes de integrar. main, bryan y santiagol conservados.
