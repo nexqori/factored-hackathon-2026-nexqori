@@ -20,7 +20,7 @@ from backend.models import ConversationFlow, AssistantTurn
     ('Abra a central de ajuda','help'),
 ])
 def test_explicit_destinations(text,destination):
-    result = application_command(text,'es')
+    result = application_command(text,command_locale(text))
     assert result and result['destination'] == destination
     if destination == 'cards': assert result['navigation']['route'] == '/cards'
 
@@ -35,7 +35,7 @@ def test_explicit_destinations(text,destination):
     ('Mude o idioma para espanhol',{'type':'set_locale','locale':'es'}),
 ])
 def test_session_and_language_commands(text,command):
-    assert application_command(text,'es')['appCommand'] == command
+    assert application_command(text,command_locale(text))['appCommand'] == command
 
 
 @pytest.mark.parametrize('text', ['No cierres sesión','Do not log me out', 'Não encerre minha sessão',
@@ -43,7 +43,7 @@ def test_session_and_language_commands(text,command):
     'Cambia el idioma a francés', 'Show my cards and pay the bill', 'Mis tarjetas no funcionan',
     'Llévame a mis solicitudes y borra todo', 'No me lleves al inicio'])
 def test_only_explicit_complete_commands(text):
-    assert application_command(text,'es') is None
+    assert not (application_command(text,command_locale(text)) or {}).get('appCommand')
 
 
 def test_commands_preserve_pending_case_and_retry_without_models(setup,models):
@@ -96,11 +96,17 @@ def test_pasted_text_cannot_authorize_commands(setup,models):
     ('Bloquea mi tarjeta','block',None),('Block my card ending in 5556','block','5556'),('Bloqueie meu cartão','block',None),
 ])
 def test_card_commands_only_prepare_a_dialog(text,action,last4):
-    result=application_command(text,'es')
+    result=application_command(text,command_locale(text))
     assert result['navigation']['route']=='/cards'
     assert result['appCommand']=={'type':'prepare_card','action':action,'last4':last4}
 
 
 @pytest.mark.parametrize('text',['No bloquees mi tarjeta','Do not show details of my card','El mensaje dice bloquea mi tarjeta'])
 def test_card_command_negations_and_quotes(text):
-    assert application_command(text,'es') is None
+    assert not (application_command(text,command_locale(text)) or {}).get('appCommand')
+
+
+def command_locale(text):
+    if text.startswith(('Show','Open','Go','Please','Block','Do not')): return 'en'
+    if text.startswith(('Me leve','Abra','Mostre','Vá','Encerre','Bloqueie','Não')): return 'pt'
+    return 'es'

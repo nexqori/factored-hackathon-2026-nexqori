@@ -80,7 +80,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
         else if (result.appCommand.type === 'prepare_card' && ['reveal','block'].includes(result.appCommand.action)) {
           const last4 = result.appCommand.last4;
           if (last4 && !/^\d{4}$/.test(last4)) return;
-          setCardAction({ action: result.appCommand.action, last4, nonce: crypto.randomUUID() });
+          setCardAction({ action: result.appCommand.action, last4, name:result.appCommand.name, nonce: crypto.randomUUID() });
           navigate('/cards');
         }
       } catch (error) { setActionError(errorText(error)); }
@@ -121,7 +121,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
         <Route path="/services" element={<ServiceDirectory />} />
         <Route path="/services/:category" element={<ServiceDirectory />} />
         <Route path="/services/catalog/:serviceId" element={<ServicePage data={data} saved={async () => { await refresh(); }} />} />
-        <Route path="/requests" element={<><PageHeading title={t('requests')} subtitle={t('applicationsHint')} /><MyDocuments/><button className="button primary new-request" onClick={() => navigate('/services')}>{t('allServices')}<ArrowRight size={18}/></button><RequestCollection requests={applications} renderCase={caseCard} />{!applications.length && <p className="empty-panel">{t('noRequests')}</p>}</>} />
+        <Route path="/requests" element={<><PageHeading title={t('requests')} subtitle={t('applicationsHint')} /><button className="button primary new-request" onClick={() => navigate('/services')}>{t('allServices')}<ArrowRight size={18}/></button><RequestCollection requests={applications} renderCase={caseCard} />{!applications.length && <p className="empty-panel">{t('noRequests')}</p>}</>} />
         <Route path="/complaints" element={<ClaimsPanel users={[]} requests={complaints} admin={false} onRequest={id => open({type:'request',id})} onCreate={() => open({type:'create'})} />} />
         <Route path="/payments/:paymentId" element={<PaymentReceipt />} /><Route path="/transfers/:transferId" element={<TransferReceipt />} />
         <Route path="/help" element={<><PageHeading title={t('helpTitle')} subtitle={t('helpBody')} /><div className="help-list">{[1, 2, 3].map(n => <details key={n}><summary>{t('help' + n)}<ChevronDown size={18} /></summary><p>{t('answer' + n)}</p></details>)}</div>{user.role === 'customer' && <button className="button primary" onClick={focusChat}><MessageCircle size={19} />{t('focusAssistant')}</button>}</>} />
@@ -131,7 +131,7 @@ function Shell({ user, setUser, signOut }: { user: User; setUser: (user: User) =
       </Routes>}
       <footer className="main-footer"><ShieldCheck size={14} />{t('footerNote')}<span>ES / EN / PT</span></footer>
     </main>
-    {user.role === 'customer' && <AssistantPanel data={data} onClaim={id => { void refresh().then(() => { navigate("/complaints?case=" + id); }); }} transactionQuestion={transactionQuestion} guided={user.experience?.effectiveAssistance === 'guided'} key={user.id} currentPage={currentDestination(location.pathname, location.search)} onReply={receiveReply} />}
+    {user.role === 'customer' && <AssistantPanel onProfile={setUser} data={data} onClaim={id => { void refresh().then(() => { navigate("/complaints?case=" + id); }); }} transactionQuestion={transactionQuestion} guided={user.experience?.effectiveAssistance === 'guided'} key={user.id} currentPage={currentDestination(location.pathname, location.search)} onReply={receiveReply} />}
     </div></div>
     {notice && <div className="toast" role="status"><Check size={18} />{notice}</div>}
     {modal?.type === 'create' && <CreateRequest key={modal.transactionId || modal.service || 'new'} modal={modal} data={data} close={() => setModal(null)} saved={async (id, duplicate) => { await refresh(); setNotice(t(duplicate ? 'duplicate' : 'saved')); navigate('/complaints?case=' + id); open({ type: 'request', id }); }} />}

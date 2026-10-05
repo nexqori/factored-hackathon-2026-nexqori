@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from pydantic import Field, model_validator
 from sqlalchemy import select, func, or_
 from .models import User, Product, Transaction, RequestCase, Conversation, ConversationFlow, Message, ChatDocument, AuditEvent, now, iso_utc
+from .conversation_closed import require_open
 from .schemas import StrictModel, Locale
 from .security import customer, customer_read, db_session
 from .document_renderer import generar_pdf
@@ -107,6 +108,7 @@ def document_router(message_view):
     def context(conversation_id:str,user=Depends(customer_read),db=Depends(db_session)):
         conv=db.scalar(select(Conversation).where(Conversation.id==conversation_id,Conversation.user_id==user.id))
         if not conv:raise HTTPException(404,'not_found')
+        require_open(db,conv)
         row=db.get(ConversationFlow,conv.id)
         if not can_document(row):raise HTTPException(409,'document_query_required')
         return conversation_defaults(db,user.id,row.state)
@@ -121,6 +123,7 @@ def document_router(message_view):
         if previous:
             if previous.fingerprint!=fingerprint:raise HTTPException(409,'conflict')
             return {'document':document_view(previous),'message':message_view(db.get(Message,previous.message_id))}
+        require_open(db,conv)
         if not can_document(db.get(ConversationFlow,conv.id)):raise HTTPException(409,'document_query_required')
         if db.scalar(select(func.count()).select_from(ChatDocument).where(ChatDocument.conversation_id==conv.id))>=20:raise HTTPException(409,'document_limit')
         packet=document_packet(db,user.id,body)

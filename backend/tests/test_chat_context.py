@@ -75,7 +75,8 @@ def test_explicit_new_topic_interrupts_pending_question_but_keeps_safe_history(s
     app, engine = setup
     client, _ = login(app)
     calls, control = models
-    first = send(client, 'Quiero revisar un cobro incorrecto', locale=locale, transactionId='TX-1002')
+    initial={'es':'Quiero revisar un cobro incorrecto','en':'I want to review an incorrect charge','pt':'Quero revisar uma cobrança incorreta'}[locale]
+    first = send(client, initial, locale=locale, transactionId='TX-1002')
     assert first['flow']['execution']['phase'] == 'waiting_reply'
     cid = first['conversation']['id']
     control.update(family='query', intent='account-balance')
@@ -88,7 +89,7 @@ def test_explicit_new_topic_interrupts_pending_question_but_keeps_safe_history(s
     third = send(client, {'es': '¿Y puedo tenerlo en PDF?', 'en': 'Can I have that as a PDF?', 'pt': 'Posso ter isso em PDF?'}[locale], cid, locale)
     assert third['flow']['canDocument']
     assert [entry[0] for entry in calls] == ['triage', 'jev', 'llm', 'triage', 'jev', 'triage', 'jev']
-    assert calls[-1][1][0]['content'] == 'Quiero revisar un cobro incorrecto'
+    assert calls[-1][1][0]['content'] == initial
     assert second['text'] not in [entry['content'] for entry in calls[-1][1]]
     assert chat.SERVICES['account-balance']['copy'][locale]['title'] in calls[-1][1][-2]['content']
     with make_sessions(engine)() as db:

@@ -2,6 +2,7 @@ import os
 import secrets
 import time
 import re
+from datetime import timedelta, timezone
 from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import FastAPI, Request, Depends, HTTPException, Query
@@ -11,7 +12,7 @@ from sqlalchemy import select, delete, func, or_, and_, text
 from sqlalchemy.exc import IntegrityError
 from .db import make_engine, make_sessions
 from .models import User, Session, Product, Transaction, RequestCase, AuditEvent, Message, Conversation, CardProfile, Refund, now
-from .schemas import CardRevealInput, CardCvvInput, RegisterInput, ExperienceInput
+from .schemas import CardRevealInput, CardCvvInput, RegisterInput, ExperienceInput, ProfileFieldInput
 from .models import CustomerProfile
 from .customer_profile import adult_birth_date, experience_view
 from .workflows import workflow_view
@@ -31,6 +32,9 @@ from .catalog import SERVICES, CATEGORIES, search_services, service_view
 from .security import db_session, current_session, current_user, csrf, customer, customer_read, admin, admin_write, digest, verify, hasher, DUMMY_HASH, COOKIE, SESSION_SECONDS, LoginLimiter
 from .assistant import answer
 from .chat_commands import application_command
+from .chat_language import wrong_language, language_reply
+from .conversation_closed import require_open, document_closed
+from sqlalchemy.orm import object_session
 from .presentation import present_message
 from .transaction_context import transaction_evidence, transaction_reply
 
@@ -38,7 +42,7 @@ def user_view(user):
     return {"id":user.id,"email":user.email,"name":user.name,"role":user.role,"locale":user.locale,"textSize":user.text_size,"experience":experience_view(user.profile)}
 
 def conversation_view(c):
-    return {"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
+    return {"closed":document_closed(object_session(c),c),"id":c.id,"title":c.title,"locale":c.locale,"transactionId":c.transaction_id,"createdAt":c.created_at.isoformat(),"updatedAt":c.updated_at.isoformat()}
 
 def message_view(m):
     document = m.document if m.document and m.document.user_id == m.user_id and m.document.conversation_id == m.conversation_id else None
@@ -159,6 +163,22 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
     @app.get("/api/profile/experience")
     def get_experience(user=Depends(customer_read)):
         return {"birthDate":user.profile.birth_date.isoformat() if user.profile else "", "experience":experience_view(user.profile)}
+
+    @app.patch('/api/profile/field')
+    def set_profile_field(payload: ProfileFieldInput, user=Depends(customer), db=Depends(db_session)):
+        db.scalar(select(User).where(User.id==user.id).with_for_update())
+        allowed = {'textSize': ('small','medium','large'), 'bankingExperience': ('new','occasional','frequent'),
+                   'digitalExperience': ('new','learning','confident'), 'assistance': ('auto','guided','standard')}
+        value = adult_birth_date(payload.value) if payload.field=='birthDate' else payload.value
+        if payload.field in allowed and value not in allowed[payload.field]: raise HTTPException(422,'validation')
+        if payload.field=='textSize': user.text_size=value
+        else:
+            if not user.profile: raise HTTPException(409,'profile_required')
+            setattr(user.profile, {'birthDate':'birth_date','bankingExperience':'banking_experience','digitalExperience':'digital_experience','assistance':'assistance'}[payload.field], value)
+            user.profile.updated_at=now()
+        add_audit(db,user.id,'preferences_updated' if payload.field=='textSize' else 'experience_updated',user.id)
+        db.commit()
+        return {'user':user_view(user)}
 
     @app.patch("/api/profile/experience")
     def set_experience(payload: ExperienceInput, user=Depends(customer), db=Depends(db_session)):
@@ -385,7 +405,9 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             conversation=Conversation(id=str(uuid4()),user_id=user.id,title=message[:100],locale=payload.locale,transaction_id=payload.transactionId)
             db.add(conversation); db.flush()
             add_audit(db,user.id,"conversation_started",user.id,conversation_id=conversation.id)
+        require_open(db,conversation)
         command=application_command(instruction,payload.locale) if not payload.pastedText.strip() else None
+        if not command and wrong_language(instruction,payload.locale): command=language_reply(payload.locale)
         if command:
             result=command
             add_audit(db,user.id,"chat_app_command",user.id,conversation_id=conversation.id)
@@ -397,10 +419,12 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             balance=db.scalar(select(func.coalesce(func.sum(Product.balance_minor),0)).where(Product.user_id==user.id,Product.type.in_(["account","savings"]),Product.currency=="MXN"))
             result=answer(instruction or payload.pastedText,payload.locale,balance,payload.currentPage)
         if result["navigation"]: add_audit(db,user.id,"navigate_"+result["navigation"]["destination"],user.id,conversation_id=conversation.id)
-        user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale)
+        latest=db.scalar(select(func.max(Message.created_at)).where(Message.conversation_id==conversation.id,Message.user_id==user.id))
+        sent_at=max(now(),latest.replace(tzinfo=latest.tzinfo or timezone.utc)+timedelta(microseconds=1)) if latest else now()
+        user_message=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="user",content=message,locale=payload.locale,created_at=sent_at)
         db.add(user_message)
         db.flush()
-        reply=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="assistant",content=result["text"],locale=payload.locale)
+        reply=Message(id=str(uuid4()),user_id=user.id,conversation_id=conversation.id,role="assistant",content=result["text"],locale=payload.locale,created_at=max(now(),sent_at+timedelta(microseconds=1)))
         db.add(reply)
         add_audit(db,user.id,"message_sent",user.id,conversation_id=conversation.id)
         add_audit(db,user.id,"assistant_replied",user.id,conversation_id=conversation.id)

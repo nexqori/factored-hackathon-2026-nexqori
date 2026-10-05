@@ -6,9 +6,10 @@ Financial operations remain outside this allowlist.
 import re
 import unicodedata
 from .navigation import navigate_in_app
+from .chat_language import wrong_language, language_reply
 
 
-def application_command(text, locale):
+def command_text(text):
     value = ''.join(c for c in unicodedata.normalize('NFD', text.lower()) if unicodedata.category(c) != 'Mn')
     value = re.sub(r'\s+', ' ', value).strip(' .!¡?¿')
     value = re.sub(r'^(por favor|please|por gentileza),?\s+', '', value)
@@ -16,6 +17,11 @@ def application_command(text, locale):
     # Match the entire request: negations, quoted instructions and mixed banking
     # requests must continue through the existing interpreter.
     value = re.sub(r'^(puedes|podrias|me puedes|me podrias|podes|voce pode|could you|can you) ', '', value)
+    return value
+
+
+def _application_command(text, locale):
+    value = command_text(text)
     action = None
     navigation = None
     value = re.sub(r'^(show|show me|view) (?:my |the )?card (details|number|cvv)(.*)$', r'\1 \2 of my card\3', value)
@@ -51,3 +57,56 @@ def application_command(text, locale):
             reply = tuple(template.format(screen=label) for template, label in zip(('Abrí {screen}.','I opened {screen}.','Abri {screen}.'), labels[destination]))
     return {'text': reply[('es','en','pt').index(locale)], 'destination': navigation['destination'] if navigation else None,
             'navigation': navigation, 'appCommand': action}
+
+
+def application_command(text, locale):
+    command = _application_command(text, locale)
+    if command and (command.get('appCommand') or {}).get('type') == 'set_locale':
+        return command
+    if wrong_language(text, locale):
+        return language_reply(locale)
+    if command:
+        return command
+    from .chat_language import normalized
+    value = command_text(text)
+    if re.search({'es':r'\b(no|nunca)\b','en':r'\b(no|not|never|dont)\b','pt':r'\b(nao|nunca)\b'}[locale], value) or any(c in value for c in ('"','“','”')):
+        return None
+    verbs = {'es':r'(?:cambia|cambiar|quiero cambiar|actualiza|modifica|pon|ajusta|aumenta|reduce)', 'en':r'(?:change|set|update|i want to change|adjust|increase|decrease)', 'pt':r'(?:mude|mudar|altere|alterar|quero mudar|atualize|ajuste|aumente|diminua)'}
+    match = re.fullmatch(verbs[locale] + r' (.{1,180})', value)
+    if not match:
+        # A named card remains a proposal, never an authorization to reveal it.
+        named = re.fullmatch({'es':r'(?:ver|muestrame|mostrar|quiero ver) (?:los )?(?:datos|detalles) de (?:mi |la )?tarjeta (.{1,80})',
+            'en':r'(?:show|show me|view) (?:the |my )?(?:details of (?:my |the )?card|card details for) (.{1,80})',
+            'pt':r'(?:mostre|mostrar|quero ver) (?:os )?dados d[oa] (?:meu |minha )?cartao (.{1,80})'}[locale], value)
+        if named:
+            result = _application_command({'es':'ver datos de mi tarjeta','en':'show my card details','pt':'mostre os dados do meu cartao'}[locale], locale)
+            result['appCommand']['name'] = named[1]
+            return result
+        from .assistant import NAV_LABELS
+        route = re.fullmatch({'es':r'(?:llevame|abre|abrir|muestrame|ver|quiero ver|ir) (?:a |al |a la |a los |a las |mis |mi |los |las |el |la )*(.+)',
+            'en':r'(?:take me|go|open|show|show me|view) (?:to |the |my )*(.+)',
+            'pt':r'(?:me leve|leve-me|va|abra|abrir|mostre|ver|quero ver) (?:a |ao |aos |as |os |o |meus |minhas |minha |meu )*(.+)'}[locale],value)
+        if route:
+            labels = {**NAV_LABELS[locale], 'documents':{'es':'Mis documentos','en':'My documents','pt':'Meus documentos'}[locale]}
+            for destination,label in labels.items():
+                target=re.sub(r'^(mis |my |meus |minhas )','',normalized(label))
+                if route[1]==target:
+                    return {'text':{'es':'Abrí ','en':'I opened ','pt':'Abri '}[locale]+label+'.', 'destination':destination,
+                            'navigation':navigate_in_app(destination,'customer'),'appCommand':None}
+        return None
+    subject = match[1]
+    fields = {
+        'birthDate': r'fecha de nacimiento|date of birth|birth date|birthday|data de nascimento',
+        'digitalExperience': r'banca digital|digital banking|banco digital|experiencia digital|digital experience',
+        'bankingExperience': r'frecuencia|frecuentemente|frequency|how often|frequencia|banking experience|experiencia bancaria',
+        'assistance': r'acompan|asistencia|assist|support preference|preferencia de ajuda',
+        'textSize': r'tamano (?:de |del )?(?:texto|letra)|text size|font size|tamanho (?:da |de |do )?(?:letra|texto)|letra (?:pequena|mediana|media|grande)',
+    }
+    for field, pattern in fields.items():
+        if re.search(pattern, subject):
+            size = None
+            if field == 'textSize':
+                size = next((key for key, pattern in {'small':r'pequen[oa]|small','medium':r'median[oa]|medium|medi[oa]','large':r'grande|large'}.items() if re.search(r'\b(?:'+pattern+r')\b',subject)),None)
+            return {'text': {'es':'Elige el dato y confirma el cambio aquí.', 'en':'Choose the value and confirm the change here.', 'pt':'Escolha o dado e confirme a alteração aqui.'}[locale],
+                    'navigation':None,'destination':None,'appCommand':{'type':'prepare_profile','field':field,'value':size}}
+    return None

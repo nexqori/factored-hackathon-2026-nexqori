@@ -6,3 +6,5 @@
 .transaction-context{display:flex;flex-direction:column;gap:5px;margin:0 17px 12px;padding:12px;border:1px solid var(--nq-border);border-radius:10px;background:var(--nq-soft);font-size:.8rem}
 .transaction-context code{overflow-wrap:anywhere;font-size:.77rem}
 .transaction-context span{color:var(--nq-muted);font-size:.75rem;line-height:1.5}
+
+.request-filters{display:flex;gap:16px;align-items:end;flex-wrap:wrap}.request-filters .request-search{flex:1;min-width:180px}.request-filters select{width:100%}

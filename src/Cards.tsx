@@ -8,9 +8,9 @@ import './cards.css';
 
 type Card = { id: string; last4: string; holder: string; expiryMonth: number | null; expiryYear: number | null; canReveal: boolean; canBlock: boolean; status: string };
 type Details = { number: string; cvv: string; expiresAt: number; expiryMonth: number; expiryYear: number; cvvExpiresAt: number; serverTime: number; revealToken: string; hideDeadline: number; cvvDeadline: number };
-export type CardAction = { action: 'reveal' | 'block'; last4?: string | null; nonce: string };
+export type CardAction = { action: 'reveal' | 'block'; last4?: string | null; name?:string|null; selectedId?:string; nonce: string };
 
-function CardView({ card, onBlocked, request }: { card: Card; onBlocked: () => void; request?: CardAction }) {
+function CardView({ card, onBlocked, request, cards, onSelect }: { card: Card; onBlocked: () => void; request?: CardAction; cards:Card[]; onSelect:(id:string)=>void }) {
   const { t } = useTranslation();
   const [details, setDetails] = useState<Details | null>(null);
   const [ask, setAsk] = useState(false); const [password, setPassword] = useState('');
@@ -23,7 +23,7 @@ function CardView({ card, onBlocked, request }: { card: Card; onBlocked: () => v
   function hide() { generation.current++; setDetails(null); setPassword(''); setAsk(false); }
   function openBlock() { hide(); setError(''); setBlockConfirmed(false); setBlockPassword(''); setBlockOpen(true); }
   useEffect(() => {
-    if (!request) return;
+    if (!request) { hide();setBlockOpen(false);setBlockPassword('');return; }
     if (request.action === 'block' && card.canBlock) openBlock();
     else if (request.action === 'reveal' && card.canReveal) { hide(); setBlockOpen(false); setBlockPassword(''); setError(''); setAsk(true); }
   }, [request?.nonce]);
@@ -52,7 +52,7 @@ function CardView({ card, onBlocked, request }: { card: Card; onBlocked: () => v
     tick(); const timer = window.setInterval(tick, 250); return () => { clearInterval(timer); controller.abort(); };
   }, [details]);
   async function reveal(e: FormEvent) {
-    e.preventDefault(); if (busy) return; setBusy(true); setError('');
+    e.preventDefault(); if (busy || (request && !request.selectedId)) return; setBusy(true); setError('');
     const current = ++generation.current;
     const submittedPassword = password; setPassword('');
     const started = performance.now();
@@ -72,7 +72,7 @@ function CardView({ card, onBlocked, request }: { card: Card; onBlocked: () => v
   return <article className="card-workspace" data-card-id={card.id}>
     <div className="bank-card">
       <div className="card-top"><strong>nexqori.</strong><CreditCard size={28} aria-hidden="true" /></div>
-      <p>{t('card')}</p>
+      <p>{t('cardName')}</p>
       {card.status === 'blocked' && <p className="card-blocked-label" role="status"><LockKeyhole size={16}/>{t('cardBlocked')}</p>}
       <div className="card-number" aria-label={t('cardNumber')}>{details ? details.number.match(/.{1,4}/g)?.join(' ') : '•••• •••• •••• ' + card.last4}</div>
       <dl className="card-fields"><div><dt>{t('cardHolder')}</dt><dd>{card.holder}</dd></div><div><dt>{t('cardExpiry')}</dt><dd data-testid="card-expiry">{details ? String(details.expiryMonth).padStart(2, '0') + '/' + String(details.expiryYear).slice(-2) : '••/••'}</dd></div></dl>
@@ -86,7 +86,7 @@ function CardView({ card, onBlocked, request }: { card: Card; onBlocked: () => v
       <Link className="text-link" to={'/movements?product=' + encodeURIComponent(card.id)}>{t('seeMovements')}</Link>
       <p className="card-security"><ShieldCheck size={18} />{t('cardSecretHint')}</p>
     </div>
-    {ask && <Dialog title={t('confirmIdentity')} onClose={hide} busy={busy}><form onSubmit={reveal} className="form-stack"><p>{t('cardReauth')}</p><label>{t('password')}<input autoFocus type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={e => setPassword(e.target.value)} /></label>{error && <p role="alert" className="error-text">{error}</p>}<button className="button primary" disabled={busy}>{t(busy ? 'loading' : 'showCardDetails')}</button></form></Dialog>}
+    {ask && <Dialog title={t('confirmIdentity')} onClose={hide} busy={busy}><form onSubmit={reveal} className="form-stack"><p>{t('cardReauth')}</p>{request&&<label>{t('cardSelection')}<select required disabled={busy} value={request.selectedId||''} onChange={e=>{setPassword('');onSelect(e.target.value);}}><option value="">{t('chooseOption')}</option>{cards.filter(c=>c.canReveal).map(c=><option key={c.id} value={c.id}>{t('cardName')} · {c.last4}</option>)}</select></label>}<label>{t('password')}<input autoFocus type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={e => setPassword(e.target.value)} /></label>{error && <p role="alert" className="error-text">{error}</p>}<button className="button primary" disabled={busy}>{t(busy ? 'loading' : 'showCardDetails')}</button></form></Dialog>}
     {blockOpen && <Dialog title={t('blockCard')} onClose={() => { setBlockOpen(false); setBlockPassword(''); }} busy={busy}><form onSubmit={block} className="form-stack"><p>{t('blockCardExplain', { last4: card.last4 })}</p><label>{t('password')}<input type="password" autoComplete="current-password" required maxLength={256} value={blockPassword} onChange={e => setBlockPassword(e.target.value)} /></label><label className="checkbox-label"><input type="checkbox" required checked={blockConfirmed} onChange={e => setBlockConfirmed(e.target.checked)}/>{t('blockCardConfirm')}</label>{error && <p className="error-text" role="alert">{error}</p>}<button className="button primary" disabled={busy || !blockConfirmed}>{t(busy ? 'loading' : 'confirmBlockCard')}</button></form></Dialog>}
   </article>;
 }
@@ -99,12 +99,18 @@ export function Cards({ onChanged, action, onActionConsumed }: { onChanged?: () 
   useEffect(() => {
     if (!action || status !== 'ready' || handled.current === action.nonce) return;
     handled.current = action.nonce; setActionError(false);
-    const available = cards.filter(c => (action.action === 'reveal' ? c.canReveal : c.canBlock) && (!action.last4 || c.last4 === action.last4));
-    if (available.length === 1) setPending({...action,id:available[0].id});
+    const eligible=cards.filter(c=>action.action==='reveal'?c.canReveal:c.canBlock);
+    const normalize=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const available=eligible.filter(c=>(!action.last4||c.last4===action.last4)&&(!action.name||[normalize(t('cardName')), 'nexqori',c.last4].includes(normalize(action.name))));
+    if(action.action==='reveal'&&eligible.length){
+      const selected=available.length===1?available[0]:null;
+      setPending({...action,id:selected?.id||eligible[0].id,selectedId:selected?.id||''});onActionConsumed?.();return;
+    }
+    if (available.length === 1) setPending({...action,id:available[0].id,selectedId:available[0].id});
     else if (available.length > 1) setChoices({action,cards:available});
     else setActionError(true);
     onActionConsumed?.();
   }, [action,status,cards,onActionConsumed]);
   useEffect(() => { const controller = new AbortController(); api<{ cards: Card[] }>('/cards', 'GET', undefined, controller.signal).then(data => { setCards(data.cards); setStatus('ready'); }).catch(() => { if (!controller.signal.aborted) setStatus('error'); }); return () => controller.abort(); }, []);
-  return <section><div className="page-heading"><h1>{t('cards')}</h1><p>{t('cardsIntro')}</p></div>{actionError&&<p role="alert">{t('cardActionUnavailable')}</p>}{choices&&<Dialog title={t('cardChooseAction')} onClose={()=>setChoices(null)}><div className="form-stack">{choices.cards.map(card=><button className="button secondary" key={card.id} onClick={()=>{setPending({...choices.action,id:card.id});setChoices(null);}}>{t('card')} · •••• {card.last4}</button>)}</div></Dialog>}{status === 'loading' ? <p role="status">{t('loading')}</p> : status === 'error' ? <p role="alert">{t('error.generic')}</p> : cards.length ? cards.map(card => <CardView card={card} request={pending?.id===card.id?pending:undefined} key={card.id} onBlocked={() => { setCards(old => old.map(c => c.id === card.id ? { ...c, status: 'blocked', canReveal: false, canBlock: false } : c)); onChanged?.(); }} />) : <p className="empty-panel">{t('noCards')}</p>}</section>;
+  return <section><div className="page-heading"><h1>{t('cards')}</h1><p>{t('cardsIntro')}</p></div>{actionError&&<p role="alert">{t('cardActionUnavailable')}</p>}{choices&&<Dialog title={t('cardChooseAction')} onClose={()=>setChoices(null)}><div className="form-stack">{choices.cards.map(card=><button className="button secondary" key={card.id} onClick={()=>{setPending({...choices.action,id:card.id,selectedId:card.id});setChoices(null);}}>{t('card')} · •••• {card.last4}</button>)}</div></Dialog>}{status === 'loading' ? <p role="status">{t('loading')}</p> : status === 'error' ? <p role="alert">{t('error.generic')}</p> : cards.length ? cards.map(card => <CardView cards={cards} onSelect={id=>{if(pending)setPending({...pending,id:id||cards.find(c=>c.canReveal)!.id,selectedId:id,nonce:crypto.randomUUID()});}} card={card} request={pending?.id===card.id?pending:undefined} key={card.id} onBlocked={() => { setCards(old => old.map(c => c.id === card.id ? { ...c, status: 'blocked', canReveal: false, canBlock: false } : c)); onChanged?.(); }} />) : <p className="empty-panel">{t('noCards')}</p>}</section>;
 }

@@ -1,5 +1,5 @@
 import { Check, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from './api';
 import { ExperienceSettings } from './Experience';
@@ -10,6 +10,7 @@ export function Settings({ user, setUser }: { user: User; setUser: (user: User) 
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState(user.textSize);
+  useEffect(()=>setSelected(user.textSize),[user.textSize]);
   async function choose(textSize: TextSize) {
     setBusy(true); setStatus(''); setSelected(textSize);
     try { const result = await api<{ user: User }>('/profile/preferences', 'PATCH', { textSize }); setUser(result.user); setStatus('preferencesSaved'); }

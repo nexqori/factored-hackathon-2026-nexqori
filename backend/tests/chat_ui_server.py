@@ -39,7 +39,7 @@ def triage(messages,language,*args,**kw):
     calls.append({'model':'triage','messages':messages.copy()});return {'status':'ok','family':'problem'},{}
 def classify(messages,language,*args,**kw):
     calls.append({'model':'jev','messages':messages.copy()})
-    intent=next(intent for intent in ('unrecognized-charge','incorrect-charge','payment-status') if intent in messages[0]['content'])
+    intent=next(intent for index,intent in enumerate(('unrecognized-charge','incorrect-charge','payment-status'),1) if f'[CASE-{index}]' in messages[0]['content'])
     return {'status':'ok','intent':intent},{}
 def extract(messages,language,fields,*args,**kw):
     calls.append({'model':'llm','messages':messages.copy()})

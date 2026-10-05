@@ -6,22 +6,26 @@ import { Dialog, formatDate, formatMoney } from './components';
 import { type FlowResult } from './ChatFlow';
 import { ChatDetails } from './ChatDetails';
 import { ChatDocuments, DocumentDownload } from './ChatDocuments';
+import { ChatProfile, type ProfileCommand } from './ChatProfile';
+import type { User } from './types';
 import type { Dashboard } from './types';
 import { PasteComposer } from './PasteComposer';
 import { localeTags, type Locale } from './i18n';
 import type { Destination, NavigationCommand } from './navigation';
 import type { Conversation, ConversationList, ConversationPage, Message } from './types';
 
-export type ChatReply = { appCommand?: { type: 'logout' } | { type: 'set_locale'; locale: Locale } | { type: 'prepare_card'; action: 'reveal' | 'block'; last4?: string | null } | null; flow?: FlowResult; text: string; destination: string | null; navigation: NavigationCommand | null; conversation: Conversation; messages: Message[] };
+export type ChatReply = { appCommand?: ProfileCommand | { type: 'logout' } | { type: 'set_locale'; locale: Locale } | { type: 'prepare_card'; action: 'reveal' | 'block'; last4?: string | null; name?: string | null } | null; flow?: FlowResult; text: string; destination: string | null; navigation: NavigationCommand | null; conversation: Conversation; messages: Message[] };
 export type TransactionQuestion = { nonce: string; transactionId: string; merchant: string };
 export function Bot({ large = false }: { large?: boolean }) { return <img className={'bot-avatar' + (large ? ' bot-large' : '')} src="/nexqori-bot.png" alt="" aria-hidden="true" width={large ? 100 : 48} height={large ? 100 : 48} />; }
 
-export function AssistantPanel({ currentPage, onReply, guided = false, transactionQuestion, data, onClaim }: { data: Dashboard; onClaim: (id: string) => void; guided?: boolean; currentPage: Destination; onReply: (reply: ChatReply) => void; transactionQuestion?: TransactionQuestion | null }) {
+export function AssistantPanel({ currentPage, onReply, onProfile, guided = false, transactionQuestion, data, onClaim }: { onProfile:(user:User)=>void; data: Dashboard; onClaim: (id: string) => void; guided?: boolean; currentPage: Destination; onReply: (reply: ChatReply) => void; transactionQuestion?: TransactionQuestion | null }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language as Locale;
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const conversationId = useRef<string | null>(null);
   const [connected, setConnected] = useState(true); const [configured, setConfigured] = useState(true);
+  const [profile,setProfile]=useState<ProfileCommand|null>(null);
+  const [profileSaved,setProfileSaved]=useState(false);
   const [flow, setFlow] = useState<FlowResult | null>(null); const [selectedTx, setSelectedTx] = useState(''); const [selectedRequest, setSelectedRequest] = useState('');
   const attempt = useRef<{signature: string; key: string} | null>(null);
   useEffect(() => { const c = new AbortController(); void api<{connected: boolean; providers: Record<string,string>}>('/assistant/capabilities','GET',undefined,c.signal).then(r => { setConnected(r.connected); setConfigured(!r.connected || Object.values(r.providers).every(v => v === 'configured')); }).catch(() => {}); return () => c.abort(); }, []);
@@ -50,6 +54,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
   useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages.at(-1)?.id, pending, busy]);
 
   async function send(message: string, signal?: AbortSignal, pastedText='', transactionId?: string, replaceTransaction=false): Promise<string> {
+    if (conversation?.closed && conversationId.current===conversation.id) throw new ApiError('conversation_closed',409);
     if (busyRef.current || (!message.trim()&&!pastedText.trim())) throw new ApiError('conflict', 409);
     busyRef.current = true; setBusy(true); setError('');
     setPending({text: [message.trim(), pastedText.trim() ? t('pastedText') + '\n' + pastedText : ''].filter(Boolean).join('\n\n'), locale});
@@ -67,6 +72,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
       setSelectedTx(result.conversation.transactionId || '');
       if (replaceTransaction) setSelectedRequest('');
       setMessages(items => [...items, ...result.messages.filter(m => !items.some(old => old.id === m.id))]);
+      setProfile(result.appCommand?.type==='prepare_profile'?result.appCommand:null);setProfileSaved(false);
       replyHandler.current(result);
       return result.text;
     } finally { signal?.removeEventListener('abort', abort); busyRef.current = false; setBusy(false); setPending(null); }
@@ -85,7 +91,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
     finally { setHistoryBusy(false); }
   }
   const [composerKey,setComposerKey]=useState(0);
-  function fresh() { setDocumentsOpen(false); setDetailsOpen(false); setFlow(null); setSelectedTx(''); setSelectedRequest(''); attempt.current = null; conversationId.current = null; setConversation(null); setMessages([]); setBefore(null); setComposerKey(k=>k+1); setError(''); setHistory(false); }
+  function fresh() { setProfile(null);setProfileSaved(false); setDocumentsOpen(false); setDetailsOpen(false); setFlow(null); setSelectedTx(''); setSelectedRequest(''); attempt.current = null; conversationId.current = null; setConversation(null); setMessages([]); setBefore(null); setComposerKey(k=>k+1); setError(''); setHistory(false); }
   useEffect(() => {
     if (!transactionQuestion || busy || historyBusy || handledTransaction.current === transactionQuestion.nonce) return;
     handledTransaction.current = transactionQuestion.nonce;
@@ -93,7 +99,7 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
     void send(t('askTransactionQuestion', { id: transactionQuestion.transactionId, merchant: transactionQuestion.merchant }), undefined, '', transactionQuestion.transactionId).catch(fail);
   }, [transactionQuestion, busy, historyBusy]);
   async function select(item: Conversation) {
-    setHistoryBusy(true); setError('');
+    setProfile(null);setProfileSaved(false);setHistoryBusy(true); setError('');
     try { const result = await api<ConversationPage>('/conversations/' + item.id); conversationId.current = result.conversation.id; setConversation(result.conversation); setMessages(result.messages); setBefore(result.before); setSelectedTx(result.conversation.transactionId || ''); setSelectedRequest(''); setFlow((await api<{flow:FlowResult|null}>('/conversations/' + item.id + '/flow')).flow); setComposerKey(k=>k+1); setHistory(false); }
     catch (e) { fail(e); }
     finally { setHistoryBusy(false); }
@@ -119,22 +125,23 @@ export function AssistantPanel({ currentPage, onReply, guided = false, transacti
       {messages.map(message => <div className={'chat-bubble ' + message.role} key={message.id} lang={message.locale}>{message.text}{message.document&&<DocumentDownload document={message.document}/>}</div>)}
       {pending && <div className="chat-bubble user chat-pending" lang={pending.locale}>{pending.text}</div>}
       {busy && <div className="chat-thinking" role="status"><span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span>{t(pending ? 'chatSending.thinking' : 'loading')}</div>}
-      {!busy && connected && !flow?.requestId && <div className="chat-movement-context">
+      {!conversation?.closed && !busy && connected && !flow?.requestId && <div className="chat-movement-context">
         {selectedTransaction && <div className="chat-selected-movement" data-chat-movement={selectedTx}><strong>{selectedTransaction.merchant}</strong><span>{formatMoney(selectedTransaction.amountMinor,locale,selectedTransaction.currency)} · {formatDate(selectedTransaction.date,locale)}</span><small>{t('chatMovement.reference')}: {selectedTx}</small></div>}
         <div className="chat-transaction-choice" aria-label={t('chatSending.suggestion')}>
           {flow?.suggestedTransaction && !selectedTx && <button className="button primary" onClick={() => { void send(t('chatSending.confirmMessage'),undefined,'',flow.suggestedTransaction!.id).catch(fail); }}>{t('chatSending.confirm')}</button>}
           <button className="button secondary" aria-haspopup="dialog" onClick={() => openDetails('records')}>{t(selectedTx ? 'chatMovement.change' : 'chatMovement.choose')}</button>
         </div>
       </div>}
-      {!busy && flow?.canDocument && conversation && <button className="button secondary chat-next-action" onClick={()=>setDocumentsOpen(true)}>{t('documents.prepare')}</button>}
-      {!busy && flow?.canRegister && <button className="button secondary chat-next-action" onClick={() => openDetails('progress')}>{t('chatFlow.prepareClaim')}<ArrowUpRight size={16}/></button>}
-      {!busy && flow?.missing_fields.includes('request_id') && <button className="text-link chat-next-action" onClick={() => openDetails('records')}>{t('chatDetails.selectRecords')}<ArrowUpRight size={16}/></button>}
+      {!conversation?.closed && !busy && flow?.canDocument && conversation && <button className="button secondary chat-next-action" onClick={()=>setDocumentsOpen(true)}>{t('documents.prepare')}</button>}
+      {!conversation?.closed && !busy && flow?.canRegister && <button className="button secondary chat-next-action" onClick={() => openDetails('progress')}>{t('chatFlow.prepareClaim')}<ArrowUpRight size={16}/></button>}
+      {!conversation?.closed && !busy && flow?.missing_fields.includes('request_id') && <button className="text-link chat-next-action" onClick={() => openDetails('records')}>{t('chatDetails.selectRecords')}<ArrowUpRight size={16}/></button>}
     </div>
     {error && !history && <p className="error-text assistant-error" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}
     {connected && !configured && <p className="flow-provider-warning">{t('chatFlow.unconfigured')}</p>}
-    {documentsOpen && conversation && <ChatDocuments conversationId={conversation.id} data={data} onClose={()=>setDocumentsOpen(false)} onMessage={m=>setMessages(items=>items.some(x=>x.id===m.id)?items:[...items,m])}/>}
+    {documentsOpen && conversation && <ChatDocuments conversationId={conversation.id} data={data} onClose={()=>setDocumentsOpen(false)} onMessage={m=>{setMessages(items=>items.some(x=>x.id===m.id)?items:[...items,m]);setConversation(c=>c?{...c,closed:true}:c);setProfile(null);}}/>}
     {detailsOpen && <ChatDetails initialTab={detailsTab} result={flow} conversation={conversation} data={data} selectedTx={selectedTx} selectedRequest={selectedRequest} onTx={applyTransaction} onRequest={setSelectedRequest} busy={busy} onClose={() => setDetailsOpen(false)} onRegistered={claim => { setFlow(claim.flow); setMessages(items=>items.some(m=>m.id===claim.message.id)?items:[...items,claim.message]); setDetailsOpen(false); onClaim(claim.id); }}/>}
-    <div className="chat-bottom"><PasteComposer key={composerKey} busy={busy} onSend={(message,pasted)=>send(message,undefined,pasted)} copy={{text:t('pastedText'),preview:t('previewPasted'),remove:t('removePasted'),placeholder:t('chatPlaceholder'),label:t('chatLabel'),send:t('send'),limit:t('pasteLimit'),failed:t('chatSending.failed')}}/><button className="human-link" disabled={busy} onClick={() => submit(t('talkHuman'))}><Headphones size={15} />{t('talkHuman')}</button></div>
+    {profile&&!conversation?.closed&&<ChatProfile key={messages.at(-1)?.id} command={profile} onCancel={()=>setProfile(null)} onSaved={user=>{onProfile(user);setProfile(null);setProfileSaved(true);}}/>}{profileSaved&&<p role="status">{t("preferencesSaved")}</p>}
+    {conversation?.closed?<p className="info-banner" role="status">{t("error.conversation_closed")}</p>:<div className="chat-bottom"><PasteComposer key={composerKey} busy={busy} onSend={(message,pasted)=>send(message,undefined,pasted)} copy={{text:t('pastedText'),preview:t('previewPasted'),remove:t('removePasted'),placeholder:t('chatPlaceholder'),label:t('chatLabel'),send:t('send'),limit:t('pasteLimit'),failed:t('chatSending.failed')}}/><button className="human-link" disabled={busy} onClick={() => submit(t('talkHuman'))}><Headphones size={15} />{t('talkHuman')}</button></div>}
     {history && <Dialog title={t('conversations')} onClose={() => setHistory(false)} busy={historyBusy}><p className="muted">{t('historyIntro')}</p><button className="button secondary wide history-new" disabled={historyBusy} onClick={fresh}><Plus size={18} />{t('newConversation')}</button>{error && <p className="error-text" role="alert">{t(i18n.exists(error) ? error : 'error.generic')}</p>}<div className="conversation-list">{historyItems.map(item => <button className={item.id === conversationId.current ? 'current' : ''} key={item.id} disabled={historyBusy} onClick={() => { void select(item); }}><MessageCircle size={18} /><span><strong lang={item.title ? item.locale : locale}>{item.title || t('previousConversation')}</strong><time>{formatTime(item.updatedAt)}</time></span><ArrowUpRight size={17} /></button>)}</div>{!historyItems.length && !historyBusy && !error && <p className="empty-copy">{t('noConversations')}</p>}{historyBusy && <p role="status">{t('loading')}</p>}{nextOffset !== null && <button className="text-link" disabled={historyBusy} onClick={() => { void fetchHistory(nextOffset); }}>{t('loadMore')}</button>}</Dialog>}
   </aside>;
 }

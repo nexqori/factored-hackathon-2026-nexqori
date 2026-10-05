@@ -40,6 +40,12 @@ class PreferencesInput(StrictModel):
     textSize: Literal["small", "medium", "large"]
 
 
+class ProfileFieldInput(StrictModel):
+    field: Literal['birthDate', 'bankingExperience', 'digitalExperience', 'assistance', 'textSize']
+    value: str = Field(min_length=1, max_length=32)
+    confirmed: Literal[True]
+
+
 class ConfirmInput(StrictModel):
     confirmed: Literal[True]
 

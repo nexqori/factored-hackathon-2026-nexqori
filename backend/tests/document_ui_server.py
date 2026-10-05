@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from backend import workflow_chat as chat
 from backend.db import make_engine, make_sessions
 from backend.main import create_app
-from backend.models import Base, Product, Transaction, User, RequestCase
+from backend.models import Base, Product, Transaction, User, RequestCase, CustomerProfile, CardProfile, AuditEvent
 from backend.security import hasher
 
 if os.getenv('NEXQORI_DOCUMENT_UI_CHECK') != '1':
@@ -25,6 +25,7 @@ folder.mkdir(parents=True, exist_ok=True)
 database = folder/'bank.sqlite'
 if database.exists(): raise RuntimeError('Use a fresh verification directory')
 os.environ['BANK_ASSISTANT_FLOW'] = 'true'
+os.environ['CARD_PROVIDER'] = 'local_fixture'
 os.environ['BANK_FLOW_CONFIG'] = str(folder)
 os.environ['NEXQORI_LAB_DATA'] = str(folder)
 engine = make_engine('sqlite:///'+str(database))
@@ -51,6 +52,14 @@ with make_sessions(engine)() as db:
         application='NQ-A'+uid[:10];claim='NQ-C'+uid[:10]
         db.add_all([RequestCase(id=application,user_id=uid,request_key='application-'+uid,service='loans',catalog_service_id='personal-loan',reason='other',details='Verificación solicitud de préstamo',status='received'),
                     RequestCase(id=claim,user_id=uid,request_key='claim-'+uid,service='cards',catalog_service_id='incorrect-charge',reason='amount',details='Verificación reclamo de importe',status='in_review')])
+        if os.getenv('NEXQORI_PROFILE_UI_CHECK')=='1':
+            if locale!='es': db.add(CustomerProfile(user_id=uid,birth_date=datetime(1987,2,14).date(),banking_experience='frequent',digital_experience='confident',assistance='auto'))
+            for suffix,last4 in [('one','9102'),('two','9103')]:
+                card_id='verify-card-'+uid+'-'+suffix
+                db.add(Product(id=card_id,user_id=uid,type='card',last4=last4,balance_minor=None));db.flush()
+                db.add(CardProfile(product_id=card_id,user_id=uid,provider_ref=card_id,expiry_month=12,expiry_year=2030,status='active',settlement_product_id=account))
+            for rid in (application,claim):
+                db.add(AuditEvent(id=str(uuid4()),user_id=uid,actor_id=uid,request_id=rid,action='created'))
         people.append({'applicationId':application,'claimId':claim,'email': email, 'password': password, 'locale': locale, 'accountId': account,
                        'transactionId': september, 'octoberTransactionId': october, 'septemberAmountMinor': 25743})
     db.commit()

@@ -50,7 +50,7 @@ try{
    await expect(panel.locator('[data-chat-movement]')).toHaveAttribute('data-chat-movement',person.transactionId);
    assert.deepEqual(await(await context.request.get(origin+'/api/verification/summary')).json(),counts,'Preparing a movement before conversation must not execute models');
   }
-  const message='Verificación ['+person.intent+'] '+(person.intent==='unrecognized-charge'?{es:'no reconozco e lcobro del celualar',en:'I do not recognize the phone charge.',pt:'Não reconheço a cobrança do celular.'}[person.locale]:{es:'Quiero revisar este movimiento.',en:'I need to review this transaction.',pt:'Quero revisar esta movimentação.'}[person.locale]);
+  const message={es:'Verificación',en:'Verification',pt:'Verificação'}[person.locale]+' [CASE-'+(['unrecognized-charge','incorrect-charge','payment-status'].indexOf(person.intent)+1)+'] '+(person.intent==='unrecognized-charge'?{es:'no reconozco e lcobro del celualar',en:'I do not recognize the phone charge.',pt:'Não reconheço a cobrança do celular.'}[person.locale]:{es:'Quiero revisar este movimiento.',en:'I need to review this transaction.',pt:'Quero revisar esta movimentação.'}[person.locale]);
   // Hold the network before the server answers: the outgoing bubble and empty
   // composer must already be visible. A response lost after commit must reuse
   // its original request key, rather than append a second turn or call models.
@@ -184,7 +184,7 @@ try{
     await page.reload();await expect(page.locator('html')).toHaveAttribute('lang',target);
    }
    const logout=page.waitForResponse(r=>r.url().endsWith('/api/auth/logout'));
-   await panel.locator('.paste-composer textarea').fill({es:'Cierra sesión',en:'Log me out',pt:'Encerre minha sessão'}[person.locale]);await panel.locator('.paste-entry button').click();
+   await panel.locator('.paste-composer textarea').fill('Cierra sesión');await panel.locator('.paste-entry button').click();
    assert.equal((await logout).status(),200);await expect(page.locator('.login-page')).toBeVisible();
    assert.equal((await context.request.get(origin+'/api/session')).status(),401);
   }

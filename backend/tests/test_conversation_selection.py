@@ -18,14 +18,14 @@ from backend.tests.test_workflow_chat import message, models
 def start(client, control, **kwargs):
     control['intent'] = 'unrecognized-charge'
     result = client.post('/api/assistant/flow', json=message(
-        message='No reconozco este cobro y necesito revisarlo.', transactionId='TX-1002', **kwargs))
+        message={'es':'No reconozco este cobro y necesito revisarlo.','en':'I do not recognize this charge and need to review it.','pt':'Não reconheço esta cobrança e preciso revisar.'}[kwargs.get('locale','es')], transactionId='TX-1002', **kwargs))
     assert result.status_code == 200, result.text
     assert result.json()['flow']['canRegister']
     return result.json()
 
 
 def replace_body(conversation, **kwargs):
-    return message(message='Quiero revisar este movimiento.', conversationId=conversation,
+    return message(message={'es':'Quiero revisar este movimiento.','en':'I want to review this transaction.','pt':'Quero revisar esta movimentação.'}[kwargs.get('locale','es')], conversationId=conversation,
                    transactionId='TX-1001', replaceTransaction=True, **kwargs)
 
 
@@ -64,7 +64,7 @@ def test_explicit_replacement_keeps_contract_and_story_but_refreshes_evidence_on
     assert value['flow']['jev'] == first['flow']['jev']
     assert selected_evidence(value)['id'] == 'TX-1001' and selected_evidence(value)['amountMinor'] == -28650
     assert [call[0] for call in calls] == ['triage', 'jev', 'llm', 'llm']
-    assert calls[-1][1][0]['content'] == 'No reconozco este cobro y necesito revisarlo.'
+    assert calls[-1][1][0]['content'] == first['messages'][0]['text']
     assert calls[-1][1][-1]['content'] == body['message']
     for private in ['Stream Plus', 'Mercado Central', 'TX-1002', 'TX-1001', '2026-09-27', '2026-09-28']:
         assert private not in json.dumps(calls, ensure_ascii=False)

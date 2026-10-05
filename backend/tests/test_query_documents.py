@@ -18,14 +18,14 @@ def test_requests_and_complaints_have_disjoint_templates_and_selections(setup,mo
     with make_sessions(engine)() as db:
         db.add(RequestCase(id='NQ-APPLICATION',user_id='andrea',catalog_service_id='personal-loan',request_key='verification-application',service='loans',reason='other',details='Verificación solicitud de préstamo',status='received'))
         db.commit()
-    cid=query(client,control,locale);path=f'/api/conversations/{cid}/documents'
     for kind,expected,excluded in [('requests_summary','NQ-APPLICATION','NQ-1021'),('claims_summary','NQ-1021','NQ-APPLICATION')]:
+        cid=query(client,control,locale);path=f'/api/conversations/{cid}/documents'
+        assert client.post(path,json=body(kind,locale=locale,scope='selected',requestId=excluded)).status_code==404
         response=client.post(path,json=body(kind,locale=locale));assert response.status_code==200,response.text
         value=response.json();raw=client.get('/api/documents/'+value['document']['id']).content
         text=''.join(p.extract_text() for p in PdfReader(BytesIO(raw)).pages)
         assert expected in text and excluded not in text
         assert value['document']['details']['recordCount']==1
-        assert client.post(path,json=body(kind,locale=locale,scope='selected',requestId=excluded)).status_code==404
 
 
 @pytest.mark.parametrize('text,kind',[
@@ -39,7 +39,7 @@ def test_document_kind_from_conversation(text,kind):
 
 def query(client, control, locale='es', intent='documents'):
     control.update(family='query',intent=intent)
-    text='Muéstrame los movimientos de todas mis cuentas' if intent=='account-activity' else 'Quiero un PDF de mi cuenta'
+    text='Muéstrame los movimientos de todas mis cuentas' if intent=='account-activity' else {'es':'Quiero un PDF de mi cuenta','en':'I want a PDF of my account','pt':'Quero um PDF da minha conta'}[locale]
     r=client.post('/api/assistant/flow',json=message(message=text,locale=locale))
     assert r.status_code==200,r.text
     assert r.json()['flow']['canDocument']
@@ -126,6 +126,7 @@ def test_document_date_filter_and_no_silent_truncation(setup,models):
         sample=db.get(Transaction,'TX-1002')
         for i in range(251):db.add(Transaction(id=f'large-doc-{i}',user_id='andrea',product_id='card-01',merchant='<b>Not markup</b>',category='shopping',amount_minor=-100,currency='MXN',occurred_at=sample.occurred_at,status='completed'))
         db.commit()
+    cid=query(client,control)
     too_many=client.post('/api/conversations/'+cid+'/documents',json=body())
     assert too_many.status_code==422 and too_many.json()['error']=='document_too_many_rows'
 
