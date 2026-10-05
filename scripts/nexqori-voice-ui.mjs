@@ -73,6 +73,7 @@ try{
   await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveCount(1);
   await expect(page.locator('.transaction-panel [data-transaction-id]')).toHaveAttribute('data-transaction-id',person.transactionId);
   await expect(page.locator('.transaction-panel [data-transaction-id]')).toBeInViewport();
+  await axe('selected-movement-'+locale);
   await expect(page.getByRole('heading',{name:copy.movements,exact:true})).toBeVisible();
   await page.setViewportSize({width:1366,height:768});
   await expect(page.locator('.spending-overview')).not.toHaveAttribute('open');
