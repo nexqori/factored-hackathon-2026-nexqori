@@ -55,7 +55,13 @@ def case_navigation_command(db, owner, identity, action, locale):
         'Abro Mis reclamos para que elijas el expediente.',
         'I am opening My complaints so you can choose the case.',
         'Abro Minhas reclamações para você escolher o protocolo.')[('es','en','pt').index(locale)]
-    return {'text':message, 'navigation':navigation, 'destination':navigation['destination'], 'appCommand':None}
+    # State only the requested next action, without repeating the whole case.
+    if action == 'show-refund' and navigation['destination'] == 'movements':
+        message = ('Abro Movimientos con sólo el abono de tu reembolso.',
+                   'I am opening Transactions with only your refund credit.',
+                   'Abro Movimentações com apenas o crédito do seu reembolso.')[('es','en','pt').index(locale)]
+    return {'text':message, 'navigation':navigation, 'destination':navigation['destination'], 'appCommand':None,
+            'caseNavigation':action}
 
 
 def case_status_reply(data, locale, *, speech=False):

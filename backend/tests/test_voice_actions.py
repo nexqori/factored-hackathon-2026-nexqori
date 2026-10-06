@@ -32,3 +32,16 @@ def test_review_context_is_explicit_without_sending_bank_records(monkeypatch):
     assert seen[0][0]==[{'role':'user','content':'Confirm and send'}]
     assert 'Trusted application state' in seen[0][1]
     assert 'awaiting submission' in seen[0][1]
+
+
+def test_refund_context_contains_no_bank_records(monkeypatch):
+    from intent_lab import providers
+    seen=[]
+    def classify(messages,locale,instructions,**kwargs):
+        seen.append((messages,instructions))
+        return {'status':'ok','intent':'show-refund','provider_confidence':.95},1
+    monkeypatch.setattr(providers,'classify_jev',classify)
+    assert classify_action('Can you filter to only the refund?', 'en', refund_context=True)=='show-refund'
+    assert seen[0][0]==[{'role':'user','content':'Can you filter to only the refund?'}]
+    assert 'verified deposited refund' in seen[0][1]
+    assert 'NQ-' not in seen[0][1] and 'CR-' not in seen[0][1]

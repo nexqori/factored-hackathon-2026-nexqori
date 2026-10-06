@@ -203,7 +203,18 @@ class VoiceRuntime:
                 and shown.get('locale') == row.locale
                 and 0 <= now().timestamp() - shown.get('at', 0) < 600
                 and shown.get('token') == preview_token(conv, flow.state, row.locale))
-            action = classify_action(text, row.locale, awaiting_claim)
+            # Only a verified, owned case supplies referential context. No bank
+            # records or identifiers are sent to the semantic classifier.
+            refund_context = False
+            context_case = (flow.request_id if flow else None) or selected_request
+            if context_case:
+                from .case_followup import read_case_status
+                try:
+                    refund_context = bool((read_case_status(db, user.id, context_case).get('refund') or {}).get('creditTransactionId'))
+                except HTTPException as error:
+                    if error.status_code != 404: raise
+            action = (classify_action(text, row.locale, awaiting_claim, refund_context=True)
+                      if refund_context else classify_action(text, row.locale, awaiting_claim))
             # Ending media is not a bank operation. A banking content guard
             # must never trap a customer in a billed call they asked to end.
             if action == 'end-call':

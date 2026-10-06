@@ -148,7 +148,7 @@ def test_requesting_preview_keeps_previously_supplied_amount_without_reasking(se
     assert '100 MXN' in preview['summary']
 
 
-def test_resuming_refunded_case_announces_credit_and_opens_case_first(voice, models):
+def test_resuming_refunded_case_announces_credit_and_opens_case_first(voice, models, monkeypatch):
     from backend.tests.test_operations import approve_case, approve_payload
     app, _, provider = voice; customer, _ = login(app); admin, _ = login(app, 'nora')
     _, control = models; control['intent']='unrecognized-charge'
@@ -164,6 +164,19 @@ def test_resuming_refunded_case_announces_credit_and_opens_case_first(voice, mod
     assert result['navigation']['route']=='/complaints?case='+claim['id']
     assert 'reembolso realizado' in result['voiceSummary']['summary']
     assert customer.get('/api/bootstrap').json()['transactions']==before['transactions']
+    seen=[]
+    def action(text,locale,awaiting=False,**context):
+        seen.append(context)
+        return 'show-refund'
+    monkeypatch.setattr('backend.voice.classify_action',action)
+    speech=app.state.voice.turn(started['id'],'filter-refund','Can you filter the results to see the only refund')
+    filtered=customer.post('/api/voice/sessions/'+started['id']+'/heartbeat',json={}).json()['reply']
+    assert seen[-1]=={'refund_context':True}
+    assert filtered['navigation']['route']=='/movements?transaction='+credit
+    assert filtered['navigation']['filters']=={'transaction':credit}
+    assert 'sólo el abono' in speech
+    after=customer.get('/api/bootstrap').json()
+    assert after['transactions']==before['transactions'] and after['products']==before['products']
     customer.post('/api/voice/sessions/'+started['id']+'/close',json={})
 
 
