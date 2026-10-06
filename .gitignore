@@ -31,3 +31,8 @@ __pycache__/
 *.log
 .DS_Store
 Thumbs.db
+
+# Private presentation drafts and generated local artifacts
+/.chart-data-*/
+/output/
+/reuniones/
