@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import Field, field_validator
 from sqlalchemy import func, select
 
-from .email_templates import code_message, refund_message
+from .email_templates import code_message, refund_message, request_message
 from .models import AuditEvent, CardProfile, EmailChallenge, NotificationPreference, Product, User, now
 from .schemas import StrictModel
 from .security import customer, customer_read, current_session, db_session, hasher, LoginLimiter, verify
@@ -198,4 +198,20 @@ def notify_refund_completed(db, refund):
         action = 'notification_refund_failed'
     db.add(AuditEvent(id=str(uuid4()), user_id=owner.id, actor_id=refund.decided_by,
         action=action, request_id=refund.request_id, product_id=account.id))
+    db.commit()
+
+
+def notify_request_registered(db, case):
+    """A receipt after initial registration; never sent for drafts or retries."""
+    from .catalog import request_kind
+    owner=db.get(User,case.user_id)
+    setting=db.get(NotificationPreference,case.user_id)
+    action='notification_request_accepted'
+    try:
+        send_email(setting.email if setting else owner.email,
+                   *request_message(owner.locale,case.id,request_kind(case)=='claim'))
+    except HTTPException:
+        action='notification_request_failed'
+    db.add(AuditEvent(id=str(uuid4()),user_id=owner.id,actor_id=owner.id,
+                      action=action,request_id=case.id))
     db.commit()

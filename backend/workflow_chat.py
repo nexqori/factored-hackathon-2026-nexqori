@@ -519,4 +519,7 @@ def register_reviewed_claim(conversation_id, body, user, db, message_view):
     row.state = state
     flag_modified(row, 'state')
     db.commit()
+    if not linked:
+        from .notifications import notify_request_registered
+        notify_request_registered(db,existing)
     return response

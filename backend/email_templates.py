@@ -118,3 +118,19 @@ def refund_message(locale, amount_minor, currency, case_id, credit_id, last4):
 <tr><td style="padding:20px 24px;border-top:1px solid #E8D9D0;color:#735C50;font-size:12px">Nexqori · {escape(_COPY[locale]['footer'])}</td></tr>
 </table></td></tr></table></body></html>'''
     return 'Nexqori · ' + title, plain, html
+
+
+def request_message(locale, case_id, is_claim=True):
+    locale=locale if locale in ('es','en','pt') else 'es'
+    title, intro, label, next_step = {
+        'es': ('Recibimos tu reclamo' if is_claim else 'Recibimos tu solicitud', 'Tu expediente quedó registrado y está pendiente de revisión.', 'Número de expediente', 'Puedes consultar su avance en Mis reclamos.' if is_claim else 'Puedes consultar su avance en Mis solicitudes.'),
+        'en': ('We received your complaint' if is_claim else 'We received your request', 'Your case is registered and awaiting review.', 'Case number', 'Track its progress in My complaints.' if is_claim else 'Track its progress in My requests.'),
+        'pt': ('Recebemos sua reclamação' if is_claim else 'Recebemos sua solicitação', 'Seu protocolo foi registrado e está aguardando análise.', 'Número do protocolo', 'Acompanhe em Minhas reclamações.' if is_claim else 'Acompanhe em Minhas solicitações.'),
+    }[locale]
+    plain='\n\n'.join([title, intro, f'{label}: {case_id}', next_step, 'Nexqori'])
+    html=f'''<!doctype html><html lang="{locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#F6F0EA;color:#392C27;font-family:Segoe UI,Arial,sans-serif"><table role="presentation" width="100%"><tr><td align="center" style="padding:24px 16px"><table role="presentation" width="600" style="width:100%;max-width:600px;background:#FFFCF9;border:1px solid #E8D9D0;border-radius:24px">
+<tr><td style="padding:24px;border-bottom:1px solid #E8D9D0;font-size:28px;font-weight:700;color:#9A4B32">nexqori.</td></tr>
+<tr><td style="padding:28px 24px"><h1 style="font-family:Georgia,serif;font-size:30px;font-weight:400;margin:0 0 18px">{escape(title)}</h1><p style="line-height:1.7">{escape(intro)}</p><p style="padding:20px;background:#F7F2ED;border-radius:12px;line-height:1.7">{escape(label)}<br><strong>{escape(case_id)}</strong></p><p style="line-height:1.7">{escape(next_step)}</p></td></tr>
+<tr><td style="padding:20px 24px;border-top:1px solid #E8D9D0;color:#735C50;font-size:12px">Nexqori · {escape(_COPY[locale]['footer'])}</td></tr></table></td></tr></table></body></html>'''
+    return 'Nexqori · '+title,plain,html

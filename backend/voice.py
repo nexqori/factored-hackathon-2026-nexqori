@@ -131,6 +131,10 @@ class TranscriptBuffer:
             raise ValueError('voice_transcript_limit')
         self.ids.add(identity); self.fragments.append(dict(event))
 
+    def pending_text(self):
+        return ''.join(f['delta'] for f in sorted(self.fragments, key=lambda f:(f['start_ms'],f['end_ms']))
+                       if f['event_id'] not in self.used).strip()[-8000:]
+
     def take(self, offset):
         # A delegation can land inside the last word's timestamp span. Keep
         # that whole fragment; otherwise its suffix leaks into the next turn.
@@ -168,6 +172,16 @@ class VoiceRuntime:
             if not row:return
             if status: row.status=status
             row.state={**row.state,**fields}; db.commit()
+
+    def request_end(self, identity):
+        with self.sessions() as db:
+            row=db.scalar(select(VoiceSession).where(VoiceSession.id==identity).with_for_update())
+            if not row or not self.live(identity):return None
+            if not row.state.get('end_requested'):
+                row.state={**row.state,'end_requested':True,'last_action':'end-call'}
+                audit(db,row,'voice_end_requested');db.commit()
+            return ('Gracias por llamar. Que tengas un buen día.', 'Thank you for calling. Have a good day.',
+                    'Obrigado por ligar. Tenha um bom dia.')[('es','en','pt').index(row.locale)]
 
     def turn(self, identity, delegation_id, text):
         with self.sessions() as db:
@@ -316,6 +330,8 @@ class VoiceRuntime:
     def run(self, identity, socket, stop, ready):
         fragments=TranscriptBuffer(); pending=[]; seen=set(); future=None; work_id=None
         pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='nexqori-voice-turn')
+        close_pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='nexqori-call-control')
+        close_buffer=TranscriptBuffer();close_future=None;close_ids=set()
         closed=False; reason='ended'; final_usage=None
         greeting_decided=False; greeting_id=None; greeting_sent_at=None; greeting_acked=False
         speech_started=False; next_case_check=0; ending_at=None; last_output_at=None; last_input_at=0; closing_text=''
@@ -327,7 +343,24 @@ class VoiceRuntime:
                 if greeting_sent_at is not None and not greeting_acked and time.monotonic()-greeting_sent_at>10:
                     self.update(identity,greeting_status='unconfirmed')
                     greeting_sent_at=None  # Never retry speech after an ambiguous acknowledgment.
-                if future and future.done():
+                # Call control observes trusted provider transcripts independently of
+                # optional model delegation. It can ONLY end media, never run bank tools.
+                if close_future and close_future.done():
+                    action=close_future.result();close_future=None
+                    if close_ids==close_buffer.ids:
+                        close_buffer.used.update(close_ids)
+                        if action=='end-call' and ending_at is None:
+                            farewell=self.request_end(identity)
+                            if farewell:
+                                send(socket,'session.instructions.append',delegation_id=None,
+                                     content='Say this complete farewell once: "'+farewell+'" Then remain silent while the application ends the call.')
+                                ending_at=time.monotonic();last_output_at=None;closing_text='';pending.clear()
+                if ending_at is None and not close_future and last_input_at and time.monotonic()-last_input_at>=1.5:
+                    close_text=close_buffer.pending_text()
+                    if close_text:
+                        close_ids=set(close_buffer.ids)
+                        close_future=close_pool.submit(classify_action,close_text,locale)
+                if future and future.done() and ending_at is None:
                     result=future.result()
                     future=None
                     with self.sessions() as db:
@@ -341,11 +374,11 @@ class VoiceRuntime:
                 if ending_at is not None and ((last_output_at and len(closing_text.strip())>=12 and time.monotonic()-last_output_at>3 and time.monotonic()-ending_at>5)
                                              or time.monotonic()-ending_at>15):
                     reason='requested_by_customer'; break
-                if not future and not pending and time.monotonic()>=next_case_check:
+                if ending_at is None and not future and not pending and time.monotonic()>=next_case_check:
                     next_case_check=time.monotonic()+1
                     notice=self.registration_notice(identity)
                     if notice:send(socket,'session.commentary.append',delegation_id=None,content=notice)
-                if not future and pending and time.monotonic()-max(pending[0][2],last_input_at)>=1.2:
+                if ending_at is None and not future and pending and time.monotonic()-max(pending[0][2],last_input_at)>=1.2:
                     work_id,offset,_=pending.pop(0);text=fragments.take(offset)
                     if text:future=pool.submit(self.turn,identity,work_id,text)
                     else:send(socket,'session.commentary.append',delegation_id=work_id,content='Please ask the customer to repeat their last request; no complete transcript was received.')
@@ -368,7 +401,7 @@ class VoiceRuntime:
                 elif event.get('type')=='session.input_transcript.delta':
                     speech_started=speech_started or bool(event.get('delta','').strip())
                     last_input_at=time.monotonic()
-                    fragments.add(event)
+                    fragments.add(event);close_buffer.add(event)
                 elif event.get('type')=='session.output_transcript.delta':
                     speech_started=speech_started or bool(event.get('delta','').strip())
                     if ending_at is not None:
@@ -398,7 +431,7 @@ class VoiceRuntime:
                         if event.get('type')=='session.closed':
                             closed=True;final_usage=event.get('usage');break
                 except Exception:pass
-            disconnect(socket);pool.shutdown(wait=False,cancel_futures=True)
+            disconnect(socket);pool.shutdown(wait=False,cancel_futures=True);close_pool.shutdown(wait=False,cancel_futures=True)
             self.update(identity,'closed' if closed else 'failed',reason=reason if closed else 'close_unconfirmed',
                         remote_closed=closed,ended_at=int(time.time()),usage=final_usage if isinstance(final_usage,dict) else None)
             with self.sessions() as db:

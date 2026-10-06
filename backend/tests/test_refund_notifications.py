@@ -11,6 +11,7 @@ from backend.email_templates import refund_message
 @pytest.mark.parametrize('failure', [False, True])
 def test_mail_after_committed_credit_once_and_only_to_owner(setup, monkeypatch, failure):
     app, engine = setup
+    monkeypatch.setattr('backend.notifications.notify_request_registered', lambda *args: None)
     customer, _ = login(app)
     admin, _ = login(app, 'nora')
     sent = []
@@ -45,6 +46,7 @@ def test_mail_after_committed_credit_once_and_only_to_owner(setup, monkeypatch, 
 
 def test_rejection_does_not_send_credit_receipt(setup, monkeypatch):
     app, _ = setup
+    monkeypatch.setattr('backend.notifications.notify_request_registered', lambda *args: None)
     customer, _ = login(app)
     admin, _ = login(app, 'nora')
     monkeypatch.setattr('backend.notifications.send_email', lambda *args: pytest.fail('No credit to notify'))

@@ -377,6 +377,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             prior=previous()
             if prior: return prior
             raise HTTPException(409,"conflict")
+        from .notifications import notify_request_registered
+        notify_request_registered(db,case)
         return JSONResponse({"id":case.id,"duplicate":False},201)
 
     @app.post("/api/requests")
@@ -400,6 +402,8 @@ def create_app(engine=None, origins=None, secure_cookies=None, login_limit=10):
             existing=db.scalar(select(RequestCase).where(RequestCase.user_id==user.id,condition))
             if existing: return {"id":existing.id,"duplicate":True}
             raise HTTPException(409,"conflict")
+        from .notifications import notify_request_registered
+        notify_request_registered(db,case)
         return JSONResponse({"id":case.id,"duplicate":False},201)
     @app.post("/api/requests/{request_id}/handoff")
     def handoff(request_id: str,payload: ConfirmInput,user=Depends(customer),db=Depends(db_session)):

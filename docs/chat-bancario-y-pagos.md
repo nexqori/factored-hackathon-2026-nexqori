@@ -158,3 +158,10 @@ Instrucciones de voz simplificadas conforme a [Prompting GPT-Live](https://devel
 La confirmación administrativa del abono guarda primero el movimiento y el saldo en una transacción atómica. Después envía un comprobante ES/EN/PT mediante el SMTP configurado en el servidor. Usa el correo de notificaciones verificado del titular o, si no existe, el correo de su cuenta. No utiliza el correo del administrador ni un destinatario indicado al modelo. El mensaje incluye importe, moneda, expediente, referencia del abono y sólo los últimos cuatro dígitos de la cuenta.
 
 Aprobar el reclamo, consultar su estado o rechazar la devolución no envía este comprobante. Repetir la misma confirmación no duplica el abono ni el envío. La auditoría notification_refund_accepted indica aceptación SMTP, no entrega garantizada a la bandeja. notification_refund_failed registra un fallo sin revertir el dinero. Este envío es un intento posterior al commit: no incluye una cola durable ni reintento automático tras interrupción del proceso. No repetir una operación bancaria para reintentar un correo.
+
+
+### Acuse de recepción y control de cierre
+
+Registrar por primera vez una solicitud desde chat, voz o formulario envía un acuse al correo del titular después del commit. Incluye el expediente y el estado pendiente de revisión; no confirma un reembolso. Los borradores, la vinculación de un caso existente y los reintentos idempotentes no duplican el envío. Se audita notification_request_accepted o notification_request_failed. Se aplican los mismos límites SMTP del comprobante de reembolso.
+
+El cierre de llamada también observa las transcripciones del proveedor cuando quedan estables, aunque el agente de voz no emita una delegación. Una clasificación semántica end-call activa únicamente la despedida y el cierre de medios. No habilita herramientas bancarias ni ejecuta otras acciones propuestas. Una transcripción nueva invalida una propuesta de cierre anterior aún en evaluación. Las pruebas deben omitir deliberadamente el evento de delegación de la despedida, verificar cierre remoto y conservar el expediente.
