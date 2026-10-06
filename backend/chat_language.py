@@ -31,7 +31,10 @@ def wrong_language(text, locale):
     value = re.sub(r'\b(?:tx|nq|pay|trf|refund|card)-[a-z0-9-]+\b|\b[a-z][a-z0-9-]*\d[a-z0-9-]*\b', '', normalized(text))
     words = set(re.findall(r'[a-z]+', value))
     foreign = set().union(*(tokens for lang,tokens in WORDS.items() if lang != locale)) - WORDS[locale]
-    return bool(words & foreign)
+    # A merchant name can contain a foreign word (e.g. Mercado Llevar).
+    # Reject a foreign request, not an otherwise local sentence naming it.
+    own = WORDS[locale] - set().union(*(tokens for lang,tokens in WORDS.items() if lang != locale))
+    return len(words & foreign) > len(words & own)
 
 
 def language_reply(locale):

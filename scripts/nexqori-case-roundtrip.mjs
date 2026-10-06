@@ -49,9 +49,6 @@ try {
     const first=await send({es:'No reconozco el cobro del teléfono [CASE-1]',en:'I do not recognize the phone charge [CASE-1]',pt:'Não reconheço a cobrança do telefone [CASE-1]'}[locale]);
     assert.equal(first.flow.suggestedTransaction.id,person.transactionId);
     await panel.getByRole('button',{name:copy['chatSending.confirm'],exact:true}).click();
-    await expect(panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true})).toBeVisible();
-    await panel.getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
-    await page.locator('.chat-details-dialog').getByRole('button',{name:copy['chatFlow.prepareClaim'],exact:true}).click();
     const review=page.locator('.chat-claim-review');await expect(review.locator('.chat-claim-summary')).not.toHaveText('');
     await expect(review.getByRole('checkbox')).toHaveCount(0);
     const registered=page.waitForResponse(r=>r.url().endsWith('/'+first.conversation.id+'/claim')&&r.request().method()==='POST');
@@ -86,7 +83,10 @@ try {
     const after=await(await customer.context.request.get(origin+'/api/bootstrap')).json();const credits=after.transactions.filter(t=>t.category==='refund');assert.equal(credits.length,1);
     await customerPage.locator('.sidebar nav a[href="/movements"]').click();
     const fresh=await send(followText);assert(fresh.text.includes(credits[0].id));assert(fresh.text.includes(claim.id));
-    await expect(customerPage).toHaveURL(new RegExp('/movements\\?transaction='+credits[0].id));
+    await expect(customerPage).toHaveURL(new RegExp('/complaints\\?case='+claim.id));
+    await expect(customerPage.locator('.trace-current')).toContainText(copy['trace.outcome.refund_approved']);
+    await customerPage.getByRole('button',{name:copy['caseDecision.viewCredit'],exact:true}).click();
+    await expect(customerPage).toHaveURL(/\/movements\?transaction=CR-/);
     await expect(customerPage.locator('[data-transaction-id="'+credits[0].id+'"]')).toBeInViewport();
     assert.equal(fresh.flow.requestId,claim.id);assert.equal(fresh.conversation.id,first.conversation.id);
     assert.equal((await(await customer.context.request.get(origin+'/api/verification/summary')).json()).bankRecordsSentToModels,false);

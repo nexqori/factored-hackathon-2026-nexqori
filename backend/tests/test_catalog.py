@@ -68,7 +68,8 @@ def test_specific_request_persists_without_debit_and_is_idempotent(setup):
     other,_=login(app,'mateo')
     assert all(c['id']!=case['id'] for c in other.get('/api/bootstrap').json()['requests'])
     with make_sessions(engine)() as db:
-        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.request_id==case['id']))==1
+        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.request_id==case['id'], AuditEvent.action=='created'))==1
+        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.request_id==case['id'], AuditEvent.action.like('notification_request_%')))==1
 
 
 @pytest.mark.parametrize('override',[

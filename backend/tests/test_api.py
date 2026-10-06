@@ -113,7 +113,8 @@ def test_request_confirmation_and_idempotency(setup):
     assert second.json()["id"]==third.json()["id"]==first.json()["id"]
     assert second.json()["duplicate"] and third.json()["duplicate"]
     with make_sessions(engine)() as db:
-        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.request_id==first.json()["id"]))==1
+        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.request_id==first.json()["id"], AuditEvent.action=="created"))==1
+        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.request_id==first.json()["id"], AuditEvent.action.like("notification_request_%")))==1
 
 def test_general_request_retry_is_idempotent(setup):
     app,_=setup

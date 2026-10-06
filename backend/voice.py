@@ -19,7 +19,7 @@ from .security import customer, customer_read, current_session, db_session
 from .schemas import StrictModel, Locale
 from .transaction_context import transaction_evidence
 from .workflow_chat import FlowMessage, RegisterClaim, register_reviewed_claim, run_chat_turn, flow_view, enabled as flow_enabled, next_message_time
-from .transaction_suggestions import submit_review
+from .voice_actions import classify_action
 from .claim_summary import preview_token
 from .prompt_guard import inspect_prompt
 from .voice_summary import presentation
@@ -131,12 +131,22 @@ class TranscriptBuffer:
             raise ValueError('voice_transcript_limit')
         self.ids.add(identity); self.fragments.append(dict(event))
 
+    def pending_text(self):
+        return ''.join(f['delta'] for f in sorted(self.fragments, key=lambda f:(f['start_ms'],f['end_ms']))
+                       if f['event_id'] not in self.used).strip()[-8000:]
+
     def take(self, offset):
         # A delegation can land inside the last word's timestamp span. Keep
         # that whole fragment; otherwise its suffix leaks into the next turn.
         chosen = sorted((f for f in self.fragments if f['event_id'] not in self.used and f['start_ms']<=offset),
                         key=lambda f:(f['start_ms'],f['end_ms']))
-        text = ''.join(f['delta'] for f in chosen).strip()
+        # Late fragments from a previous utterance must not prefix a new reply.
+        # Acoustic separation, not matching particular confirmation words.
+        start = 0
+        for index in range(1, len(chosen)):
+            if chosen[index]['start_ms'] - chosen[index-1]['end_ms'] > 2500:
+                start = index
+        text = ''.join(f['delta'] for f in chosen[start:]).strip()
         if len(text)>8000: raise ValueError('voice_transcript_limit')
         self.used.update(f['event_id'] for f in chosen)
         return text
@@ -163,6 +173,16 @@ class VoiceRuntime:
             if status: row.status=status
             row.state={**row.state,**fields}; db.commit()
 
+    def request_end(self, identity):
+        with self.sessions() as db:
+            row=db.scalar(select(VoiceSession).where(VoiceSession.id==identity).with_for_update())
+            if not row or not self.live(identity):return None
+            if not row.state.get('end_requested'):
+                row.state={**row.state,'end_requested':True,'last_action':'end-call'}
+                audit(db,row,'voice_end_requested');db.commit()
+            return ('Gracias por llamar. Que tengas un buen día.', 'Thank you for calling. Have a good day.',
+                    'Obrigado por ligar. Tenha um bom dia.')[('es','en','pt').index(row.locale)]
+
     def turn(self, identity, delegation_id, text):
         with self.sessions() as db:
             row=db.get(VoiceSession,identity)
@@ -179,10 +199,36 @@ class VoiceRuntime:
             if receipt:
                 previous = row.state.get('reply') or {}
                 return safe_spoken_result(previous, row.locale, previous.get('voiceSummary'))
-            can_submit = bool(submit_review(text) and flow and not flow.request_id and shown
-                and shown.get('ready') and shown.get('locale') == row.locale
+            awaiting_claim = bool(flow and not flow.request_id and shown and shown.get('ready')
+                and shown.get('locale') == row.locale
                 and 0 <= now().timestamp() - shown.get('at', 0) < 600
                 and shown.get('token') == preview_token(conv, flow.state, row.locale))
+            # Only a verified, owned case supplies referential context. No bank
+            # records or identifiers are sent to the semantic classifier.
+            refund_context = False
+            context_case = (flow.request_id if flow else None) or selected_request
+            if context_case:
+                from .case_followup import read_case_status
+                try:
+                    refund_context = bool((read_case_status(db, user.id, context_case).get('refund') or {}).get('creditTransactionId'))
+                except HTTPException as error:
+                    if error.status_code != 404: raise
+            action = (classify_action(text, row.locale, awaiting_claim, refund_context=True)
+                      if refund_context else classify_action(text, row.locale, awaiting_claim))
+            # Ending media is not a bank operation. A banking content guard
+            # must never trap a customer in a billed call they asked to end.
+            if action == 'end-call':
+                farewell = ('Gracias por llamar. Que tengas un buen día.', 'Thank you for calling. Have a good day.',
+                            'Obrigado por ligar. Tenha um bom dia.')[('es','en','pt').index(row.locale)]
+                row.state = {**row.state, 'end_requested': True, 'last_action':action}
+                audit(db, row, 'voice_end_requested'); db.commit()
+                return farewell
+            if action in ('case-status','open-complaints','show-refund') and flow and flow.request_id:
+                selected_request = flow.request_id
+            elif action in ('case-status','open-complaints','show-refund') and not selected_request:
+                from .case_followup import unique_owned_claim
+                selected_request = unique_owned_claim(db, user.id)
+            can_submit = action == 'submit-claim' and awaiting_claim
             if can_submit and inspect_prompt(text, row.locale)['status'] == 'allowed':
                 require_open(db, conv)
                 spoken = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id,
@@ -197,7 +243,8 @@ class VoiceRuntime:
             else:
                 reply=run_chat_turn(FlowMessage(message=text,locale=row.locale,conversationId=conv.id,
                     transactionId=conv.transaction_id,requestId=selected_request,requestKey=key),
-                    user,db,self.conversation_view,self.message_view)
+                    user,db,self.conversation_view,self.message_view,
+                    navigation_action=action if action in ('open-complaints','show-refund') else None)
             if (reply.get('appCommand') or {}).get('type')=='prepare_profile':
                 reply={**reply,'appCommand':None,'destination':'settings','navigation':navigate_in_app('settings','customer')}
             summary=presentation(db,user.id,reply,row.locale)
@@ -221,7 +268,7 @@ class VoiceRuntime:
             receipts=dict(row.state.get('delegations',{}))
             if delegation_id not in receipts:
                 receipts[delegation_id]=key
-                row.state={**row.state,'reply':reply,'revision':row.state.get('revision',0)+1,'delegations':receipts}
+                row.state={**row.state,'reply':reply,'revision':row.state.get('revision',0)+1,'delegations':receipts,'last_action':action}
                 audit(db,row,'voice_turn');db.commit()
             return safe_spoken_result(reply,row.locale,summary)
 
@@ -294,9 +341,11 @@ class VoiceRuntime:
     def run(self, identity, socket, stop, ready):
         fragments=TranscriptBuffer(); pending=[]; seen=set(); future=None; work_id=None
         pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='nexqori-voice-turn')
+        close_pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='nexqori-call-control')
+        close_buffer=TranscriptBuffer();close_future=None;close_ids=set()
         closed=False; reason='ended'; final_usage=None
         greeting_decided=False; greeting_id=None; greeting_sent_at=None; greeting_acked=False
-        speech_started=False; next_case_check=0
+        speech_started=False; next_case_check=0; ending_at=None; last_output_at=None; last_input_at=0; closing_text=''
         try:
             with self.sessions() as db:
                 locale=db.get(VoiceSession,identity).locale
@@ -305,14 +354,42 @@ class VoiceRuntime:
                 if greeting_sent_at is not None and not greeting_acked and time.monotonic()-greeting_sent_at>10:
                     self.update(identity,greeting_status='unconfirmed')
                     greeting_sent_at=None  # Never retry speech after an ambiguous acknowledgment.
-                if future and future.done():
-                    result=future.result();send(socket,'session.commentary.append',delegation_id=work_id,content=result)
+                # Call control observes trusted provider transcripts independently of
+                # optional model delegation. It can ONLY end media, never run bank tools.
+                if close_future and close_future.done():
+                    action=close_future.result();close_future=None
+                    if close_ids==close_buffer.ids:
+                        close_buffer.used.update(close_ids)
+                        if action=='end-call' and ending_at is None:
+                            farewell=self.request_end(identity)
+                            if farewell:
+                                send(socket,'session.instructions.append',delegation_id=None,
+                                     content='Say this complete farewell once: "'+farewell+'" Then remain silent while the application ends the call.')
+                                ending_at=time.monotonic();last_output_at=None;closing_text='';pending.clear()
+                if ending_at is None and not close_future and last_input_at and time.monotonic()-last_input_at>=1.5:
+                    close_text=close_buffer.pending_text()
+                    if close_text:
+                        close_ids=set(close_buffer.ids)
+                        close_future=close_pool.submit(classify_action,close_text,locale)
+                if future and future.done() and ending_at is None:
+                    result=future.result()
                     future=None
-                if not future and not pending and time.monotonic()>=next_case_check:
+                    with self.sessions() as db:
+                        ending=db.get(VoiceSession,identity).state.get('end_requested')
+                    if ending:
+                        send(socket,'session.instructions.append',delegation_id=work_id,
+                             content='The customer has ended the call. Say this complete farewell now, exactly once: "'+result+'" Do not add an acknowledgment, filler, question or any further information. Then remain silent while the application closes the call.')
+                        ending_at=time.monotonic(); last_output_at=None; closing_text=''
+                    else:
+                        send(socket,'session.commentary.append',delegation_id=work_id,content=result)
+                if ending_at is not None and ((last_output_at and len(closing_text.strip())>=12 and time.monotonic()-last_output_at>3 and time.monotonic()-ending_at>5)
+                                             or time.monotonic()-ending_at>15):
+                    reason='requested_by_customer'; break
+                if ending_at is None and not future and not pending and time.monotonic()>=next_case_check:
                     next_case_check=time.monotonic()+1
                     notice=self.registration_notice(identity)
                     if notice:send(socket,'session.commentary.append',delegation_id=None,content=notice)
-                if not future and pending and time.monotonic()-pending[0][2]>=0.6:
+                if ending_at is None and not future and pending and time.monotonic()-max(pending[0][2],last_input_at)>=1.2:
                     work_id,offset,_=pending.pop(0);text=fragments.take(offset)
                     if text:future=pool.submit(self.turn,identity,work_id,text)
                     else:send(socket,'session.commentary.append',delegation_id=work_id,content='Please ask the customer to repeat their last request; no complete transcript was received.')
@@ -334,9 +411,12 @@ class VoiceRuntime:
                     self.update(identity,greeting_status='accepted')  # Acceptance is not proof of playback.
                 elif event.get('type')=='session.input_transcript.delta':
                     speech_started=speech_started or bool(event.get('delta','').strip())
-                    fragments.add(event)
+                    last_input_at=time.monotonic()
+                    fragments.add(event);close_buffer.add(event)
                 elif event.get('type')=='session.output_transcript.delta':
                     speech_started=speech_started or bool(event.get('delta','').strip())
+                    if ending_at is not None:
+                        last_output_at=time.monotonic(); closing_text=(closing_text+event.get('delta',''))[-400:]
                 elif event.get('type')=='session.delegation.created':
                     item=event.get('delegation',{});did=item.get('id');offset=event.get('offset_ms')
                     if item.get('target')=='client' and isinstance(did,str) and 0<len(did)<=128 and isinstance(offset,(int,float)) and offset>=0 and did not in seen:
@@ -362,7 +442,7 @@ class VoiceRuntime:
                         if event.get('type')=='session.closed':
                             closed=True;final_usage=event.get('usage');break
                 except Exception:pass
-            disconnect(socket);pool.shutdown(wait=False,cancel_futures=True)
+            disconnect(socket);pool.shutdown(wait=False,cancel_futures=True);close_pool.shutdown(wait=False,cancel_futures=True)
             self.update(identity,'closed' if closed else 'failed',reason=reason if closed else 'close_unconfirmed',
                         remote_closed=closed,ended_at=int(time.time()),usage=final_usage if isinstance(final_usage,dict) else None)
             with self.sessions() as db:

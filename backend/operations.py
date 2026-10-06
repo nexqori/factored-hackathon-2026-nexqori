@@ -12,7 +12,7 @@ from .models import ClaimReview, AuditEvent, CardProfile, Product, Refund, Reque
 from .schemas import ConfirmInput
 from .workflows import WORKFLOWS
 from .security import admin, admin_write, customer, customer_read, current_session, db_session, LoginLimiter, verify
-from .notifications import email_required, consume_code
+from .notifications import email_required, consume_code, notify_refund_completed
 
 
 class OperationInput(ConfirmInput):
@@ -213,6 +213,8 @@ def operations_router():
         except IntegrityError:
             db.rollback()
             raise HTTPException(409, "idempotency_conflict")
+        if final == 'approved':
+            notify_refund_completed(db, refund)
         return refund_view(db, refund)
 
     return router

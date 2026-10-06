@@ -90,3 +90,47 @@ def code_message(code, purpose, locale, last4=None):
 <tr><td style="padding:22px 24px;border-top:1px solid #E8D9D0;text-align:center;font-size:12px;color:#735C50"><strong style="color:#392C27">Nexqori</strong> · {e('footer')}</td></tr>
 </table></td></tr></table></body></html>'''
     return subject, plain, html
+
+
+_REFUND_COPY = {
+    'es': ('Tu reembolso ya está en tu cuenta', 'El abono se completó. Puedes verlo en Movimientos.', 'Importe abonado', 'Expediente', 'Referencia del abono', 'Cuenta terminada en', 'No necesitas realizar ninguna acción ni compartir códigos.'),
+    'en': ('Your refund is now in your account', 'The credit is complete. You can see it in Transactions.', 'Amount credited', 'Case', 'Credit reference', 'Account ending in', 'No action or security code is needed.'),
+    'pt': ('Seu reembolso já está na sua conta', 'O crédito foi concluído. Você pode vê-lo em Movimentações.', 'Valor creditado', 'Protocolo', 'Referência do crédito', 'Conta terminada em', 'Você não precisa fazer nada nem compartilhar códigos.'),
+}
+
+
+def refund_message(locale, amount_minor, currency, case_id, credit_id, last4):
+    locale = locale if locale in _REFUND_COPY else 'es'
+    title, intro, amount_label, case_label, credit_label, account_label, instruction = _REFUND_COPY[locale]
+    # Integer minor units avoid rounding a financial amount through binary floats.
+    amount = f'{currency} {amount_minor // 100:,}.{amount_minor % 100:02d}'
+    details = [(amount_label, amount), (case_label, case_id), (credit_label, credit_id), (account_label, last4)]
+    plain = '\n\n'.join([title, intro, *[f'{label}: {value}' for label, value in details], instruction, 'Nexqori'])
+    rows = ''.join(f'<tr><td style="padding:12px 16px;color:#735C50">{escape(label)}</td><td style="padding:12px 16px;overflow-wrap:anywhere;font-weight:600">{escape(str(value))}</td></tr>' for label, value in details)
+    html = f'''<!doctype html><html lang="{locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;background:#F6F0EA;font-family:Segoe UI,Arial,sans-serif;color:#392C27">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 16px">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:#FFFCF9;border:1px solid #E8D9D0;border-radius:24px">
+<tr><td style="padding:24px;border-bottom:1px solid #E8D9D0;font-size:28px;font-weight:700;color:#9A4B32">nexqori.</td></tr>
+<tr><td style="padding:28px 24px"><h1 style="font-family:Georgia,serif;font-weight:400;font-size:30px;margin:0 0 16px">{escape(title)}</h1><p style="line-height:1.6">{escape(intro)}</p>
+<table width="100%" cellspacing="0" cellpadding="0" style="background:#F7F2ED;border-radius:16px;font-size:14px">{rows}</table>
+<p style="font-size:13px;line-height:1.6;color:#735C50;margin-top:24px">{escape(instruction)}</p></td></tr>
+<tr><td style="padding:20px 24px;border-top:1px solid #E8D9D0;color:#735C50;font-size:12px">Nexqori · {escape(_COPY[locale]['footer'])}</td></tr>
+</table></td></tr></table></body></html>'''
+    return 'Nexqori · ' + title, plain, html
+
+
+def request_message(locale, case_id, is_claim=True):
+    locale=locale if locale in ('es','en','pt') else 'es'
+    title, intro, label, next_step = {
+        'es': ('Recibimos tu reclamo' if is_claim else 'Recibimos tu solicitud', 'Tu expediente quedó registrado y está pendiente de revisión.', 'Número de expediente', 'Puedes consultar su avance en Mis reclamos.' if is_claim else 'Puedes consultar su avance en Mis solicitudes.'),
+        'en': ('We received your complaint' if is_claim else 'We received your request', 'Your case is registered and awaiting review.', 'Case number', 'Track its progress in My complaints.' if is_claim else 'Track its progress in My requests.'),
+        'pt': ('Recebemos sua reclamação' if is_claim else 'Recebemos sua solicitação', 'Seu protocolo foi registrado e está aguardando análise.', 'Número do protocolo', 'Acompanhe em Minhas reclamações.' if is_claim else 'Acompanhe em Minhas solicitações.'),
+    }[locale]
+    plain='\n\n'.join([title, intro, f'{label}: {case_id}', next_step, 'Nexqori'])
+    html=f'''<!doctype html><html lang="{locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#F6F0EA;color:#392C27;font-family:Segoe UI,Arial,sans-serif"><table role="presentation" width="100%"><tr><td align="center" style="padding:24px 16px"><table role="presentation" width="600" style="width:100%;max-width:600px;background:#FFFCF9;border:1px solid #E8D9D0;border-radius:24px">
+<tr><td style="padding:24px;border-bottom:1px solid #E8D9D0;font-size:28px;font-weight:700;color:#9A4B32">nexqori.</td></tr>
+<tr><td style="padding:28px 24px"><h1 style="font-family:Georgia,serif;font-size:30px;font-weight:400;margin:0 0 18px">{escape(title)}</h1><p style="line-height:1.7">{escape(intro)}</p><p style="padding:20px;background:#F7F2ED;border-radius:12px;line-height:1.7">{escape(label)}<br><strong>{escape(case_id)}</strong></p><p style="line-height:1.7">{escape(next_step)}</p></td></tr>
+<tr><td style="padding:20px 24px;border-top:1px solid #E8D9D0;color:#735C50;font-size:12px">Nexqori · {escape(_COPY[locale]['footer'])}</td></tr></table></td></tr></table></body></html>'''
+    return 'Nexqori · '+title,plain,html

@@ -7,6 +7,13 @@ from .claim_review import handling_view
 from .catalog import request_kind
 
 
+def unique_owned_claim(db, owner):
+    """Use an unambiguous owned claim; never guess between multiple cases."""
+    rows = db.scalars(select(RequestCase).where(RequestCase.user_id == owner)).all()
+    claims = [row.id for row in rows if request_kind(row) == 'claim']
+    return claims[0] if len(claims) == 1 else None
+
+
 def read_case_status(db, owner, identity):
     case = db.scalar(select(RequestCase).where(RequestCase.id == identity, RequestCase.user_id == owner))
     if not case:
@@ -26,15 +33,35 @@ def read_case_status(db, owner, identity):
             'transactionId': case.transaction_id}
 
 
-def case_status_navigation(data):
-    """Navigate to the verified credit, or to the owned case awaiting it."""
+def case_status_navigation(data, *, show_credit=False):
+    """Show the case first; open its verified credit only when requested."""
     from .navigation import navigate_in_app
     credit = (data.get('refund') or {}).get('creditTransactionId')
-    if credit:
+    if credit and show_credit:
         return navigate_in_app('movements', 'customer', filters={'transaction': credit})
     if data['request']['kind'] != 'claim':
         return navigate_in_app('requests', 'customer')
     return navigate_in_app('complaints', 'customer', case_id=data['request']['id'])
+
+
+def case_navigation_command(db, owner, identity, action, locale):
+    from .navigation import navigate_in_app
+    if action not in ('open-complaints', 'show-refund'):
+        return None
+    identity = identity or unique_owned_claim(db, owner)
+    data = read_case_status(db, owner, identity) if identity else None
+    navigation = case_status_navigation(data, show_credit=action == 'show-refund') if data else navigate_in_app('complaints', 'customer')
+    message = case_status_reply(data, locale, speech=True) if data else (
+        'Abro Mis reclamos para que elijas el expediente.',
+        'I am opening My complaints so you can choose the case.',
+        'Abro Minhas reclamações para você escolher o protocolo.')[('es','en','pt').index(locale)]
+    # State only the requested next action, without repeating the whole case.
+    if action == 'show-refund' and navigation['destination'] == 'movements':
+        message = ('Abro Movimientos con sólo el abono de tu reembolso.',
+                   'I am opening Transactions with only your refund credit.',
+                   'Abro Movimentações com apenas o crédito do seu reembolso.')[('es','en','pt').index(locale)]
+    return {'text':message, 'navigation':navigation, 'destination':navigation['destination'], 'appCommand':None,
+            'caseNavigation':action}
 
 
 def case_status_reply(data, locale, *, speech=False):

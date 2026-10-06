@@ -47,7 +47,7 @@ def test_registered_chat_reads_fresh_decision_and_credit_without_models(setup, m
         assert rid not in json.dumps(state['messages'])
     if decision == 'approve':
         reference = result['creditTransactionId']; assert reference in fresh['text']
-        assert fresh['navigation']['route'] == '/movements?transaction='+reference
+        assert fresh['navigation']['route'] == '/complaints?case='+rid
         assert any(word in voice for word in ('reembolso realizado', 'has been refunded', 'já foi reembolsada'))
         assert reference not in voice
     else:
@@ -57,9 +57,21 @@ def test_registered_chat_reads_fresh_decision_and_credit_without_models(setup, m
     assert other.post('/api/assistant/flow', json=message(conversationId=cid)).status_code == 404
     control.update(intent='request-status', family='query')
     selected = customer.post('/api/assistant/flow', json=message(locale=locale, requestId=rid, message={'es':'Estado del caso', 'en':'What is my case status?', 'pt':'Qual é o estado da minha reclamação?'}[locale])).json()
-    assert selected['navigation']['route'] == ('/movements?transaction='+reference if decision=='approve' else '/complaints?case='+rid)
+    assert selected['navigation']['route'] == '/complaints?case='+rid
     assert rid in selected['text']
     if decision=='approve': assert reference in selected['text']
+    if decision=='approve':
+        from backend.case_followup import case_navigation_command
+        with make_sessions(engine)() as db:
+            first=case_navigation_command(db,'andrea',rid,'open-complaints',locale)
+            second=case_navigation_command(db,'andrea',rid,'show-refund',locale)
+            assert first['navigation']['route']=='/complaints?case='+rid
+            assert second['navigation']['route']=='/movements?transaction='+reference
+            from fastapi import HTTPException
+            with pytest.raises(HTTPException) as denied:
+                case_navigation_command(db,'mateo',rid,'show-refund',locale)
+            assert denied.value.status_code==404
+
 
 
 def test_approval_without_valid_completed_credit_is_not_a_refund(setup, models):
@@ -74,3 +86,19 @@ def test_approval_without_valid_completed_credit_is_not_a_refund(setup, models):
         assert data['refund']['creditTransactionId'] is None
         assert 'todavía no consta' in case_status_reply(data,'es')
         db.rollback()
+
+
+def test_unique_owned_claim_is_used_without_manual_selection(setup, models):
+    from backend.case_followup import unique_owned_claim
+    from backend.models import RequestCase
+    app, engine = setup
+    customer, _ = login(app)
+    _, control = models
+    with make_sessions(engine)() as db:
+        assert unique_owned_claim(db,'mateo') != 'NQ-1021'
+    control.update(intent='request-status',family='query')
+    response=customer.post('/api/assistant/flow',json=message(message='Now check my case',locale='en'))
+    assert response.status_code == 200,response.text
+    result=response.json()
+    assert 'NQ-1021' in result['text']
+    assert result['navigation']['route']=='/complaints?case=NQ-1021'

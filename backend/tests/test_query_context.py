@@ -218,3 +218,15 @@ def test_summary_sql_counts_full_period_and_only_settled_amounts_with_local_day_
         assert state['messages']==original and 'QUERY_PRIVATE' not in json.dumps(state)
         assert state['context']['navigation']['filters']['product']=='query-account'
         assert db.scalar(select(AuditEvent).where(AuditEvent.conversation_id==conv.id,AuditEvent.action=='tool_filtered_transactions'))
+
+
+def test_portuguese_recognized_purchase_focuses_owned_unusual_transaction(setup):
+    app,engine=setup
+    with make_sessions(engine)() as db:
+        base=db.get(Transaction,'TX-1001');base.merchant='Mercado del Barrio'
+        db.add(Transaction(id='TEST-MARKET-UNUSUAL',user_id=base.user_id,product_id=base.product_id,merchant=base.merchant,category=base.category,amount_minor=-270000,currency='MXN',occurred_at=base.occurred_at,status='completed'))
+        db.commit()
+        result=query.recognized_purchase_lookup(db,base.user_id,'Vi uma transacao no comercio Mercado Llevar, marcada como suspeita, mas fui eu que a fiz, quero reconhecer-la como normal','pt')
+        assert result['navigation']['route']=='/movements?transaction=TEST-MARKET-UNUSUAL'
+        assert '2,700.00 MXN' in result['text']
+        assert query.recognized_purchase_lookup(db,'another-user','Fui eu no Mercado Llevar','pt') is None

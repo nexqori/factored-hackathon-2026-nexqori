@@ -9,10 +9,10 @@
 .inbox-overview strong{font-size:1.05rem;color:var(--nq-text);font-variant-numeric:tabular-nums}
 .inbox-overview button[aria-pressed=true]{background:var(--nq-soft);border-color:var(--nq-primary);color:var(--nq-primary)}
 .admin-inbox .inbox-filters{grid-template-columns:minmax(200px,1.25fr) minmax(160px,1fr) minmax(140px,.65fr);gap:12px;margin-bottom:18px}
-.admin-inbox .inbox-filters>label{grid-column:auto;font-size:.75rem;gap:6px}
+.admin-inbox .inbox-filters>label{grid-column:auto;font-size:.82rem;gap:10px}
 .inbox-search{display:flex;align-items:center;padding-left:12px;border:1px solid #B6A79C;border-radius:10px;background:white;color:var(--nq-muted)}
 .admin-inbox .inbox-search input{border:0;background:transparent;min-width:0}
-.admin-inbox .inbox-filters input,.admin-inbox .inbox-filters select{font-size:.82rem;min-height:44px}
+.admin-inbox .inbox-filters input,.admin-inbox .inbox-filters select{font-size:.9rem;min-height:52px;padding-block:12px}
 .admin-inbox .inbox-workspace{grid-template-columns:minmax(245px,300px) minmax(0,1fr);gap:18px;height:calc(100dvh - 450px);min-height:420px;align-items:stretch}
 .admin-inbox .inbox-list{display:flex;flex-direction:column;max-height:none;overflow:hidden;border:1px solid var(--nq-border);border-radius:16px;background:#fff}
 .inbox-list-title{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--nq-border)}

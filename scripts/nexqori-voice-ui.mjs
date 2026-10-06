@@ -42,6 +42,8 @@ try{
   const next=await context.request.post(origin+'/api/assistant/flow',{headers:{Origin:origin,'X-CSRF-Token':auth.csrfToken},data:{requestKey:crypto.randomUUID(),locale,conversationId:first.conversation.id,message:{es:'Esperaba 100 MXN',en:'I expected 100 MXN',pt:'Esperava 100 MXN'}[locale]}});
   assert.equal(next.status(),200);let reply=await next.json();assert(reply.flow.canRegister);let voiceRevision=1;
   reply.voiceSummary={summary:copy['voiceCall.verdict.unusual'],transactionId:person.transactionId,comparison:{basis:'history',baselineMinor:10000,currentMinor:18500,differenceMinor:8500,currency:'MXN',count:3,verdict:'unusual'}};
+  // First transport update represents lookup; the later update opens review.
+  reply={...reply,flow:{...reply.flow,canRegister:false,reviewRequestKey:null},destination:'movements',navigation:{tool:'navigate_in_app',destination:'movements',filters:{transaction:person.transactionId},route:'/movements?transaction='+person.transactionId}};
   await page.goto(origin);await page.locator('.language-trigger').click();await page.locator('[data-locale="'+locale+'"]').click();
   await page.locator('.paste-composer textarea').fill('Borrador conservado');
   await page.getByRole('button',{name:copy.startVoice,exact:true}).click();const call=page.locator('.voice-call');
@@ -196,6 +198,8 @@ try{
   await expect(review.locator('textarea')).toHaveCount(0);
   await page.setViewportSize({width:390,height:844});
   await expect(review.getByRole('button',{name:copy['chatClaim.register'],exact:true})).toBeInViewport();
+  await call.getByRole('button',{name:copy['voiceCall.end'],exact:true}).click({trial:true});
+  assert.equal(await review.evaluate(el=>el.matches(':modal')),false,'Draft must not disable call controls');
   await review.screenshot({path:path.join(folder,'review-summary-'+locale+'.png')});
   await page.setViewportSize({width:1512,height:1050});
 

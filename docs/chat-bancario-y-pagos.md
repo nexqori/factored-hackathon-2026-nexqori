@@ -131,7 +131,7 @@ Pedir preparar el reclamo abre su vista previa cuando el flujo tiene contexto su
 
 Después del envío y al consultar el seguimiento, la navegación permitida abre Mis reclamos con el expediente propio seleccionado. La respuesta se basa en la decisión y el abono actuales del servidor. Ninguna URL libre del modelo puede abrir otro destino o ejecutar un reembolso.
 
-Si la consulta comprueba un reembolso completado, abre directamente Movimientos filtrado por la referencia del abono y actualiza los datos de la pantalla. Si aún está en revisión o aprobado sin abono, abre el expediente en Mis reclamos. Consultar nunca ejecuta ni duplica un reembolso; éste conserva la confirmación administrativa. No hay espera artificial ni promesa de minutos.
+Consultar el estado abre primero el expediente seleccionado en Mis reclamos, también cuando el reembolso ya está completado. El botón del abono en el resumen o la acción de voz show-refund abre después Movimientos filtrado por la referencia comprobada. La acción open-complaints vuelve al expediente sin ejecutar ninguna operación. Consultar nunca ejecuta ni duplica un reembolso; éste conserva la confirmación administrativa. No hay espera artificial ni promesa de minutos.
 
 ### Confirmación natural durante una llamada
 
@@ -144,8 +144,24 @@ Para validar este recorrido, además de las regresiones del motor, reproducir au
 
 Al confirmar el movimiento y completar el contexto del problema, la aplicación abre Mis reclamos y muestra automáticamente el borrador del servidor. Nexi explica una sola vez el promedio y la diferencia. Los turnos posteriores del mismo borrador informan sólo la acción siguiente.
 
-El formulario comunica al servidor que el borrador está visible, con versión, idioma y texto. Editarlo o cerrarlo desactiva la confirmación por voz. Tras verlo, «confirmar y enviar» o «No, enviémoslo a revisión» permiten registrar ese borrador desde una delegación autenticada; un «sí» aislado nunca registra. La autorización caduca a los diez minutos y se invalida al cambiar el contexto. Jev sigue revisando el mensaje. No habilita pagos, reembolsos ni cambios de tarjeta por voz.
+El formulario comunica al servidor que el borrador se mostró, con versión, idioma y texto. Editarlo desactiva la confirmación por voz; ocultarlo conserva la revisión. Los cambios de disponibilidad se envían en orden. La revisión caduca a los diez minutos y se invalida al cambiar el contexto. No habilita pagos, reembolsos ni cambios de tarjeta por voz.
 
-El registro utiliza el mismo servicio transaccional e idempotente que el botón, navega al expediente creado y comunica una confirmación breve con despedida. El botón Terminar llamada permanece disponible; el expediente sigue visible al cerrar. Un pago pendiente puede generar un reclamo, pero eso no lo convierte en un cargo reembolsado.
+Jev propone una acción tipada a partir del mensaje del cliente: enviar reclamo, consultar estado, cerrar llamada o continuar. No se ejecuta por una lista de frases exactas. Sólo recibe texto redactado del cliente; no se envían registros bancarios. El servidor vuelve a comprobar sesión, titular, revisión vigente, confirmación explícita y guardia antes de registrar. Incertidumbre, negación y resultados desconocidos no autorizan el envío. Un «sí» aislado no registra.
+
+El registro utiliza el mismo servicio transaccional e idempotente que el botón, navega al expediente creado y comunica una confirmación breve con despedida. El borrador de llamada no bloquea los controles de voz. La acción de cerrar la llamada espera la despedida breve y cierra la sesión remota; el botón sigue disponible. El expediente permanece visible. Un pago pendiente puede generar un reclamo, pero eso no lo convierte en un cargo reembolsado.
 
 Instrucciones de voz simplificadas conforme a [Prompting GPT-Live](https://developers.openai.com/api/docs/guides/live-prompting): capacidades y condiciones concretas de delegación, resultados breves y procedimientos en el servidor. La validación incluye audio de prueba real y no se sustituye por las pruebas con proveedor simulado.
+
+
+### Correo después de un reembolso completado
+
+La confirmación administrativa del abono guarda primero el movimiento y el saldo en una transacción atómica. Después envía un comprobante ES/EN/PT mediante el SMTP configurado en el servidor. Usa el correo de notificaciones verificado del titular o, si no existe, el correo de su cuenta. No utiliza el correo del administrador ni un destinatario indicado al modelo. El mensaje incluye importe, moneda, expediente, referencia del abono y sólo los últimos cuatro dígitos de la cuenta.
+
+Aprobar el reclamo, consultar su estado o rechazar la devolución no envía este comprobante. Repetir la misma confirmación no duplica el abono ni el envío. La auditoría notification_refund_accepted indica aceptación SMTP, no entrega garantizada a la bandeja. notification_refund_failed registra un fallo sin revertir el dinero. Este envío es un intento posterior al commit: no incluye una cola durable ni reintento automático tras interrupción del proceso. No repetir una operación bancaria para reintentar un correo.
+
+
+### Acuse de recepción y control de cierre
+
+Registrar por primera vez una solicitud desde chat, voz o formulario envía un acuse al correo del titular después del commit. Incluye el expediente y el estado pendiente de revisión; no confirma un reembolso. Los borradores, la vinculación de un caso existente y los reintentos idempotentes no duplican el envío. Se audita notification_request_accepted o notification_request_failed. Se aplican los mismos límites SMTP del comprobante de reembolso.
+
+El cierre de llamada también observa las transcripciones del proveedor cuando quedan estables, aunque el agente de voz no emita una delegación. Una clasificación semántica end-call activa únicamente la despedida y el cierre de medios. No habilita herramientas bancarias ni ejecuta otras acciones propuestas. Una transcripción nueva invalida una propuesta de cierre anterior aún en evaluación. Las pruebas deben omitir deliberadamente el evento de delegación de la despedida, verificar cierre remoto y conservar el expediente.

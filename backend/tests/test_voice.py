@@ -268,3 +268,89 @@ def test_voice_suggests_then_browses_without_repeating_date_or_leaking_bank_valu
     after=client.get('/api/bootstrap').json()
     for key in ('products','transactions','requests'):assert after[key]==before[key]
     assert client.post(f'/api/voice/sessions/{identity}/close',json={}).json()['remoteClosed']
+
+
+def test_spoken_close_reaches_remote_provider_after_farewell(voice, monkeypatch):
+    monkeypatch.setattr('backend.voice.classify_action',lambda *a:'end-call')
+    monkeypatch.setattr('backend.voice.inspect_prompt',lambda *a:{'status':'uncertain'})
+    app,engine,provider=voice;client,_=login(app)
+    identity=client.post('/api/voice/sessions',json=start_body(locale='pt')).json()['id']
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'end','delta':'Encerre a chamada','start_ms':0,'end_ms':100})
+    provider.socket.events.put({'type':'session.delegation.created','delegation':{'id':'end','target':'client'},'offset_ms':100})
+    wait_until(lambda:any('Obrigado por ligar' in e.get('content','') for e in provider.socket.sent))
+    provider.socket.events.put({'type':'session.output_transcript.delta','delta':'Obrigado por ligar. Tenha um bom dia.'})
+    wait_until(lambda:any(e['type']=='session.close' for e in provider.socket.sent))
+    result=wait_until(lambda:(s if (s:=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json())['status']=='closed' else None))
+    assert result['remoteClosed'] and result['reason']=='requested_by_customer'
+
+
+def test_late_previous_utterance_does_not_prefix_next_confirmation():
+    buffer=TranscriptBuffer()
+    for identity,start,end,text in [('first',1600,4200,'There is a charge I do not recognize'),
+                                   ('tail',5000,7000,'Can you help me request a refund'),
+                                   ('next',15000,16600,'Yes, that is the charge')]:
+        buffer.add({'event_id':identity,'start_ms':start,'end_ms':end,'delta':text})
+    assert buffer.take(4000)=='There is a charge I do not recognize'
+    assert buffer.take(16400)=='Yes, that is the charge'
+    assert buffer.take(20000)==''
+
+
+@pytest.mark.parametrize('locale,text,farewell', [
+    ('en','Thank you, bye-bye [exhale]','Thank you for calling. Have a good day.'),
+    ('es','Gracias, hasta luego','Gracias por llamar. Que tengas un buen día.'),
+    ('pt','Obrigado, tchau','Obrigado por ligar. Tenha um bom dia.')])
+def test_farewell_closes_without_provider_delegation(voice,monkeypatch,locale,text,farewell):
+    seen=[]
+    def classify(message,*args):
+        seen.append(message)
+        return 'end-call'
+    monkeypatch.setattr('backend.voice.classify_action',classify)
+    monkeypatch.setattr('backend.voice.run_chat_turn',lambda *a,**k:pytest.fail('Call control cannot run bank actions'))
+    app,engine,provider=voice;client,_=login(app)
+    before=client.get('/api/bootstrap').json()
+    identity=client.post('/api/voice/sessions',json=start_body(locale=locale)).json()['id']
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'bye','delta':text,'start_ms':0,'end_ms':100})
+    # No session.delegation.created: the precise production failure.
+    wait_until(lambda:any(farewell in e.get('content','') for e in provider.socket.sent))
+    provider.socket.events.put({'type':'session.output_transcript.delta','delta':farewell})
+    wait_until(lambda:any(e['type']=='session.close' for e in provider.socket.sent))
+    result=wait_until(lambda:(s if (s:=client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json())['status']=='closed' else None))
+    assert seen==[text] and result['remoteClosed'] and result['reason']=='requested_by_customer'
+    after=client.get('/api/bootstrap').json()
+    for key in ('products','transactions','requests'):assert after[key]==before[key]
+
+
+@pytest.mark.parametrize('action',['continue','submit-claim','open-complaints'])
+def test_transcript_watchdog_never_runs_other_actions(voice,monkeypatch,action):
+    seen=[]
+    def classify(text,*args):seen.append(text);return action
+    monkeypatch.setattr('backend.voice.classify_action',classify)
+    monkeypatch.setattr('backend.voice.run_chat_turn',lambda *a,**k:pytest.fail('Not a bank delegation'))
+    app,engine,provider=voice;client,_=login(app)
+    identity=client.post('/api/voice/sessions',json=start_body()).json()['id']
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'turn','delta':'Customer utterance','start_ms':0,'end_ms':100})
+    wait_until(lambda:seen)
+    time.sleep(.4)
+    assert not any(e['type']=='session.close' for e in provider.socket.sent)
+    assert client.post(f'/api/voice/sessions/{identity}/heartbeat',json={}).json()['status']=='active'
+    client.post(f'/api/voice/sessions/{identity}/close',json={})
+
+
+def test_new_speech_invalidates_stale_end_proposal(voice,monkeypatch):
+    import threading
+    started=threading.Event();release=threading.Event();seen=[]
+    def classify(text,*args):
+        seen.append(text)
+        if len(seen)==1:started.set();release.wait(4);return 'end-call'
+        return 'continue'
+    monkeypatch.setattr('backend.voice.classify_action',classify)
+    app,engine,provider=voice;client,_=login(app)
+    identity=client.post('/api/voice/sessions',json=start_body()).json()['id']
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'bye','delta':'Bye','start_ms':0,'end_ms':100})
+    assert started.wait(4)
+    provider.socket.events.put({'type':'session.input_transcript.delta','event_id':'correction','delta':', wait, do not hang up','start_ms':110,'end_ms':200})
+    time.sleep(.4);release.set()
+    wait_until(lambda:len(seen)==2)
+    assert seen[1]=='Bye, wait, do not hang up'
+    assert not any(e['type']=='session.close' for e in provider.socket.sent)
+    client.post(f'/api/voice/sessions/{identity}/close',json={})

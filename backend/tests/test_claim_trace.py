@@ -116,16 +116,19 @@ def test_cursor_pagination_keeps_older_events_when_new_reads_are_audited(setup):
     with make_sessions(engine)() as db:
         db.add_all([AuditEvent(id=ident, user_id='andrea', actor_id='andrea', request_id=case, action='tool_request_status', created_at=moment) for ident in fixture_ids])
         db.commit()
+    with make_sessions(engine)() as db:
+        expected_ids = set(db.scalars(select(AuditEvent.id).where(AuditEvent.request_id == case)).all())
     seen = []
     response = admin.get(trace_url(case)).json()
-    assert len(response['events']) == 50 and response['eventCount'] == 106
+    assert len(response['events']) == 50 and response['eventCount'] == len(expected_ids)
     while True:
         seen.extend(e['id'] for e in response['events'])
         if not response['before']:
             break
         response = admin.get(trace_url(case) + '?before=' + response['before']).json()
     assert fixture_ids <= set(seen)
-    assert len(seen) == len(set(seen)) == 106
+    assert len(seen) == len(set(seen)) == len(expected_ids)
+    assert set(seen) == expected_ids
 
 
 def test_conversation_list_is_bounded_and_paginates(setup):

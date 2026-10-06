@@ -51,6 +51,21 @@ describe('optional voice client',()=>{
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('fetches a final authenticated result before hiding a remotely closed call',async()=>{
+    const final={text:'Your complaint is registered',conversation:{id:'owned'}};
+    let reads=0;
+    vi.mocked(api).mockImplementation(async(path)=>path==='/voice/capabilities'?{enabled:true}:
+      path==='/voice/sessions'?{id:'session',conversationId:'owned',sdp:'answer',expiresAt:Date.now()/1000+300}:
+      {revision:++reads===1?0:1,reply:reads===1?null:final,status:reads===1?'active':'closed'});
+    const client=new VoiceClient(callbacks,audio);await client.start(selection);
+    peer.channel.onmessage({data:JSON.stringify({type:'session.closed'})});
+    await vi.waitFor(()=>expect(callbacks.status).toHaveBeenLastCalledWith('closed'));
+    expect(track.stop).toHaveBeenCalled();
+    expect(callbacks.reply).toHaveBeenCalledWith(final);
+    expect(callbacks.reply.mock.invocationCallOrder[0]).toBeLessThan(callbacks.status.mock.invocationCallOrder.at(-1));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('releases a microphone granted after the user cancelled',async()=>{
     vi.mocked(api).mockResolvedValue({enabled:true});
     let grant!:(stream:any)=>void;
