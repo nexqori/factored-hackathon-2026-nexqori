@@ -12,15 +12,15 @@ Pruebas repetibles: [tres casos con acciones y auditoría](docs/pruebas-tres-cas
 
 Recorridos nuevos: [segunda atención en el LAB](docs/evaluacion-segunda-atencion.md) y [aprobación, ID de operación y consulta del movimiento](docs/trazabilidad-solicitudes.md). Mis reclamos distingue aprobación pendiente, abono y rechazo; en Movimientos puedes iniciar un chat contextual. Jev y Luna también están conectados al chat del banco cuando se configuran.
 
-Esta es la base de trabajo del equipo: React + TypeScript, FastAPI y PostgreSQL, en Docker local, con identidad Terracota suave y español, inglés y portugués. Repositorio del equipo: [nexqori/nexqori](https://github.com/nexqori/nexqori).
+Esta es la base de trabajo del equipo: React + TypeScript, FastAPI y PostgreSQL, en Docker local, con identidad Terracota suave y español, inglés y portugués. Repositorio del equipo: [nexqori/factored-hackathon-2026-nexqori](https://github.com/nexqori/factored-hackathon-2026-nexqori).
 
 ## Arranque
 
 Requisitos: acceso al repositorio, Git, Node.js 24 y Docker Desktop iniciado con contenedores Linux. Clona el proyecto y usa `main` para probar la integración del equipo.
 
 ```sh
-git clone https://github.com/nexqori/nexqori.git
-cd nexqori
+git clone https://github.com/nexqori/factored-hackathon-2026-nexqori.git
+cd factored-hackathon-2026-nexqori
 git switch main
 npm ci
 npm run setup

@@ -62,8 +62,8 @@ The server checks ownership, confirmation and idempotency. A model proposal is n
 Requirements: **Node.js 24**, Git and **Docker Compose** with Linux containers.
 
 ```sh
-git clone https://github.com/nexqori/nexqori.git
-cd nexqori
+git clone https://github.com/nexqori/factored-hackathon-2026-nexqori.git
+cd factored-hackathon-2026-nexqori
 npm ci
 npm run setup
 npm run docker:up

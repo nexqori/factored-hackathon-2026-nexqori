@@ -1,6 +1,6 @@
 # Integración del equipo
 
-Integración final en `main` mediante [PR #4](https://github.com/nexqori/nexqori/pull/4), el 3 de octubre de 2026, America/Lima, sobre la entrega previa del [PR #3](https://github.com/nexqori/nexqori/pull/3). Añade LangGraph y pago telefónico pendiente. La [CI del PR final](https://github.com/nexqori/nexqori/actions/runs/37133828920) pasó: **267 pruebas API, 199 del editor, 22 frontend y 101 de Security Lab**, con las compilaciones. Conserva React, FastAPI, PostgreSQL y ES/EN/PT.
+Integración final en `main` mediante [PR #4](https://github.com/nexqori/factored-hackathon-2026-nexqori/pull/4), el 3 de octubre de 2026, America/Lima, sobre la entrega previa del [PR #3](https://github.com/nexqori/factored-hackathon-2026-nexqori/pull/3). Añade LangGraph y pago telefónico pendiente. La [CI del PR final](https://github.com/nexqori/factored-hackathon-2026-nexqori/actions/runs/37133828920) pasó: **267 pruebas API, 199 del editor, 22 frontend y 101 de Security Lab**, con las compilaciones. Conserva React, FastAPI, PostgreSQL y ES/EN/PT.
 
 | Origen | Incorporación |
 | --- | --- |
