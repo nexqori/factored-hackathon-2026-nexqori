@@ -83,7 +83,10 @@ try {
     const after=await(await customer.context.request.get(origin+'/api/bootstrap')).json();const credits=after.transactions.filter(t=>t.category==='refund');assert.equal(credits.length,1);
     await customerPage.locator('.sidebar nav a[href="/movements"]').click();
     const fresh=await send(followText);assert(fresh.text.includes(credits[0].id));assert(fresh.text.includes(claim.id));
-    await expect(customerPage).toHaveURL(new RegExp('/movements\\?transaction='+credits[0].id));
+    await expect(customerPage).toHaveURL(new RegExp('/complaints\\?case='+claim.id));
+    await expect(customerPage.locator('.trace-current')).toContainText(copy['trace.outcome.refund_approved']);
+    await customerPage.getByRole('button',{name:copy['caseDecision.viewCredit'],exact:true}).click();
+    await expect(customerPage).toHaveURL(/\/movements\?transaction=CR-/);
     await expect(customerPage.locator('[data-transaction-id="'+credits[0].id+'"]')).toBeInViewport();
     assert.equal(fresh.flow.requestId,claim.id);assert.equal(fresh.conversation.id,first.conversation.id);
     assert.equal((await(await customer.context.request.get(origin+'/api/verification/summary')).json()).bankRecordsSentToModels,false);

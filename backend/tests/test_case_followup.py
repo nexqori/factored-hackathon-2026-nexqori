@@ -47,7 +47,7 @@ def test_registered_chat_reads_fresh_decision_and_credit_without_models(setup, m
         assert rid not in json.dumps(state['messages'])
     if decision == 'approve':
         reference = result['creditTransactionId']; assert reference in fresh['text']
-        assert fresh['navigation']['route'] == '/movements?transaction='+reference
+        assert fresh['navigation']['route'] == '/complaints?case='+rid
         assert any(word in voice for word in ('reembolso realizado', 'has been refunded', 'já foi reembolsada'))
         assert reference not in voice
     else:
@@ -57,9 +57,21 @@ def test_registered_chat_reads_fresh_decision_and_credit_without_models(setup, m
     assert other.post('/api/assistant/flow', json=message(conversationId=cid)).status_code == 404
     control.update(intent='request-status', family='query')
     selected = customer.post('/api/assistant/flow', json=message(locale=locale, requestId=rid, message={'es':'Estado del caso', 'en':'What is my case status?', 'pt':'Qual é o estado da minha reclamação?'}[locale])).json()
-    assert selected['navigation']['route'] == ('/movements?transaction='+reference if decision=='approve' else '/complaints?case='+rid)
+    assert selected['navigation']['route'] == '/complaints?case='+rid
     assert rid in selected['text']
     if decision=='approve': assert reference in selected['text']
+    if decision=='approve':
+        from backend.case_followup import case_navigation_command
+        with make_sessions(engine)() as db:
+            first=case_navigation_command(db,'andrea',rid,'open-complaints',locale)
+            second=case_navigation_command(db,'andrea',rid,'show-refund',locale)
+            assert first['navigation']['route']=='/complaints?case='+rid
+            assert second['navigation']['route']=='/movements?transaction='+reference
+            from fastapi import HTTPException
+            with pytest.raises(HTTPException) as denied:
+                case_navigation_command(db,'mateo',rid,'show-refund',locale)
+            assert denied.value.status_code==404
+
 
 
 def test_approval_without_valid_completed_credit_is_not_a_refund(setup, models):

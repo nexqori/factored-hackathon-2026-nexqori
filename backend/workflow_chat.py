@@ -179,7 +179,7 @@ def chat_router(conversation_view, message_view):
     return router
 
 
-def run_chat_turn(body, user, db, conversation_view, message_view):
+def run_chat_turn(body, user, db, conversation_view, message_view, *, navigation_action=None):
     """Shared authenticated interpreter, preserving current text and voice behavior."""
     if not enabled(): raise HTTPException(503, 'flow_unavailable')
     if body.replaceTransaction and (not body.conversationId or not body.transactionId):
@@ -213,6 +213,10 @@ def run_chat_turn(body, user, db, conversation_view, message_view):
     require_open(db, conv)
     row = db.get(ConversationFlow, conv.id)
     command = application_command(body.message, body.locale) if not body.pastedText.strip() and not body.replaceTransaction and not body.updateSelection else None
+    if navigation_action in ('open-complaints','show-refund') or (command and (command.get('navigation') or {}).get('destination') == 'complaints'):
+        from .case_followup import case_navigation_command
+        identity = body.requestId or (row.request_id or row.state.get('bank_binding',{}).get('request_id') if row else None)
+        command = case_navigation_command(db,user.id,identity,navigation_action or 'open-complaints',body.locale)
     if not command and not body.updateSelection and wrong_language(body.message, body.locale):
         command = language_reply(body.locale)
     if not command and not body.pastedText.strip() and not body.updateSelection:

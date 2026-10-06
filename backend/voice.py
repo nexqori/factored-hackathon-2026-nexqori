@@ -198,9 +198,9 @@ class VoiceRuntime:
                 row.state = {**row.state, 'end_requested': True, 'last_action':action}
                 audit(db, row, 'voice_end_requested'); db.commit()
                 return farewell
-            if action == 'case-status' and flow and flow.request_id:
+            if action in ('case-status','open-complaints','show-refund') and flow and flow.request_id:
                 selected_request = flow.request_id
-            elif action == 'case-status' and not selected_request:
+            elif action in ('case-status','open-complaints','show-refund') and not selected_request:
                 from .case_followup import unique_owned_claim
                 selected_request = unique_owned_claim(db, user.id)
             can_submit = action == 'submit-claim' and awaiting_claim
@@ -218,7 +218,8 @@ class VoiceRuntime:
             else:
                 reply=run_chat_turn(FlowMessage(message=text,locale=row.locale,conversationId=conv.id,
                     transactionId=conv.transaction_id,requestId=selected_request,requestKey=key),
-                    user,db,self.conversation_view,self.message_view)
+                    user,db,self.conversation_view,self.message_view,
+                    navigation_action=action if action in ('open-complaints','show-refund') else None)
             if (reply.get('appCommand') or {}).get('type')=='prepare_profile':
                 reply={**reply,'appCommand':None,'destination':'settings','navigation':navigate_in_app('settings','customer')}
             summary=presentation(db,user.id,reply,row.locale)
@@ -317,7 +318,7 @@ class VoiceRuntime:
         pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='nexqori-voice-turn')
         closed=False; reason='ended'; final_usage=None
         greeting_decided=False; greeting_id=None; greeting_sent_at=None; greeting_acked=False
-        speech_started=False; next_case_check=0; ending_at=None; last_output_at=None; last_input_at=0
+        speech_started=False; next_case_check=0; ending_at=None; last_output_at=None; last_input_at=0; closing_text=''
         try:
             with self.sessions() as db:
                 locale=db.get(VoiceSession,identity).locale
@@ -327,12 +328,17 @@ class VoiceRuntime:
                     self.update(identity,greeting_status='unconfirmed')
                     greeting_sent_at=None  # Never retry speech after an ambiguous acknowledgment.
                 if future and future.done():
-                    result=future.result();send(socket,'session.commentary.append',delegation_id=work_id,content=result)
+                    result=future.result()
                     future=None
                     with self.sessions() as db:
-                        if db.get(VoiceSession,identity).state.get('end_requested'):
-                            ending_at=time.monotonic(); last_output_at=None
-                if ending_at is not None and ((last_output_at and time.monotonic()-last_output_at>3 and time.monotonic()-ending_at>5)
+                        ending=db.get(VoiceSession,identity).state.get('end_requested')
+                    if ending:
+                        send(socket,'session.instructions.append',delegation_id=work_id,
+                             content='The customer has ended the call. Say this complete farewell now, exactly once: "'+result+'" Do not add an acknowledgment, filler, question or any further information. Then remain silent while the application closes the call.')
+                        ending_at=time.monotonic(); last_output_at=None; closing_text=''
+                    else:
+                        send(socket,'session.commentary.append',delegation_id=work_id,content=result)
+                if ending_at is not None and ((last_output_at and len(closing_text.strip())>=12 and time.monotonic()-last_output_at>3 and time.monotonic()-ending_at>5)
                                              or time.monotonic()-ending_at>15):
                     reason='requested_by_customer'; break
                 if not future and not pending and time.monotonic()>=next_case_check:
@@ -365,7 +371,8 @@ class VoiceRuntime:
                     fragments.add(event)
                 elif event.get('type')=='session.output_transcript.delta':
                     speech_started=speech_started or bool(event.get('delta','').strip())
-                    if ending_at is not None:last_output_at=time.monotonic()
+                    if ending_at is not None:
+                        last_output_at=time.monotonic(); closing_text=(closing_text+event.get('delta',''))[-400:]
                 elif event.get('type')=='session.delegation.created':
                     item=event.get('delegation',{});did=item.get('id');offset=event.get('offset_ms')
                     if item.get('target')=='client' and isinstance(did,str) and 0<len(did)<=128 and isinstance(offset,(int,float)) and offset>=0 and did not in seen:

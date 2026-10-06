@@ -148,7 +148,7 @@ def test_requesting_preview_keeps_previously_supplied_amount_without_reasking(se
     assert '100 MXN' in preview['summary']
 
 
-def test_resuming_refunded_case_announces_and_opens_existing_credit(voice, models):
+def test_resuming_refunded_case_announces_credit_and_opens_case_first(voice, models):
     from backend.tests.test_operations import approve_case, approve_payload
     app, _, provider = voice; customer, _ = login(app); admin, _ = login(app, 'nora')
     _, control = models; control['intent']='unrecognized-charge'
@@ -161,7 +161,7 @@ def test_resuming_refunded_case_announces_and_opens_existing_credit(voice, model
     before=customer.get('/api/bootstrap').json()
     started=customer.post('/api/voice/sessions',json=start_body(conversationId=cid)).json()
     result=wait_until(lambda:(v.get('reply') if (v:=customer.post('/api/voice/sessions/'+started['id']+'/heartbeat',json={}).json()).get('revision') else None))
-    assert result['navigation']['route']=='/movements?transaction='+credit
+    assert result['navigation']['route']=='/complaints?case='+claim['id']
     assert 'reembolso realizado' in result['voiceSummary']['summary']
     assert customer.get('/api/bootstrap').json()['transactions']==before['transactions']
     customer.post('/api/voice/sessions/'+started['id']+'/close',json={})

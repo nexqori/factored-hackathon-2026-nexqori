@@ -131,7 +131,7 @@ Pedir preparar el reclamo abre su vista previa cuando el flujo tiene contexto su
 
 Después del envío y al consultar el seguimiento, la navegación permitida abre Mis reclamos con el expediente propio seleccionado. La respuesta se basa en la decisión y el abono actuales del servidor. Ninguna URL libre del modelo puede abrir otro destino o ejecutar un reembolso.
 
-Si la consulta comprueba un reembolso completado, abre directamente Movimientos filtrado por la referencia del abono y actualiza los datos de la pantalla. Si aún está en revisión o aprobado sin abono, abre el expediente en Mis reclamos. Consultar nunca ejecuta ni duplica un reembolso; éste conserva la confirmación administrativa. No hay espera artificial ni promesa de minutos.
+Consultar el estado abre primero el expediente seleccionado en Mis reclamos, también cuando el reembolso ya está completado. El botón del abono en el resumen o la acción de voz show-refund abre después Movimientos filtrado por la referencia comprobada. La acción open-complaints vuelve al expediente sin ejecutar ninguna operación. Consultar nunca ejecuta ni duplica un reembolso; éste conserva la confirmación administrativa. No hay espera artificial ni promesa de minutos.
 
 ### Confirmación natural durante una llamada
 
@@ -151,3 +151,10 @@ Jev propone una acción tipada a partir del mensaje del cliente: enviar reclamo,
 El registro utiliza el mismo servicio transaccional e idempotente que el botón, navega al expediente creado y comunica una confirmación breve con despedida. El borrador de llamada no bloquea los controles de voz. La acción de cerrar la llamada espera la despedida breve y cierra la sesión remota; el botón sigue disponible. El expediente permanece visible. Un pago pendiente puede generar un reclamo, pero eso no lo convierte en un cargo reembolsado.
 
 Instrucciones de voz simplificadas conforme a [Prompting GPT-Live](https://developers.openai.com/api/docs/guides/live-prompting): capacidades y condiciones concretas de delegación, resultados breves y procedimientos en el servidor. La validación incluye audio de prueba real y no se sustituye por las pruebas con proveedor simulado.
+
+
+### Correo después de un reembolso completado
+
+La confirmación administrativa del abono guarda primero el movimiento y el saldo en una transacción atómica. Después envía un comprobante ES/EN/PT mediante el SMTP configurado en el servidor. Usa el correo de notificaciones verificado del titular o, si no existe, el correo de su cuenta. No utiliza el correo del administrador ni un destinatario indicado al modelo. El mensaje incluye importe, moneda, expediente, referencia del abono y sólo los últimos cuatro dígitos de la cuenta.
+
+Aprobar el reclamo, consultar su estado o rechazar la devolución no envía este comprobante. Repetir la misma confirmación no duplica el abono ni el envío. La auditoría notification_refund_accepted indica aceptación SMTP, no entrega garantizada a la bandeja. notification_refund_failed registra un fallo sin revertir el dinero. Este envío es un intento posterior al commit: no incluye una cola durable ni reintento automático tras interrupción del proceso. No repetir una operación bancaria para reintentar un correo.

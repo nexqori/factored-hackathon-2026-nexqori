@@ -5,6 +5,8 @@ from .prompt_guard import redact_credentials
 CRITERIA = {
     'submit-claim': 'The customer explicitly instructs us to submit/send the current complaint or refund request for review, including accepting the displayed draft unchanged. Not payment execution or approval of a refund.',
     'case-status': 'The customer asks what happened to their complaint, how it stands, whether it was sent, resolved, approved or refunded.',
+    'open-complaints': 'The customer asks to open, return to or see the My complaints screen or their complaint details. This is navigation, not sending a new complaint.',
+    'show-refund': 'The customer asks to see the deposited refund or credit in Transactions/Movements, or to show that refund movement. Not approval or execution of a refund.',
     'end-call': 'The customer asks to end this voice call or hang up, or clearly says goodbye to leave the conversation, including thanking us while saying goodbye. Thanks alone, greetings, quoted or hypothetical farewells, and negated instructions do not end a call.',
     'continue': 'Any other turn: selecting a transaction, describing an issue, changing details, merely saying yes, uncertainty, conditional assent, a question about submitting, or a negated action.',
 }

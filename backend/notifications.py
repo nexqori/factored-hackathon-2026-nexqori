@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import Field, field_validator
 from sqlalchemy import func, select
 
-from .email_templates import code_message
+from .email_templates import code_message, refund_message
 from .models import AuditEvent, CardProfile, EmailChallenge, NotificationPreference, Product, User, now
 from .schemas import StrictModel
 from .security import customer, customer_read, current_session, db_session, hasher, LoginLimiter, verify
@@ -54,9 +54,12 @@ class CodeInput(StrictModel):
 
 
 def send_code(recipient, code, purpose, locale, last4=None):
+    send_email(recipient, *code_message(code, purpose, locale, last4))
+
+
+def send_email(recipient, subject, plain, html):
     if not mail_ready():
         raise HTTPException(503, 'mail_unavailable')
-    subject, plain, html = code_message(code, purpose, locale, last4)
     message = EmailMessage()
     sender = os.getenv('MAIL_FROM') or os.environ['MAIL_SMTP_USER']
     message['From'] = formataddr(('Nexqori', parseaddr(sender)[1]))
@@ -178,3 +181,21 @@ def notifications_router():
         return issue(db, user, auth[0], setting.email, 'card_block', product)
 
     return router
+
+
+def notify_refund_completed(db, refund):
+    """Called only after the credit commit, never by a model or an approval preview."""
+    owner = db.get(User, refund.user_id)
+    setting = db.get(NotificationPreference, refund.user_id)
+    account = db.get(Product, refund.destination_product_id)
+    recipient = setting.email if setting else owner.email
+    action = 'notification_refund_accepted'
+    try:
+        send_email(recipient, *refund_message(owner.locale, refund.amount_minor, refund.currency,
+            refund.request_id, refund.credit_transaction_id, account.last4))
+    except HTTPException:
+        # Delivery failure must not undo a settled credit or invite a second debit/credit.
+        action = 'notification_refund_failed'
+    db.add(AuditEvent(id=str(uuid4()), user_id=owner.id, actor_id=refund.decided_by,
+        action=action, request_id=refund.request_id, product_id=account.id))
+    db.commit()

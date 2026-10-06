@@ -62,9 +62,24 @@ export class VoiceClient {
           startMs:typeof event.start_ms==='number'&&Number.isFinite(event.start_ms)?event.start_ms:null,
           endMs:typeof event.end_ms==='number'&&Number.isFinite(event.end_ms)?event.end_ms:null});
       }
-      if(event.type==='session.closed'){this.cancelled=true;this.cleanup();this.callbacks.status('closed');}
+      if(event.type==='session.closed')void this.finishRemote();
       if(event.type==='error')void this.fail('voice_connection');
     }catch{void this.fail('voice_connection');}
+  }
+
+  private async finishRemote(){
+    if(this.cancelled)return;
+    this.cancelled=true;this.cleanup();
+    // The media-close event can beat the next heartbeat. Deliver the final
+    // authenticated bank result before the parent replaces the call panel.
+    const control=new AbortController();const timeout=setTimeout(()=>control.abort(),2000);
+    try{
+      if(this.id){
+        const state=await api<VoiceState>('/voice/sessions/'+this.id+'/heartbeat','POST',{},control.signal);
+        if(state.revision>this.revision&&state.reply){this.revision=state.revision;this.callbacks.reply(state.reply);}
+      }
+    }catch{/* Ending a call must not depend on a final network read. */}
+    finally{clearTimeout(timeout);this.callbacks.status('closed');}
   }
 
   private async poll(){
