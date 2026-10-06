@@ -3,7 +3,7 @@ import math
 from .prompt_guard import redact_credentials
 
 CRITERIA = {
-    'submit-claim': 'The customer explicitly instructs us to submit/send the current complaint or refund request for review, including accepting the displayed draft unchanged. Not payment execution or approval of a refund.',
+    'submit-claim': 'The customer explicitly instructs us to submit/send the current complaint or refund request for review, including accepting the displayed draft unchanged or declining changes while explicitly directing submission. Evaluate the sending clause itself. Not payment execution or approval of a refund.',
     'case-status': 'The customer asks what happened to their complaint, how it stands, whether it was sent, resolved, approved or refunded.',
     'open-complaints': 'The customer asks to open, return to or see the My complaints screen or their complaint details. This is navigation, not sending a new complaint.',
     'show-refund': 'The customer asks to see the deposited refund or credit in Transactions/Movements, or to show that refund movement. Not approval or execution of a refund.',
@@ -19,6 +19,9 @@ def classify_action(message, locale, awaiting_claim=False):
         'Use the meaning in Spanish, English or Portuguese, not a fixed phrase list. '
         'Choose submit-claim only for a clear instruction to SEND a complaint/request for review. '
         'A mere yes that confirms a transaction is continue. Conditional, negated or uncertain consent is continue. '
+        'Evaluate negation by its scope: rejecting edits or more discussion does not negate an affirmative instruction to submit. '
+        'When a turn contrasts a refusal with a clear sending instruction, classify the sending instruction; '
+        'a prohibition on sending remains continue. Do not treat any negative word as vetoing the whole turn. '
         'If multiple incompatible actions are requested, choose continue. '
         'This is a proposal: do not execute anything, invent identifiers or infer that a refund is approved. '
         'Return only the specified choice.')

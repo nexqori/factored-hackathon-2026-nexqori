@@ -2,7 +2,7 @@ import pytest
 from backend.voice_actions import classify_action
 
 
-@pytest.mark.parametrize('action', ['submit-claim','case-status','end-call','continue'])
+@pytest.mark.parametrize('action', ['submit-claim','case-status','open-complaints','show-refund','end-call','continue'])
 def test_accepts_only_typed_actions_from_customer_text(monkeypatch, action):
     from intent_lab import providers
     seen=[]
