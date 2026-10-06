@@ -6,13 +6,13 @@ Integración vigente: [pagos y transferencias](docs/pagos-y-transferencias.md), 
 
 Administración: [panel de reclamos por usuario](docs/panel-reclamos.md). Desde Usuarios → Ver reclamos puedes revisar contexto, conversaciones, lecturas y decisiones con sus referencias. El cliente ve el detalle propio en Mis reclamos. `npm run test:claims` deja tres casos persistentes y accesos privados para revisarlos.
 
-Panel de evaluación: [editor de flujos e incidencias](docs/editor-flujos-lab.md). En `http://localhost:5190/?view=flows&mode=editor&lang=es` puedes crear y conectar bloques, configurar contexto ES/EN/PT y ejecutar el grafo guardado. La plantilla Incidencia de la app genera logs y avisos locales sin modelos. `npm run test:lab:editor` verifica ese recorrido; `npm run test:lab:flows` conserva el [visor anterior](docs/lab-flujos-react-flow.md). Voz aplazada.
+Panel de evaluación: [editor de flujos e incidencias](docs/editor-flujos-lab.md). En `http://localhost:5190/?view=flows&mode=editor&lang=es` puedes crear y conectar bloques, configurar contexto ES/EN/PT y ejecutar el grafo guardado. La plantilla Incidencia de la app genera logs y avisos locales sin modelos. `npm run test:lab:editor` verifica ese recorrido; `npm run test:lab:flows` conserva el [visor anterior](docs/lab-flujos-react-flow.md). El banco dispone de voz opcional; consulta [voz y configuración](docs/voz-gpt-live.md).
 
 Pruebas repetibles: [tres casos con acciones y auditoría](docs/pruebas-tres-casos.md). `npm run test:cases` ejecuta bloqueo, devolución y derivación ES/EN/PT. `npm run test:cases:prepare` crea accesos privados nuevos para practicarlos manualmente.
 
 Recorridos nuevos: [segunda atención en el LAB](docs/evaluacion-segunda-atencion.md) y [aprobación, ID de operación y consulta del movimiento](docs/trazabilidad-solicitudes.md). Mis reclamos distingue aprobación pendiente, abono y rechazo; en Movimientos puedes iniciar un chat contextual. Jev y Luna también están conectados al chat del banco cuando se configuran.
 
-Esta es la base de trabajo del equipo: React + TypeScript, FastAPI y PostgreSQL, en Docker local, con identidad Terracota suave y español, inglés y portugués. El repositorio es privado: [nexqori/nexqori](https://github.com/nexqori/nexqori).
+Esta es la base de trabajo del equipo: React + TypeScript, FastAPI y PostgreSQL, en Docker local, con identidad Terracota suave y español, inglés y portugués. Repositorio del equipo: [nexqori/nexqori](https://github.com/nexqori/nexqori).
 
 ## Arranque
 
