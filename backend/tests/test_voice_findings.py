@@ -169,7 +169,11 @@ def test_resuming_refunded_case_announces_and_opens_existing_credit(voice, model
 
 @pytest.mark.parametrize('phrase', ['No, enviémoslo a revisión', 'Confirmar y enviar', 'Okay, send it like it is', 'Yes, send it', 'Okay Send the refund request for review, please', 'Sim, envie assim'])
 def test_real_reported_sequence_submits_displayed_draft_once(voice, models, phrase, monkeypatch):
-    monkeypatch.setattr('backend.voice.classify_action', lambda text,locale: 'submit-claim' if text==phrase else 'continue')
+    action_contexts=[]
+    def propose(text,locale,awaiting=False):
+        action_contexts.append((text,awaiting))
+        return 'submit-claim' if text==phrase else 'continue'
+    monkeypatch.setattr('backend.voice.classify_action', propose)
     app, engine, _ = voice; client, _ = login(app)
     _, control = models; control['intent'] = 'unrecognized-charge'
     started = client.post('/api/voice/sessions', json=start_body()).json()
@@ -188,6 +192,8 @@ def test_real_reported_sequence_submits_displayed_draft_once(voice, models, phra
         'previewToken':preview['previewToken'], 'details':preview['summary'], 'ready':True, 'locale':'es'})
     assert ack.status_code == 200, ack.text
     speech = runtime.turn(identity, 'submit', phrase)
+    assert action_contexts[-1] == (phrase, True)
+    assert (phrase, False) in action_contexts
     reply = client.post(f'/api/voice/sessions/{identity}/heartbeat', json={}).json()['reply']
     rid = reply['flow']['requestId']; assert rid
     assert reply['navigation']['route'] == '/complaints?case='+rid

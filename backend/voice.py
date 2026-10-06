@@ -185,7 +185,11 @@ class VoiceRuntime:
             if receipt:
                 previous = row.state.get('reply') or {}
                 return safe_spoken_result(previous, row.locale, previous.get('voiceSummary'))
-            action = classify_action(text, row.locale)
+            awaiting_claim = bool(flow and not flow.request_id and shown and shown.get('ready')
+                and shown.get('locale') == row.locale
+                and 0 <= now().timestamp() - shown.get('at', 0) < 600
+                and shown.get('token') == preview_token(conv, flow.state, row.locale))
+            action = classify_action(text, row.locale, awaiting_claim)
             # Ending media is not a bank operation. A banking content guard
             # must never trap a customer in a billed call they asked to end.
             if action == 'end-call':
@@ -199,10 +203,7 @@ class VoiceRuntime:
             elif action == 'case-status' and not selected_request:
                 from .case_followup import unique_owned_claim
                 selected_request = unique_owned_claim(db, user.id)
-            can_submit = bool(action == 'submit-claim' and flow and not flow.request_id and shown
-                and shown.get('ready') and shown.get('locale') == row.locale
-                and 0 <= now().timestamp() - shown.get('at', 0) < 600
-                and shown.get('token') == preview_token(conv, flow.state, row.locale))
+            can_submit = action == 'submit-claim' and awaiting_claim
             if can_submit and inspect_prompt(text, row.locale)['status'] == 'allowed':
                 require_open(db, conv)
                 spoken = Message(id=str(uuid4()), user_id=user.id, conversation_id=conv.id,
