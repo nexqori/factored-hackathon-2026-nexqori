@@ -894,7 +894,7 @@
   "spending.intro": "Compara cada gasto con sus pagos anteriores y revisa los importes que se alejan del historial.",
   "spending.coverage": "{{count}} gastos analizados. Los filtros de comparación se aplican a este grupo.",
   "spending.filter": "Comparación con el historial",
-  "spending.unusual": "Aumento fuera del rango",
+  "spending.unusual": "Sospechosa / fuera de lo habitual",
   "spending.comparable": "Con antecedentes suficientes",
   "spending.limited": "Sin comparación suficiente",
   "spending.average": "Promedio anterior",

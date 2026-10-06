@@ -894,7 +894,7 @@
   "spending.intro": "Compare each charge with earlier payments and review amounts outside the previous range.",
   "spending.coverage": "{{count}} charges analyzed. Comparison filters apply to this group.",
   "spending.filter": "History comparison",
-  "spending.unusual": "Increase outside the range",
+  "spending.unusual": "Suspicious / unusual",
   "spending.comparable": "With sufficient history",
   "spending.limited": "Insufficient comparison",
   "spending.average": "Previous average",
