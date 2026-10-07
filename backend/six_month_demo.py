@@ -1,7 +1,8 @@
 """Opt-in synthetic six-month profile; private identity and password are never defaults.
 
 The same deterministic history is usable locally and in the public demo. Repeated
-startup preserves subsequent customer activity, credentials, balances and names.
+startup can synchronize fixture identity and labels while preserving subsequent
+customer activity, balances and card blocking state.
 """
 import json
 import hashlib
@@ -13,9 +14,10 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from sqlalchemy import select, or_, text
+from uuid import uuid4
+from sqlalchemy import select, or_, text, delete
 from sqlalchemy.engine import make_url
-from .models import User, Product, CardProfile, Transaction, AuditEvent
+from .models import User, Product, CardProfile, Transaction, AuditEvent, Session
 from .security import hasher, verify
 
 
@@ -90,8 +92,8 @@ def demo_plan(manifest):
     return {'config': cfg, 'ids': ids, 'rows': rows, 'monthly': summaries, 'balances': dict(bal)}
 
 
-def ensure_demo(db, manifest):
-    """Caller owns the transaction. Collisions fail; repeats never reset activity."""
+def ensure_demo(db, manifest, *, synchronize=False):
+    """Caller owns the transaction. Only a marked customer fixture can be synced."""
     plan = demo_plan(manifest)
     cfg, ids = plan['config'], plan['ids']
     uid = cfg['profileId']
@@ -101,7 +103,7 @@ def ensure_demo(db, manifest):
     existing = db.get(User, uid)
     if existing:
         marker = db.get(AuditEvent, uid + '-created')
-        if not marker or marker.user_id != uid or marker.action != 'synthetic_fixture_created':
+        if existing.role != 'customer' or not marker or marker.user_id != uid or marker.action != 'synthetic_fixture_created':
             raise ValueError('Existing identity is not this demo')
         for kind, ident in ids.items():
             product = db.get(Product, ident)
@@ -111,7 +113,8 @@ def ensure_demo(db, manifest):
             tx = db.get(Transaction, row['id'])
             if not tx or tx.user_id != uid or tx.product_id != row['product_id']:
                 raise ValueError('Incomplete demo history; inspect without resetting')
-        return {'created': False, 'fixtureTransactions': len(plan['rows']), 'existingActivityPreserved': True}
+        changed = synchronize_profile(db, existing, plan) if synchronize else False
+        return {'created': False, 'updated': changed, 'fixtureTransactions': len(plan['rows']), 'existingActivityPreserved': True}
     conflict = db.scalar(select(User.id).where(or_(User.email == cfg['email'], User.identity_number == cfg['document'])))
     if conflict:
         raise ValueError('Email or document belongs to an existing profile')
@@ -159,23 +162,79 @@ def audit_demo(db, manifest):
             'initialBalancesMinor': plan['balances'], 'cardKinds': {'4101':'credit','4102':'debit'}}
 
 
+def synchronize_profile(db, user, plan):
+    """Update authorized fixture identity/labels, never monetary or later records."""
+    cfg = plan['config']
+    conflict = db.scalar(select(User.id).where(User.id != user.id, or_(User.email == cfg['email'], User.identity_number == cfg['document'])))
+    if conflict:
+        raise ValueError('Email or document belongs to another profile')
+    changed = False
+    revoke = False
+    for field, value in [('name', cfg['name']), ('email', cfg['email']), ('identity_number', cfg['document'])]:
+        if getattr(user, field) != value:
+            setattr(user, field, value)
+            changed = True
+            revoke |= field != 'name'
+    if not verify(cfg['password'], user.password_hash):
+        user.password_hash = hasher.hash(cfg['password'])
+        changed = revoke = True
+    for kind, last4 in [('account','4103'),('savings','4104'),('credit','4101'),('debit','4102')]:
+        product = db.get(Product, plan['ids'][kind])
+        card_kind = kind if kind in ('credit','debit') else None
+        if product.card_kind != card_kind or product.last4 != last4:
+            product.card_kind, product.last4 = card_kind, last4
+            changed = True
+    for row in plan['rows']:
+        tx = db.get(Transaction, row['id'])
+        if tx.merchant != row['merchant']:
+            tx.merchant = row['merchant']
+            changed = True
+    if revoke:
+        db.execute(delete(Session).where(Session.user_id == user.id))
+    if changed:
+        db.add(AuditEvent(id=str(uuid4()), user_id=user.id, actor_id=user.id, action='demo_profile_synchronized'))
+    db.flush()
+    return changed
+
+
+def configured_manifest(environ=None):
+    """Private JSON environment takes precedence over a read-only private file."""
+    env = os.environ if environ is None else environ
+    enabled = env.get('NEXQORI_DEMO_ENABLED', 'true').lower()
+    required = env.get('NEXQORI_DEMO_REQUIRED', 'false').lower()
+    if enabled not in ('true','false') or required not in ('true','false'):
+        raise ValueError('Invalid demo flags')
+    if enabled == 'false':
+        return None
+    raw = env.get('NEXQORI_DEMO_PROFILE_JSON', '').encode('utf-8')
+    if not raw:
+        filename = env.get('NEXQORI_DEMO_PROFILE_FILE')
+        path = Path(filename or '/app/demo-config/profile.private.json')
+        if not path.exists():
+            if required == 'true' or filename:
+                raise ValueError('Required private demo configuration is missing')
+            return None
+        with path.open('rb') as source:
+            raw = source.read(16385)
+    if len(raw) > 16384:
+        raise ValueError('Demo manifest too large')
+    return validate_manifest(json.loads(raw.decode('utf-8-sig')))
+
+
 def main():
     from .db import make_engine, make_sessions
     mode = sys.argv[1:]
     if mode == ['--configured']:
-        filename = os.environ.get('NEXQORI_DEMO_PROFILE_FILE')
-        path = Path(filename or '/app/demo-config/profile.private.json')
-        if not filename and not path.exists():
+        manifest = configured_manifest()
+        if manifest is None:
             return
-        with path.open('rb') as source:
-            raw = source.read(16385)
-    elif mode in (['--apply'], ['--audit']):
+    elif mode in (['--apply'], ['--sync'], ['--audit']):
         raw = sys.stdin.buffer.read(16385)
+        if len(raw) > 16384:
+            raise ValueError('Demo manifest too large')
+        manifest = json.loads(raw.decode('utf-8-sig'))
     else:
-        raise ValueError('Use --configured, --apply or --audit with a private manifest')
-    if len(raw) > 16384:
-        raise ValueError('Demo manifest too large')
-    manifest = json.loads(raw.decode('utf-8-sig'))
+        raise ValueError('Use --configured, --apply, --sync or --audit with a private manifest')
     url = make_url(os.environ.get('DATABASE_URL', ''))
     if url.host != 'db' or url.database != 'nexqori' or url.get_backend_name() != 'postgresql':
         raise ValueError('Only the configured Nexqori Compose database is supported')
@@ -183,7 +242,7 @@ def main():
     try:
         with make_sessions(engine)() as db:
             with db.begin():
-                result = audit_demo(db, manifest) if mode == ['--audit'] else ensure_demo(db, manifest)
+                result = audit_demo(db, manifest) if mode == ['--audit'] else ensure_demo(db, manifest, synchronize=mode in (['--configured'], ['--sync']))
         print(json.dumps(result))
     finally:
         engine.dispose()

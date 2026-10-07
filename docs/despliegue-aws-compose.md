@@ -77,4 +77,4 @@ Esta entrega es una demo bancaria con operaciones locales y datos ficticios. El 
 
 ## Perfil sintético de seis meses
 
-La carga optativa del historial y sus cuatro productos está documentada en [perfil de seis meses](perfil-seis-meses-despliegue.md). El arranque de la API usa el manifiesto privado `.local/demo/profile.private.json` cuando está instalado en el servidor; no está contenido en Git. El workflow que despliega debe conservarlo o provisionarlo antes de recrear la API y comprobar el perfil por HTTPS después. Abrir un PR no verifica por sí solo ni el despliegue ni la carga de datos.
+Compose crea o sincroniza automáticamente el perfil de prueba al arrancar la API. Configura `NEXQORI_DEMO_PROFILE_JSON` como variable privada en el entorno que ejecuta Compose, o conserva `.local/demo/profile.private.json` legible por UID 10001. La configuración requerida ausente detiene el arranque; no se omite el perfil silenciosamente. Se actualizan identidad y etiquetas del fixture, conservando actividad bancaria. Para instalaciones sin este escenario existe la exclusión explícita `NEXQORI_DEMO_ENABLED=false`. Ver [perfil de seis meses](perfil-seis-meses-despliegue.md).
