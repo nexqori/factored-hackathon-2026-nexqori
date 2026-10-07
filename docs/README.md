@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [live demo and local setup](../README.md). The pages below document implemented workflows and the checks needed to change them.
+Start with the [live demo and local setup](../README.md) and the [public judge credentials](demo-access.md). The pages below document implemented workflows and the checks needed to change them.
 
 | Need | Guide |
 | --- | --- |
