@@ -10,7 +10,7 @@ Nexqori connects conversational banking with a reviewable complaint workflow. Ne
 
 ## Try the demo
 
-1. Sign in with a test account supplied by the team. Email and document number are both supported.
+1. Sign in with the customer account in the [public demo access file](docs/demo-access.md). Email and document number are both supported.
 2. Ask Nexi to review the phone charge. The example compares **459 MXN** with five previous payments averaging **299 MXN**.
 3. Review the automatically prepared complaint, then confirm submission. **My complaints** shows the case and its reference.
 4. In a separate browser profile, sign in as an administrator. Review the evidence, approve the complaint and confirm the refund.
@@ -18,17 +18,11 @@ Nexqori connects conversational banking with a reviewable complaint workflow. Ne
 
 The interface supports **Español, English and Português**, including mobile layouts. Voice requires microphone permission. Text chat remains available.
 
-### Where to find test credentials
+### Public judge credentials
 
-Credentials belong to each installation; they are not embedded in source code.
+**[Open the public demo access file →](docs/demo-access.md)** — includes working customer and administrator usernames/passwords and the complete evaluation sequence. No invitation or private access file is required.
 
-| Installation | Private credentials location |
-| --- | --- |
-| Hosted AWS demo — team handoff | `.local/deploy/aws/nexqori-20261005/ACCESOS.private.md` on the maintainer’s machine |
-| Local Bryan + administrator scenario | `.local/ux-users/bryan-demo/ACCESOS.private.md` |
-| Fresh local installation | `.env`: `CUSTOMER_PASSWORD`, `ADMIN_PASSWORD`, `SECOND_CUSTOMER_PASSWORD` |
-
-For the hosted demo, obtain the **customer and administrator test accesses from the team’s private handoff**. These files are excluded from Git and are not URLs on the demo server. Do not use the AWS credentials for a fresh local database. [Test profiles and preparation](docs/usuarios-prueba-ux.md).
+These two accounts are dedicated to the shared synthetic demo. Maintainer accounts, provider keys and infrastructure credentials remain private. To recreate these public accounts locally, follow the command in the access file. Other local users receive their installation-specific passwords from `.env`.
 
 ## What the product supports
 
@@ -78,7 +72,7 @@ node scripts/prepare-bryan-demo.mjs --confirm-local
 node scripts/demo-access.mjs --confirm-local
 ```
 
-The commands write private accesses at the path above. Repeated preparation preserves existing activity. Changing `.env` after first startup does not change passwords already stored in PostgreSQL. [Developer guide](INICIO-EQUIPO.md).
+The commands write private accesses to `.local/ux-users/bryan-demo/ACCESOS.private.md`. Repeated preparation preserves existing activity. Changing `.env` after first startup does not change passwords already stored in PostgreSQL. [Developer guide](INICIO-EQUIPO.md).
 
 Voice is opt-in through `compose.voice.yaml` and private provider configuration. AWS uses `compose.cloud.yaml` for HTTPS. See [deployment](docs/despliegue-aws-compose.md) and [email setup](docs/notificaciones-gmail.md). Keep the existing database volume when restarting.
 
